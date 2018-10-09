@@ -22,7 +22,7 @@ GDT_SEL_KERNEL_DATA equ 0x10|SA_RPL0
 GDT_SEL_VIDEO equ 0x18|SA_RPL3
 GDT_SEL_USER_CODE equ 0x20|SA_RPL3
 GDT_SEL_USER_DATA equ 0x28|SA_RPL3
-GDT_SEL_TSS equ 0x30
+GDT_SEL_TSS equ 0x30|SA_RPL0
 ; SELF_ES equ 17E00H ;当前程序的段基址
 
 %include "include/pm.inc"
@@ -57,6 +57,12 @@ global	stack_exception
 global	general_protection
 global	page_fault
 global	copr_error
+
+
+global calltest
+global tss
+extern testcallS
+extern ss3
 
 gdt times 128*64 db 0
 GdtLen equ $-gdt
@@ -177,8 +183,13 @@ exception:
 
 test:
     ; call cstart
-	mov word[0x27a00], 0x1111
     ; int 6
+    ; mov eax, TSS
+    ; jmp $
+    ; mov ax, word[ss3]
+    ; jmp $
+    ; mov eax,tss
+    ; jmp $
     mov ax, GDT_SEL_TSS
     ltr ax
     push GDT_SEL_USER_DATA
@@ -190,6 +201,7 @@ test:
 
 ring3:
 	; int 3
+    call 0x0038:0
     mov ax, GDT_SEL_VIDEO
     mov gs, ax
     mov edi, (80*14+20)*2
@@ -200,4 +212,41 @@ ring3:
     ; mov ds, eax
     ; mov word[0x27a00], 0x3355
     jmp $
+
+tss:
+    dd 0
+    dd TOP_OF_KERNEL_STACK
+    dd GDT_SEL_KERNEL_DATA
+    DD	0			; 1 级堆栈
+		DD	0			; 
+		DD	0			; 2 级堆栈
+		DD	0			; 
+		DD	0			; CR3
+		DD	0			; EIP
+		DD	0			; EFLAGS
+		DD	0			; EAX
+		DD	0			; ECX
+		DD	0			; EDX
+		DD	0			; EBX
+		DD	0			; ESP
+		DD	0			; EBP
+		DD	0			; ESI
+		DD	0			; EDI
+		DD	0			; ES
+		DD	0			; CS
+		DD	0			; SS
+		DD	0			; DS
+		DD	0			; FS
+		DD	0			; GS
+		DD	0			; LDT
+		DW	0			; 调试陷阱标志
+    dw $-tss+2
+    db 0xff
+TssLen equ $-tss
+
+calltest:
+    mov eax, 0x4444
+    jmp $
+
+
 
