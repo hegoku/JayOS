@@ -4,6 +4,9 @@
 #define GDT_SIZE 128
 #define IDT_SIZE 256
 
+#define TOP_OF_USER_STACK 0x6C00
+#define TOP_OF_KERNEL_STACK 0x7C00
+
 /* 描述符类型值说明 */
 #define	DA_32			0x4000	/* 32 位段				*/
 #define	DA_LIMIT_4K		0x8000	/* 段界限粒度为 4K 字节			*/

@@ -4,7 +4,13 @@
 
 // unsigned char gdt_ptr[6];
 // DESCRIPTOR gdt[GDT_SIZE];
+unsigned short SelectorKernelCs;
+unsigned short SelectorKernelDs;
+unsigned short SelectorVideo;
+unsigned short SelectorUserCs;
+unsigned short SelectorUserDs;
 unsigned short SelectorTss;
+TSS *tss;
 
 static void init_idt();
 static void init_gdt();
@@ -28,10 +34,7 @@ static void moveGdt()
 
 void cstart()
 {
-    DispStr(
-    "-----Move Gdt success-------\n\n"
-    
-    );
+    DispStr("-----Move Gdt success-------\n\n");
     init_gdt();
     init_idt();
     DispStr("----Init idt success----\n\n");
@@ -107,13 +110,34 @@ DESCRIPTOR create_descriptor(unsigned int base, unsigned int limit, unsigned sho
 unsigned short insert_descriptor(DESCRIPTOR *gdt, unsigned int index, DESCRIPTOR desc, unsigned short attr)
 {
     gdt[index] = desc;
-    unsigned short selector = (index * 0x8) << 3;
+    unsigned short selector = (index * 0x8);
     selector |= attr;
     return selector;
 }
 
 static void init_gdt()
 {
-    DESCRIPTOR tss_desc=create_descriptor(0, sizeof(TSS)-1, DA_386TSS);
-    SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
+	DESCRIPTOR gdt_0 = create_descriptor(0, 0, 0);
+	insert_descriptor(gdt, 0, gdt_0, PRIVILEGE_KRNL);
+
+	DESCRIPTOR kernel_cs = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL0);
+	SelectorKernelCs=insert_descriptor(gdt, 1, kernel_cs, PRIVILEGE_KRNL);
+
+	DESCRIPTOR kernel_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL0);
+	SelectorKernelDs=insert_descriptor(gdt, 2, kernel_ds, PRIVILEGE_KRNL);
+
+	DESCRIPTOR video = create_descriptor(0xB8000, 0xfffff, DA_DRW | DA_32 | DA_DPL3);
+	SelectorVideo=insert_descriptor(gdt, 3, video, PRIVILEGE_USER);
+
+	DESCRIPTOR user_cs = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
+	SelectorUserCs=insert_descriptor(gdt, 4, user_cs, PRIVILEGE_USER);
+
+	DESCRIPTOR user_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
+	SelectorUserDs=insert_descriptor(gdt, 5, user_ds, PRIVILEGE_USER);
+
+	
+	tss->esp0 = TOP_OF_KERNEL_STACK;
+	tss->ss0 = SelectorKernelDs;
+	DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
+	SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
 }

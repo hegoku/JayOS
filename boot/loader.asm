@@ -1,7 +1,9 @@
 org 0x0 ;和boot.asm的 OFFSET_OF_LOADER一样
 
-BASE_OF_STACK equ 0x7C00 ;栈顶
-BASE_OF_STACK_PM equ 27E00H ;保护模式下栈顶
+TOP_OF_STACK equ 0x7C00 ;loader栈顶
+TOP_OF_KERNEL_STACK equ 27E00H ;保护模式下栈顶
+; TOP_OF_KERNEL_STACK equ 7C00H ;kernel栈顶
+BASE_OF_KERNEL_STACK equ 6C00H ;kernel栈基地址
 SELF_CS equ 0x17E0 ;当前loader程序的段基址
 BASE_OF_KERNEL_FILE equ 0x27E0 ;13h中断取出的数据存放的段地址 es, Kernel文件基址
 OFFSET_OF_KERNEL_FILE equ 0x0 ;13h中断取出的数据存放的偏移地址 bx
@@ -22,7 +24,7 @@ start:
     mov ds, ax
     mov es, ax
     mov ss, ax
-    mov sp, BASE_OF_STACK
+    mov sp, TOP_OF_STACK
     call ClearScreen
     call FindKernel
     jmp $
@@ -240,8 +242,9 @@ InitKernel:
     mov ds, ax
     mov es, ax
     mov fs, ax
+    ; mov ax, BASE_OF_KERNEL_STACK
     mov ss, ax
-    mov esp, BASE_OF_STACK_PM
+    mov esp, TOP_OF_KERNEL_STACK
 
     mov eax,  dword[es:BASE_OF_KERNEL_FILE*10h+(OFFSET_OF_KERNEL_FILE+ELF32_HDR_ENTRY)]
     mov dword [SELF_CS*10h+KernelEntry], eax ;kernel入口地址
@@ -346,8 +349,8 @@ gdt_0: Descriptor 0, 0, 0
 gdt_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL0
 gdt_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL0
 gdt_video: Descriptor 0B8000h, 0xfffff, DA_DRW|DA_DPL3
-gdt_user_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3
-gdt_user_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3
+; gdt_user_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3
+; gdt_user_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3
 GdtLen equ $-gdt_0
 GdtPtr dw GdtLen-1
        dd SELF_CS*10h+gdt_0
@@ -355,6 +358,6 @@ GdtPtr dw GdtLen-1
 GDT_SEL_CODE equ gdt_code-gdt_0
 GDT_SEL_DATA equ gdt_data-gdt_0
 GDT_SEL_VIDEO equ gdt_video-gdt_0
-GDT_SEL_USER_CODE equ gdt_user_code-gdt_0
-GDT_SEL_USER_DATA equ gdt_user_data-gdt_0
+; GDT_SEL_USER_CODE equ gdt_user_code-gdt_0
+; GDT_SEL_USER_DATA equ gdt_user_data-gdt_0
 

@@ -1,5 +1,7 @@
-; 500H     ------------
-;          |   stack   | 29.75K
+; 500H     -------------
+;          |user stack | 25.75K
+; 6C00H    -------------
+;          |kernel stack| 4k
 ; 7C00H    ------------
 ;          |   boot   | 512
 ; 7E00H    ------------
@@ -10,7 +12,10 @@
 
 global _start
 
-BASE_OF_STACK equ 0x7C00 ;栈顶
+; TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
+TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
+TOP_OF_USER_STACK equ 0x6C00 ;用户栈顶
+BASE_OF_KERNEL_STACK equ 6C00H ;kernel栈基地址
 SELF_CS equ 7E0H ;当前程序的段基址
 GDT_SEL_KERNEL_CODE equ 0x8|SA_RPL0 ;因为loader的 GDT_SEL_CODE 选择子为 8
 GDT_SEL_KERNEL_DATA equ 0x10|SA_RPL0
@@ -53,7 +58,7 @@ global	general_protection
 global	page_fault
 global	copr_error
 
-gdt times 128*64 db 3
+gdt times 128*64 db 0
 GdtLen equ $-gdt
 
 gdt_ptr dw 0
@@ -61,9 +66,9 @@ gdt_ptr_base dd 0
 
 idt:
 ; %rep 255
-; Gate GDT_SEL_KERNEL_CODE, 2, 0, DA_386IGate
+; Gate GDT_SEL_KERNEL_CODE, inval_opcode_limit, 0, DA_386IGate
 ; %endrep
-times 256*64 db 2
+times 256*64 db 0
 IdtLen equ $-idt
 
 idt_ptr dw IdtLen-1
@@ -71,10 +76,11 @@ idt_ptr_base dd idt
 
 [BITS 32]
 _start:
-    mov esp, BASE_OF_STACK
+    mov esp, TOP_OF_KERNEL_STACK
     ; mov eax, SELF_CS
 
-    sgdt [gdt_ptr]
+    ; sgdt [gdt_ptr]
+	call cstart
     call moveGdt
     lgdt [gdt_ptr]
 
@@ -83,17 +89,17 @@ _start:
     jmp GDT_SEL_KERNEL_CODE:test ;强制刷新
 
 moveGdt:
-    movzx eax, word[gdt_ptr]
-    push eax ;size
+    ; movzx eax, word[gdt_ptr]
+    ; push eax ;size
 
-    mov eax, dword[gdt_ptr_base]
-    push eax ;src
+    ; mov eax, dword[gdt_ptr_base]
+    ; push eax ;src
     
-    mov eax, gdt
-    push eax ;dst
+    ; mov eax, gdt
+    ; push eax ;dst
     
-    call MemCpy
-    add esp, 12
+    ; call MemCpy
+    ; add esp, 12
 
     mov ax, GdtLen
     mov word[gdt_ptr], ax
@@ -129,6 +135,7 @@ bounds_check:
 	push	5		; vector_no	= 5
 	jmp	exception
 inval_opcode:
+inval_opcode_limit equ inval_opcode-$$
 	push	0xFFFFFFFF	; no err code
 	push	6		; vector_no	= 6
 	jmp	exception
@@ -169,23 +176,20 @@ exception:
 	hlt
 
 test:
-    call cstart
-    ; mov eax, GDT_SEL_USER_DATA
-    ; mov ds, eax
-    ; mov word[ds:0x27a00], 0x3355
-    ; jmp $
+    ; call cstart
+	mov word[0x27a00], 0x1111
     ; int 6
     mov ax, GDT_SEL_TSS
     ltr ax
-    
     push GDT_SEL_USER_DATA
-    push 0x7C00
+    push TOP_OF_USER_STACK
     push GDT_SEL_USER_CODE
     push ring3
     retf
     jmp $
 
 ring3:
+	; int 3
     mov ax, GDT_SEL_VIDEO
     mov gs, ax
     mov edi, (80*14+20)*2
