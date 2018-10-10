@@ -69,6 +69,21 @@ GdtLen equ $-gdt
 
 gdt_ptr dw 0
 gdt_ptr_base dd 0
+; gdt: Descriptor 0, 0, 0
+; gdt_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL0
+; gdt_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL0
+; gdt_video: Descriptor 0B8000h, 0xfffff, DA_DRW|DA_DPL3
+; gdt_user_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3
+; gdt_user_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3
+; gdt_tss: Descriptor 0xea13, 0x69-1, DA_386TSS
+; ; gdt_tst: Gate GDT_SEL_KERNEL_CODE, 0x8aa1f, 0, DA_386CGate | DA_DPL0
+; gdt_tst: dw 0x00000	 
+; dw 0x8c00	 
+; dw 0x0008 
+; dw 0xea3f
+; GdtLen equ $-gdt
+; gdt_ptr dw GdtLen-1
+; gdt_ptr_base       dd 0
 
 idt:
 ; %rep 255
@@ -85,7 +100,7 @@ _start:
     mov esp, TOP_OF_KERNEL_STACK
     ; mov eax, SELF_CS
 
-    ; sgdt [gdt_ptr]
+    sgdt [gdt_ptr]
 	call cstart
     call moveGdt
     lgdt [gdt_ptr]
@@ -181,6 +196,10 @@ exception:
 	add	esp, 4*2	; 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS
 	hlt
 
+calltest:
+    mov eax, 0x4444
+    jmp $
+
 test:
     ; call cstart
     ; int 6
@@ -196,21 +215,15 @@ test:
     push TOP_OF_USER_STACK
     push GDT_SEL_USER_CODE
     push ring3
+; 	xor    eax, eax
+;  mov    ax, 7E00H
+;  shl    eax, 4
+;  add    eax, calltest
+; jmp $
+	; mov eax, calltest
+	; jmp $
+	; call 0x0038:0
     retf
-    jmp $
-
-ring3:
-	; int 3
-    call 0x0038:0
-    mov ax, GDT_SEL_VIDEO
-    mov gs, ax
-    mov edi, (80*14+20)*2
-    mov ah, 0ch
-    mov al, '3'
-    mov [gs:edi], ax
-    ; mov eax, GDT_SEL_USER_DATA
-    ; mov ds, eax
-    ; mov word[0x27a00], 0x3355
     jmp $
 
 tss:
@@ -244,8 +257,21 @@ tss:
     db 0xff
 TssLen equ $-tss
 
-calltest:
-    mov eax, 0x4444
+ring3:
+	; int 3
+	; mov eax, tss
+	; jmp $
+    call 0x0038:0
+	; call GDT_SEL_USER_DATA:calltest
+    mov ax, GDT_SEL_VIDEO
+    mov gs, ax
+    mov edi, (80*14+20)*2
+    mov ah, 0ch
+    mov al, '3'
+    mov [gs:edi], ax
+    ; mov eax, GDT_SEL_USER_DATA
+    ; mov ds, eax
+    ; mov word[0x27a00], 0x3355
     jmp $
 
 
