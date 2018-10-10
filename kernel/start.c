@@ -38,11 +38,11 @@ static void moveGdt()
 
 void cstart()
 {
-    DispStr("-----Move Gdt success-------\n\n");
+    // DispStr("-----Move Gdt success-------\n\n");
     init_gdt();
     init_idt();
-    DispStr("----Init idt success----\n\n");
-    DispStr("----JayOS----\n\n");
+    // DispStr("----Init idt success----\n\n");
+    // DispStr("----JayOS----\n\n");
 }
 
 void init_idt()
@@ -167,8 +167,8 @@ static void init_gdt()
     DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
     SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
 	
-    GATE call_test = create_gate(SelectorUserCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
-    testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_USER);
+    GATE call_test = create_gate(SelectorKernelCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
+    testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_KRNL);
 
     // DESCRIPTOR s3 = create_descriptor(0, TOP_OF_KERNEL_STACK, DA_DRWA|DA_32|DA_DPL0);
 	// ss3=insert_descriptor(gdt, 8, s3, PRIVILEGE_KRNL);
@@ -176,7 +176,7 @@ static void init_gdt()
 
 void calltest()
 {
-    // DispStr("i'm calltest\n");
+    DispStr("i'm calltest\n");
     while(1)
         ;
 }

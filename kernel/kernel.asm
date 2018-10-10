@@ -26,7 +26,7 @@ GDT_SEL_TSS equ 0x30|SA_RPL0
 ; SELF_ES equ 17E00H ;当前程序的段基址
 
 %include "include/pm.inc"
-%include "include/func.inc"
+%include "include/func1.inc"
 
 ; extern moveGdt
 ; extern gdt_ptr
@@ -259,10 +259,10 @@ test:
 ; TssLen equ $-tss
 
 ring3:
-	; int 3
+	; int 6
 	; mov eax, tss
 	; jmp $
-    call 0x003B:0
+    call 0x0038:0
 	; call GDT_SEL_USER_DATA:calltest
     mov ax, GDT_SEL_VIDEO
     mov gs, ax

@@ -4,7 +4,7 @@
 
 #include "kernel.h"
 
-extern int disp_pos;
+ int disp_pos;
 
 extern char gdt_ptr[6];
 extern DESCRIPTOR gdt[GDT_SIZE];
