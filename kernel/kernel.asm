@@ -59,9 +59,8 @@ global	page_fault
 global	copr_error
 
 
-global calltest
-global tss
-extern testcallS
+; extern calltest
+; global tss
 extern ss3
 
 gdt times 128*64 db 0
@@ -100,7 +99,7 @@ _start:
     mov esp, TOP_OF_KERNEL_STACK
     ; mov eax, SELF_CS
 
-    sgdt [gdt_ptr]
+    ; sgdt [gdt_ptr]
 	call cstart
     call moveGdt
     lgdt [gdt_ptr]
@@ -198,7 +197,8 @@ exception:
 
 calltest:
     mov eax, 0x4444
-    jmp $
+    ; jmp $
+    ret
 
 test:
     ; call cstart
@@ -224,44 +224,45 @@ test:
 	; jmp $
 	; call 0x0038:0
     retf
+    ; iret
     jmp $
 
-tss:
-    dd 0
-    dd TOP_OF_KERNEL_STACK
-    dd GDT_SEL_KERNEL_DATA
-    DD	0			; 1 级堆栈
-		DD	0			; 
-		DD	0			; 2 级堆栈
-		DD	0			; 
-		DD	0			; CR3
-		DD	0			; EIP
-		DD	0			; EFLAGS
-		DD	0			; EAX
-		DD	0			; ECX
-		DD	0			; EDX
-		DD	0			; EBX
-		DD	0			; ESP
-		DD	0			; EBP
-		DD	0			; ESI
-		DD	0			; EDI
-		DD	0			; ES
-		DD	0			; CS
-		DD	0			; SS
-		DD	0			; DS
-		DD	0			; FS
-		DD	0			; GS
-		DD	0			; LDT
-		DW	0			; 调试陷阱标志
-    dw $-tss+2
-    db 0xff
-TssLen equ $-tss
+; tss:
+;     dd 0
+;     dd TOP_OF_KERNEL_STACK
+;     dd GDT_SEL_KERNEL_DATA
+;     DD	0			; 1 级堆栈
+; 		DD	0			; 
+; 		DD	0			; 2 级堆栈
+; 		DD	0			; 
+; 		DD	0			; CR3
+; 		DD	0			; EIP
+; 		DD	0			; EFLAGS
+; 		DD	0			; EAX
+; 		DD	0			; ECX
+; 		DD	0			; EDX
+; 		DD	0			; EBX
+; 		DD	0			; ESP
+; 		DD	0			; EBP
+; 		DD	0			; ESI
+; 		DD	0			; EDI
+; 		DD	0			; ES
+; 		DD	0			; CS
+; 		DD	0			; SS
+; 		DD	0			; DS
+; 		DD	0			; FS
+; 		DD	0			; GS
+; 		DD	0			; LDT
+; 		DW	0			; 调试陷阱标志
+;     dw $-tss+2
+;     db 0xff
+; TssLen equ $-tss
 
 ring3:
 	; int 3
 	; mov eax, tss
 	; jmp $
-    call 0x0038:0
+    call 0x003B:0
 	; call GDT_SEL_USER_DATA:calltest
     mov ax, GDT_SEL_VIDEO
     mov gs, ax

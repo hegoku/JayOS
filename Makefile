@@ -22,7 +22,7 @@ buildimg:
 	dd if=build/boot.bin of=a.img bs=512 count=1 conv=notrunc
 	hdiutil attach -imagekey diskimage-class=CRawDiskImage a.img
 	cp build/loader /Volumes/JayOS/
-	cp build/k1 /Volumes/JayOS/kernel
+	cp build/kernel /Volumes/JayOS/kernel
 	hdiutil detach /Volumes/JayOS/
 
 boot.bin : boot/boot.asm include/fat12hdr.inc

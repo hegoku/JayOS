@@ -24,77 +24,16 @@ gdt_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL0
 gdt_video: Descriptor 0B8000h, 0xfffff, DA_DRW|DA_DPL3
 gdt_user_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3
 gdt_user_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3
-gdt_tss: Descriptor 0xea13, 0x69-1, DA_386TSS
-gdt_tst: Gate GDT_SEL_KERNEL_CODE, 0x8aa1f, 0, DA_386CGate | DA_DPL0
+gdt_tss: Descriptor 0x00007ef4, TssLen-1, DA_386TSS
+gdt_tst: Gate 0x40, 0, 0, (DA_386CGate |DA_DPL3)
+gdt_tdt: Descriptor 0x00007f5d, SegCodeDestLen-1, DA_C+DA_32
 GdtLen equ $-gdt
 gdt_ptr dw GdtLen-1
 gdt_ptr_base       dd 0
 
+gdt_tss_s equ gdt_tst-gdt
+
 [BITS 32]
-_start:
-mov eax ,0x5555
-jmp $
-    mov esp, TOP_OF_KERNEL_STACK
-    ; mov eax, SELF_CS
-
-    ; sgdt [gdt_ptr]
-    call moveGdt
-    lgdt [gdt_ptr]
-
-    ; lidt [idt_ptr]
-
-    jmp GDT_SEL_KERNEL_CODE:test ;强制刷新
-
-moveGdt:
-    ; movzx eax, word[gdt_ptr]
-    ; push eax ;size
-
-    ; mov eax, dword[gdt_ptr_base]
-    ; push eax ;src
-    
-    ; mov eax, gdt
-    ; push eax ;dst
-    
-    ; call MemCpy
-    ; add esp, 12
-
-    mov ax, GdtLen
-    mov word[gdt_ptr], ax
-
-    mov eax, gdt
-    mov dword[gdt_ptr_base], eax
-    ret
-
-calltest:
-    mov eax, 0x4444
-    jmp $
-
-test:
-    ; call cstart
-    ; int 6
-    ; mov eax, TSS
-    ; jmp $
-    ; mov ax, word[ss3]
-    ; jmp $
-    mov eax,0x555
-    jmp $
-    mov ax, GDT_SEL_TSS
-    ltr ax
-    push GDT_SEL_USER_DATA
-    push TOP_OF_USER_STACK
-    push GDT_SEL_USER_CODE
-    push ring3
-; 	xor    eax, eax
-;  mov    ax, 7E00H
-;  shl    eax, 4
-;  add    eax, calltest
-; jmp $
-	; mov eax, calltest
-	; jmp $
-	; call 0x0038:0
-    retf
-    jmp $
-
 tss:
     dd 0
     dd TOP_OF_KERNEL_STACK
@@ -125,6 +64,89 @@ tss:
     dw $-tss+2
     db 0xff
 TssLen equ $-tss
+
+calltest:
+    mov eax, 0x4444
+    jmp $
+    SegCodeDestLen	equ	$ - calltest
+
+_start:
+; mov eax ,0x5555
+; jmp $
+; mov eax, DA_386CGate | DA_DPL3
+; jmp $
+    mov esp, TOP_OF_KERNEL_STACK
+    ; mov eax, SELF_CS
+    ; xor	eax, eax
+	; mov	eax, calltest
+    ; jmp $
+	; mov	word [gdt_tst + 2], ax
+	; shr	eax, 16
+	; mov	byte [gdt_tst + 4], al
+	; mov	byte [gdt_tst + 7], ah
+
+    ; xor	eax, eax
+	; mov	eax, tss
+    ; jmp $
+	; mov	word [gdt_tss + 2], ax
+	; shr	eax, 16
+	; mov	byte [gdt_tss + 4], al
+	; mov	byte [gdt_tss + 7], ah
+    ; jmp $
+
+    ; sgdt [gdt_ptr]
+    call moveGdt
+    lgdt [gdt_ptr]
+
+    ; lidt [idt_ptr]
+    jmp GDT_SEL_KERNEL_CODE:test ;强制刷新
+
+moveGdt:
+    ; movzx eax, word[gdt_ptr]
+    ; push eax ;size
+
+    ; mov eax, dword[gdt_ptr_base]
+    ; push eax ;src
+    
+    ; mov eax, gdt
+    ; push eax ;dst
+    
+    ; call MemCpy
+    ; add esp, 12
+
+    mov ax, GdtLen
+    mov word[gdt_ptr], ax
+
+    mov eax, gdt
+    mov dword[gdt_ptr_base], eax
+    ret
+
+test:
+    ; call cstart
+    ; int 6
+    ; mov eax, TSS
+    ; jmp $
+    ; mov ax, word[ss3]
+    ; jmp $
+    ; call 0x0038:0
+    mov ax, GDT_SEL_TSS
+    ltr ax
+    push GDT_SEL_USER_DATA
+    push TOP_OF_USER_STACK
+    push GDT_SEL_USER_CODE
+    push ring3
+; 	xor    eax, eax
+;  mov    ax, 7E00H
+;  shl    eax, 4
+;  add    eax, calltest
+; jmp $
+	; mov eax, calltest
+	; jmp $
+	; call 0x0038:0
+    retf
+    jmp $
+
+
 
 ring3:
 	; int 3

@@ -12,7 +12,7 @@ unsigned short SelectorUserDs;
 unsigned short SelectorTss;
 unsigned short testcallS;
 unsigned short ss3;
-extern TSS tss;
+TSS tss;
 
 static void init_idt();
 static void init_gdt();
@@ -162,17 +162,21 @@ static void init_gdt()
 	DESCRIPTOR user_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
 	SelectorUserDs=insert_descriptor(gdt, 5, user_ds, PRIVILEGE_USER);
 
-	// tss.esp0 = TOP_OF_KERNEL_STACK;
-	// tss.ss0 = SelectorKernelDs;
-    // DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
-    DESCRIPTOR tss_desc = create_descriptor(0xe9fe, sizeof(TSS) - 1, DA_386TSS);
+	tss.esp0 = TOP_OF_KERNEL_STACK;
+	tss.ss0 = SelectorKernelDs;
+    DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
     SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
 	
-    GATE call_test = create_gate(SelectorKernelCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL0);
-    testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_KRNL);
+    GATE call_test = create_gate(SelectorUserCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
+    testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_USER);
 
-    DESCRIPTOR s3 = create_descriptor(0, TOP_OF_KERNEL_STACK, DA_DRWA|DA_32|DA_DPL0);
-	ss3=insert_descriptor(gdt, 8, s3, PRIVILEGE_KRNL);
+    // DESCRIPTOR s3 = create_descriptor(0, TOP_OF_KERNEL_STACK, DA_DRWA|DA_32|DA_DPL0);
+	// ss3=insert_descriptor(gdt, 8, s3, PRIVILEGE_KRNL);
+}
 
-    
+void calltest()
+{
+    // DispStr("i'm calltest\n");
+    while(1)
+        ;
 }

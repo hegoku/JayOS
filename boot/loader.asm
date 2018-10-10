@@ -346,13 +346,11 @@ MemCpyDst dd 0
 MemCpySrc dd 0
 
 gdt_0: Descriptor 0, 0, 0
-gdt_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL0
-gdt_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL0
-gdt_video: Descriptor 0B8000h, 0xfffff, DA_DRW|DA_DPL3
-gdt_user_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3
-gdt_user_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3
-gdt_tss: Descriptor 0xe9fe, 0x69-1, DA_386TSS
-; gdt_tst: Gate GDT_SEL_CODE, 0xe9fb, 0, DA_386CGate | DA_DPL0
+gdt_code: Descriptor 0, 0xfffff, (DA_CR|DA_32|DA_LIMIT_4K|DA_DPL0)
+gdt_data: Descriptor 0, 0xfffff, (DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL0)
+gdt_video: Descriptor 0B8000h, 0xfffff, (DA_DRW|DA_DPL3)
+; gdt_user_code: Descriptor 0, 0xfffff, (DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3)
+; gdt_user_data: Descriptor 0, 0xfffff, (DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3)
 GdtLen equ $-gdt_0
 GdtPtr dw GdtLen-1
        dd SELF_CS*10h+gdt_0
@@ -360,6 +358,6 @@ GdtPtr dw GdtLen-1
 GDT_SEL_CODE equ gdt_code-gdt_0
 GDT_SEL_DATA equ gdt_data-gdt_0
 GDT_SEL_VIDEO equ gdt_video-gdt_0
-GDT_SEL_USER_CODE equ gdt_user_code-gdt_0
-GDT_SEL_USER_DATA equ gdt_user_data-gdt_0
+; GDT_SEL_USER_CODE equ gdt_user_code-gdt_0
+; GDT_SEL_USER_DATA equ gdt_user_data-gdt_0
 
