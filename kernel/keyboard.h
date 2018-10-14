@@ -137,7 +137,7 @@ struct kb_inbuf {
 	char	buf[KB_IN_BYTES];	/* 缓冲区 */
 };
 
-void init_keyboard();
+void keyboard_init();
 void keyboard_handler(int irq);
 int keyboard_read();
 

@@ -2,6 +2,7 @@
 #include "global.h"
 #include "interrupt.h"
 #include "keyboard.h"
+#include "tty.h"
 
 // unsigned char gdt_ptr[6];
 // DESCRIPTOR gdt[GDT_SIZE];
@@ -17,6 +18,8 @@ TSS tss;
 
 static void init_idt();
 static void init_gdt();
+
+TTY tty;
 
 void calltest();
 
@@ -42,7 +45,9 @@ void cstart()
     // DispStr("-----Move Gdt success-------\n\n");
     init_gdt();
     init_idt();
-    init_keyboard();
+    keyboard_init();
+
+    tty = tty_create(0);
     // DispStr("----Init idt success----\n\n");
     // DispStr("----JayOS----\n\n");
 }
@@ -173,8 +178,9 @@ void calltest()
     {
         key = keyboard_read();
         if (!(key & FLAG_EXT)) {
-            output[0] = key & 0xff;
-            DispStr(output);
+            // tty_input(&tty, key & 0xff);
+            // output[0] = key & 0xff;
+            // DispStr(output);
         } else if(key==ENTER) {
             DispStr("\n");
         } else {
@@ -202,6 +208,8 @@ void calltest()
                     break;
             }
         }
+        tty_input(&tty, key& 0xff);
+        tty_output(&tty);
     }
 }
 
