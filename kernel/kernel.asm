@@ -57,6 +57,22 @@ global	stack_exception
 global	general_protection
 global	page_fault
 global	copr_error
+global	hwint00
+global	hwint01
+global	hwint02
+global	hwint03
+global	hwint04
+global	hwint05
+global	hwint06
+global	hwint07
+global	hwint08
+global	hwint09
+global	hwint10
+global	hwint11
+global	hwint12
+global	hwint13
+global	hwint14
+global	hwint15
 
 
 ; extern calltest
@@ -195,6 +211,103 @@ exception:
 	add	esp, 4*2	; 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS
 	hlt
 
+extern spurious_irq
+%macro	hwint_master	1
+	push	%1
+	; call	spurious_irq
+	add	esp, 4
+	iretd
+%endmacro
+
+hwint00:		; Interrupt routine for irq 0 (the clock).
+	iretd
+
+; ALIGN	16
+hwint01:		; Interrupt routine for irq 1 (keyboard)
+	hwint_master	1
+
+extern keyboard_handler
+; ALIGN	16
+hwint02:		; Interrupt routine for irq 2 (cascade!)
+    pushad
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov al, EOI ;设置EOI
+    out INT_M_CTL, al
+    ; sti
+	call keyboard_handler
+
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    iretd
+
+; ALIGN	16
+hwint03:		; Interrupt routine for irq 3 (second serial)
+	hwint_master	3
+
+; ALIGN	16
+hwint04:		; Interrupt routine for irq 4 (first serial)
+	hwint_master	4
+
+; ALIGN	16
+hwint05:		; Interrupt routine for irq 5 (XT winchester)
+	hwint_master	5
+
+; ALIGN	16
+hwint06:		; Interrupt routine for irq 6 (floppy)
+	hwint_master	6
+
+; ALIGN	16
+hwint07:		; Interrupt routine for irq 7 (printer)
+	hwint_master	7
+
+; ---------------------------------
+%macro	hwint_slave	1
+	push	%1
+	; call	spurious_irq
+	add	esp, 4
+	iretd
+%endmacro
+; ---------------------------------
+
+; ALIGN	16
+hwint08:		; Interrupt routine for irq 8 (realtime clock).
+	hwint_slave	8
+
+; ALIGN	16
+hwint09:		; Interrupt routine for irq 9 (irq 2 redirected)
+	hwint_slave	9
+
+; ALIGN	16
+hwint10:		; Interrupt routine for irq 10
+	hwint_slave	10
+
+; ALIGN	16
+hwint11:		; Interrupt routine for irq 11
+	hwint_slave	11
+
+; ALIGN	16
+hwint12:		; Interrupt routine for irq 12
+	hwint_slave	12
+
+; ALIGN	16
+hwint13:		; Interrupt routine for irq 13 (FPU exception)
+	hwint_slave	13
+
+; ALIGN	16
+hwint14:		; Interrupt routine for irq 14 (AT winchester)
+	hwint_slave	14
+
+; ALIGN	16
+hwint15:		; Interrupt routine for irq 15
+	hwint_slave	15
+
 calltest:
     mov eax, 0x4444
     ; jmp $
@@ -209,6 +322,7 @@ test:
     ; jmp $
     ; mov eax,tss
     ; jmp $
+    sti
     mov ax, GDT_SEL_TSS
     ltr ax
     push GDT_SEL_USER_DATA
@@ -264,7 +378,7 @@ ring3:
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
-	int 6
+	; int 6
 	; mov eax, tss
 	; jmp $
 	

@@ -1,6 +1,7 @@
 #include "kernel.h"
-#include "asm_global.h"
+#include "global.h"
 #include "interrupt.h"
+#include "keyboard.h"
 
 // unsigned char gdt_ptr[6];
 // DESCRIPTOR gdt[GDT_SIZE];
@@ -41,60 +42,49 @@ void cstart()
     // DispStr("-----Move Gdt success-------\n\n");
     init_gdt();
     init_idt();
+    init_keyboard();
     // DispStr("----Init idt success----\n\n");
     // DispStr("----JayOS----\n\n");
 }
 
 void init_idt()
 {
+    init_8259A();
+
 	// 全部初始化成中断门(没有陷阱门)
-	init_idt_desc(idt, INT_VECTOR_DIVIDE,	DA_386IGate,
-		      divide_error,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_DIVIDE, DA_386IGate, divide_error, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_DEBUG,		DA_386IGate,
-		      single_step_exception,	PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_DEBUG, DA_386IGate, single_step_exception, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_NMI,		DA_386IGate,
-		      nmi,			PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_NMI, DA_386IGate, nmi, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_BREAKPOINT,	DA_386IGate,
-		      breakpoint_exception,	PRIVILEGE_USER);
+	init_idt_desc(idt, INT_VECTOR_BREAKPOINT, DA_386IGate, breakpoint_exception, PRIVILEGE_USER);
 
-	init_idt_desc(idt, INT_VECTOR_OVERFLOW,	DA_386IGate,
-		      overflow,			PRIVILEGE_USER);
+	init_idt_desc(idt, INT_VECTOR_OVERFLOW,	DA_386IGate, overflow, PRIVILEGE_USER);
 
-	init_idt_desc(idt, INT_VECTOR_BOUNDS,	DA_386IGate,
-		      bounds_check,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_BOUNDS, DA_386IGate, bounds_check, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_INVAL_OP,	DA_386IGate,
-		      inval_opcode,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_INVAL_OP,	DA_386IGate, inval_opcode, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_COPROC_NOT,	DA_386IGate,
-		      copr_not_available,	PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_COPROC_NOT, DA_386IGate, copr_not_available, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_DOUBLE_FAULT,	DA_386IGate,
-		      double_fault,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_DOUBLE_FAULT,	DA_386IGate, double_fault, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_COPROC_SEG,	DA_386IGate,
-		      copr_seg_overrun,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_COPROC_SEG, DA_386IGate, copr_seg_overrun, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_INVAL_TSS,	DA_386IGate,
-		      inval_tss,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_INVAL_TSS, DA_386IGate, inval_tss, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_SEG_NOT,	DA_386IGate,
-		      segment_not_present,	PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_SEG_NOT, DA_386IGate, segment_not_present, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_STACK_FAULT,	DA_386IGate,
-		      stack_exception,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_STACK_FAULT, DA_386IGate, stack_exception, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_PROTECTION,	DA_386IGate,
-		      general_protection,	PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_PROTECTION, DA_386IGate, general_protection, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_PAGE_FAULT,	DA_386IGate,
-		      page_fault,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_PAGE_FAULT, DA_386IGate, page_fault, PRIVILEGE_KRNL);
 
-	init_idt_desc(idt, INT_VECTOR_COPROC_ERR,	DA_386IGate,
-		      copr_error,		PRIVILEGE_KRNL);
+	init_idt_desc(idt, INT_VECTOR_COPROC_ERR, DA_386IGate, copr_error, PRIVILEGE_KRNL);
+
+    init_idt_desc(idt, INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint02, PRIVILEGE_KRNL);
 }
 
 DESCRIPTOR create_descriptor(unsigned int base, unsigned int limit, unsigned short attr)
@@ -177,6 +167,46 @@ static void init_gdt()
 void calltest()
 {
     DispStr("i'm calltest\n");
-    while(1)
-        ;
+    char output[2] = {'\0', '\0'};
+    int key;
+    while (1)
+    {
+        key = keyboard_read();
+        if (!(key & FLAG_EXT)) {
+            output[0] = key & 0xff;
+            DispStr(output);
+        } else if(key==ENTER) {
+            DispStr("\n");
+        } else {
+            int raw_code=key&MASK_RAW;
+            switch (raw_code) {
+                case UP:
+                    if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
+                        asm("cli");
+                        out_byte(0x3d4, 0xc);
+                        out_byte(0x3d5, ((80*15)>>8)&0xff);
+                        out_byte(0x3d4, 0xd);
+                        out_byte(0x3d5, (80*15)&0xff);
+                        asm("sti");
+                    }
+                    break;
+                case DOWN:
+                    if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
+                        asm("cli");
+                        out_byte(0x3d4, 0xc);
+                        out_byte(0x3d5, 0&0xff);
+                        out_byte(0x3d4, 0xd);
+                        out_byte(0x3d5, 0&0xff);
+                        asm("sti");
+                    }
+                    break;
+            }
+        }
+    }
 }
+
+// void keyboard_handler(int irq)
+// {
+//     unsigned char scan_code = in_byte(0x60);
+//     disp_int(scan_code);
+// }

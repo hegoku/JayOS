@@ -7,7 +7,7 @@ CFLAGS      = -c
 
 TARGET		= boot.bin loader kernel k1
 
-OBJS        = build/kernel.o build/start.o build/interrupt.o
+OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o
 
 all : clean everything image
 
@@ -37,15 +37,20 @@ kernel : $(OBJS)
 build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 	$(ASM) -f elf -o $@ $<
 
-build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/asm_global.h
+build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/asm_global.h
+build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/k1.o : kernel/k1.asm include/pm.inc include/func.inc
 	$(ASM) -f elf -o $@ $<
 
+build/keyboard.o: kernel/keyboard.c kernel/keyboard.h kernel/keymap.h kernel/global.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/global.o: kernel/global.c kernel/global.h
+	$(CC) $(CFLAGS) -o $@ $<
 k1 : build/k1.o
 	$(LD) -s -Ttext $(ENTERPOINT) -m elf_i386 -o build/k1 build/k1.o
 

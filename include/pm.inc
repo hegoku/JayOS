@@ -316,3 +316,10 @@ PG_USU		EQU	4	; U/S 属性位值, 用户级
 	dw	((%2 >> 16) & 0FFFFh)			; 偏移 2				(2 字节)
 %endmacro ; 共 8 字节
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+INT_M_CTL equ 0x20
+INT_M_CTLMAST equ 0x21
+INT_S_CTL equ 0xA0
+INT_S_CTLMASK equ 0xA1
+EOI equ 0x20

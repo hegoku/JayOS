@@ -6,6 +6,8 @@ disp_pos	dd	0
 global DispStr
 global MemCpy
 global DispColorStr
+global in_byte
+global out_byte
 
 [BITS 32]
 
@@ -79,6 +81,34 @@ DispStr:
 
 .2:
 	mov	[disp_pos], edi
+    ;移动光标
+    cli
+    xor eax, eax
+    xor edx, edx
+    mov edx, 0x3d4
+    mov al, 0xe
+    out dx, al
+    nop
+    nop
+    mov eax, [disp_pos]
+    shr eax, 1
+    shr eax, 8
+    mov edx, 0x3d5
+    out dx, al
+    nop
+    nop
+    mov al, 0xf
+    mov edx, 0x3d4
+    out dx, al
+    nop
+    nop
+    mov eax, [disp_pos]
+    shr eax, 1
+    mov edx, 0x3d5
+    out dx, al
+    nop
+    nop
+    sti
 
 	pop	ebp
 	ret
@@ -117,6 +147,51 @@ DispColorStr:
 
 .2:
 	mov	[disp_pos], edi
-
+    ;移动光标
+    cli
+    xor eax, eax
+    xor edx, edx
+    mov edx, 0x3d4
+    mov al, 0xe
+    out dx, al
+    nop
+    nop
+    mov eax, [disp_pos]
+    shr eax, 1
+    shr eax, 8
+    mov edx, 0x3d5
+    out dx, al
+    nop
+    nop
+    mov al, 0xf
+    mov edx, 0x3d4
+    out dx, al
+    nop
+    nop
+    mov eax, [disp_pos]
+    shr eax, 1
+    mov edx, 0x3d5
+    out dx, al
+    nop
+    nop
+    sti
+    
 	pop	ebp
 	ret
+
+
+in_byte:
+    mov edx, [esp+4]
+    xor eax, eax
+    in al, dx
+    nop
+    nop
+    ret
+
+out_byte:
+    mov edx, [esp+4]
+    mov al, [esp+4+4]
+    out dx, al
+    nop
+    nop
+    ret

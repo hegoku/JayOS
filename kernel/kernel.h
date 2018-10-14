@@ -97,4 +97,10 @@ typedef struct s_tss {
     /*u8	iomap[2];*/
 }TSS;
 
+extern char gdt_ptr[6];
+extern DESCRIPTOR gdt[GDT_SIZE];
+
+extern char idt_ptr[6];
+extern GATE idt[IDT_SIZE];
+
 #endif
