@@ -12,8 +12,16 @@ void init_8259A()
 	out_byte(INT_M_CTLMASK,	0x1);			// Master 8259, ICW4.
 	out_byte(INT_S_CTLMASK,	0x1);			// Slave  8259, ICW4.
 
-	out_byte(INT_M_CTLMASK,	0xFD);	// Master 8259, OCW1. 
-	out_byte(INT_S_CTLMASK,	0xFF);	// Slave  8259, OCW1. 
+	// out_byte(INT_M_CTLMASK,	0xBD);	// Master 8259, OCW1.  开键盘和软盘
+	out_byte(INT_M_CTLMASK,	0xFF);	// Master 8259, OCW1.  开键盘和软盘
+	out_byte(INT_S_CTLMASK,	0xFF);	// Slave  8259, OCW1.
+
+    enable_irq(CLOCK_IRQ);
+    // enable_irq(KEYBOARD_IRQ);
+    // enable_irq(FLOPPY_IRQ);
+    // enable_irq(CASCADE_IRQ);
+    // enable_irq(AT_WINI_IRQ);
+
 }
 
 /*----------------------------------------------------------------------*

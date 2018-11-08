@@ -226,7 +226,7 @@ InitKernel:
         mov es, ax
         mov ax, BASE_OF_KERNEL_FILE
         mov ds, ax
-        call MemCpy
+        call memcpy
         add esp, 12
         pop es
         pop ds
@@ -282,7 +282,7 @@ KillFloppyMotor:
     pop dx
     ret
 
-MemCpy:
+memcpy:
 	push	ebp
 	mov	ebp, esp
 

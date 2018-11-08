@@ -1,5 +1,6 @@
 #include "tty.h"
 #include "global.h"
+#include "keyboard.h"
 
 TTY tty_create(unsigned char id)
 {
@@ -23,27 +24,41 @@ TTY tty_create(unsigned char id)
 
 void tty_input(TTY* tty, int content)
 {
-    if (tty->inbuf_count<TTY_IN_BYTES) {
-        *(tty->inbuf_head) = content;
-        tty->inbuf_head++;
-        if (tty->inbuf_head==tty->in_buff+TTY_IN_BYTES) {
-            tty->inbuf_head = tty->in_buff;
-        }
-        tty->inbuf_count++;
+    if (!(content & FLAG_EXT)) {
+        console_out_char(tty->console, content& 0xff);
     }
+    // if (tty->inbuf_count<TTY_IN_BYTES) {
+    //     *(tty->inbuf_head) = content;
+    //     tty->inbuf_head++;
+    //     if (tty->inbuf_head==tty->in_buff+TTY_IN_BYTES) {
+    //         tty->inbuf_head = tty->in_buff;
+    //     }
+    //     tty->inbuf_count++;
+    // }
 }
 
 void tty_output(TTY* tty)
 {
     if (tty->inbuf_count) {
+        char output[2] = {'\0', '\0'};
         char ch = *(tty->inbuf_tail);
+        output[0] = ch&0xff;
         tty->inbuf_tail++;
         if (tty->inbuf_tail==tty->in_buff+TTY_IN_BYTES) {
             tty->inbuf_tail = tty->in_buff;
         }
         tty->inbuf_count--;
+        // DispStr(output);
         console_out_char(tty->console, ch);
     }
+    // if (!(key & FLAG_EXT)) {
+    // //     tty_input(&tty, key& 0xff);
+    // // tty_output(&tty);
+    //     output[0] = key & 0xff;
+    //     console_out_char(tty->console, ch);
+    // } else if(key==ENTER) {
+    //     console_out_char(tty->console, '\n');
+    // }
 }
 
 static void console_out_char(CONSOLE* console, char ch)

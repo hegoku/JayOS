@@ -111,7 +111,7 @@ moveGdt:
     ; mov eax, gdt
     ; push eax ;dst
     
-    ; call MemCpy
+    ; call memcpy
     ; add esp, 12
 
     mov ax, GdtLen

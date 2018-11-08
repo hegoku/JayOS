@@ -1,31 +1,40 @@
-#include "kernel.h"
 #include "global.h"
 #include "interrupt.h"
 #include "keyboard.h"
+#include "fd.h"
+// #include "hd.h"
 #include "tty.h"
+#include "process.h"
+#include "system/desc.h"
+#include "kernel.h"
 
 // unsigned char gdt_ptr[6];
 // DESCRIPTOR gdt[GDT_SIZE];
-unsigned short SelectorKernelCs;
-unsigned short SelectorKernelDs;
-unsigned short SelectorVideo;
-unsigned short SelectorUserCs;
-unsigned short SelectorUserDs;
-unsigned short SelectorTss;
+
 unsigned short testcallS;
 unsigned short ss3;
 TSS tss;
 
 static void init_idt();
 static void init_gdt();
+void kernel_main();
+int is_in_int;
+void clock_handler(int irq);
 
 TTY tty;
 
+PROCESS process_table[PROC_NUMBER];
+PROCESS *p_proc_ready;
+
 void calltest();
+void TestA();
+void delay();
+
+void restart();
 
 static void moveGdt()
 {
-    // MemCpy(&gdt,
+    // memcpy(&gdt,
     //     (void*)(*((unsigned int*) (&gdt_ptr[2]))),
     //     *((unsigned short*) (&gdt_ptr[0])) +1
     // );
@@ -46,10 +55,20 @@ void cstart()
     init_gdt();
     init_idt();
     keyboard_init();
+    // init_hd();
+    // hd_open(0);
 
     tty = tty_create(0);
     // DispStr("----Init idt success----\n\n");
     // DispStr("----JayOS----\n\n");
+
+    process_table[0].pid = 0;
+    create_process(gdt, &process_table[0], (unsigned int)TestA);
+    process_table[0].regs.esp = TOP_OF_USER_STACK;
+
+    process_table[1].pid = 1;
+    create_process(gdt, &process_table[1], (unsigned int)calltest);
+    process_table[1].regs.esp = TOP_OF_USER_STACK-0x400;
 }
 
 void init_idt()
@@ -89,52 +108,10 @@ void init_idt()
 
 	init_idt_desc(idt, INT_VECTOR_COPROC_ERR, DA_386IGate, copr_error, PRIVILEGE_KRNL);
 
-    init_idt_desc(idt, INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint02, PRIVILEGE_KRNL);
-}
-
-DESCRIPTOR create_descriptor(unsigned int base, unsigned int limit, unsigned short attr)
-{
-    DESCRIPTOR desc;
-
-    desc.limit_low	= limit & 0x0FFFF;		/* 段界限 1		(2 字节) */
-	desc.base_low	= base & 0x0FFFF;		/* 段基址 1		(2 字节) */
-	desc.base_mid	= (base >> 16) & 0x0FF;		/* 段基址 2		(1 字节) */
-	desc.attr1		= attr & 0xFF;		/* 属性 1 */
-	desc.limit_high_attr2= ((limit >> 16) & 0x0F) |
-				  ((attr >> 8) & 0xF0);	/* 段界限 2 + 属性 2 */
-	desc.base_high	= (base >> 24) & 0x0FF;		/* 段基址 3		(1 字节) */
-    return desc;
-}
-
-unsigned short insert_descriptor(DESCRIPTOR *gdt, unsigned int index, DESCRIPTOR desc, unsigned short attr)
-{
-    gdt[index] = desc;
-    unsigned short selector = (index * 0x8);
-    selector |= attr;
-    return selector;
-}
-
-GATE create_gate(unsigned short selector, unsigned int limit, unsigned char dcount, unsigned short attr)
-{
-	GATE gate;
-	gate.offset_low	= limit & 0xFFFF;
-	gate.selector	= selector;
-	gate.dcount		= dcount;
-	gate.attr		= attr;
-	gate.offset_high	= (limit >> 16) & 0xFFFF;
-    return gate;
-}
-
-DESCRIPTOR gate_to_descriptor(GATE gate)
-{
-    DESCRIPTOR desc;
-    desc.limit_low = gate.offset_low;
-    desc.base_low = gate.selector;
-    desc.base_mid = gate.dcount;
-    desc.attr1 = gate.attr;
-    desc.limit_high_attr2 = gate.offset_high & 0xff;
-    desc.base_high = (gate.offset_high >> 8) & 0x0FF;
-    return desc;
+    init_idt_desc(idt, INT_VECTOR_IRQ0 + 0, DA_386IGate, hwint00, PRIVILEGE_KRNL); //时钟
+    init_idt_desc(idt, INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint01, PRIVILEGE_KRNL); //键盘
+    init_idt_desc(idt, INT_VECTOR_IRQ0 + 6, DA_386IGate, hwint06, PRIVILEGE_KRNL); //软盘
+    init_idt_desc(idt, AT_WINI_IRQ, DA_386IGate, hwint14, PRIVILEGE_KRNL); //硬盘
 }
 
 static void init_gdt()
@@ -159,28 +136,80 @@ static void init_gdt()
 
 	tss.esp0 = TOP_OF_KERNEL_STACK;
 	tss.ss0 = SelectorKernelDs;
+    // disp_int((unsigned int)&tss);while(1){}
     DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
     SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
 	
-    GATE call_test = create_gate(SelectorKernelCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
-    testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_KRNL);
+    // GATE call_test = create_gate(SelectorKernelCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
+    // testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_KRNL);
 
     // DESCRIPTOR s3 = create_descriptor(0, TOP_OF_KERNEL_STACK, DA_DRWA|DA_32|DA_DPL0);
 	// ss3=insert_descriptor(gdt, 8, s3, PRIVILEGE_KRNL);
 }
 
+void kernel_main()
+{
+    // DispStr("i'm kernel_main\n");
+    is_in_int = 0;
+    p_proc_ready = process_table;
+    restart();
+}
+
+void TestA()
+{
+    int i = 0;
+    while (1)
+    {
+        DispStr("A");
+        disp_int(i++);
+        DispStr(".");
+        delay(1);
+    }
+}
+
+void delay(int time)
+{
+    int i, j, k;
+    for (int k = 0; k < time; k++)
+    {
+        for (int i = 0; i < 10;i++) {
+            for (int j = 0; j < 10000; j++){}
+        }
+    }
+}
+
 void calltest()
 {
     DispStr("i'm calltest\n");
+    int i = 0;
+    while (1)
+    {
+        DispStr("B");
+        disp_int(i++);
+        DispStr(".");
+        delay(1);
+    }
+
     char output[2] = {'\0', '\0'};
     int key;
+
+    // floppy_init();
+    unsigned char *a="123456";
+    // floppy_motor_on();
+    // DispStr("\n");
+    // disp_int((long)a);
+    // FloppyReadSector(0, a);
+    // DispStr("\n");
+    // disp_int((long)a);
+
     while (1)
     {
         key = keyboard_read();
         if (!(key & FLAG_EXT)) {
-            // tty_input(&tty, key & 0xff);
-            // output[0] = key & 0xff;
-            // DispStr(output);
+        //     tty_input(&tty, key);
+        // tty_output(&tty);
+            output[0] = key & 0xff;
+            DispStr(output);
         } else if(key==ENTER) {
             DispStr("\n");
         } else {
@@ -208,13 +237,15 @@ void calltest()
                     break;
             }
         }
-        tty_input(&tty, key& 0xff);
-        tty_output(&tty);
+        // tty_input(&tty, key);
     }
 }
 
-// void keyboard_handler(int irq)
-// {
-//     unsigned char scan_code = in_byte(0x60);
-//     disp_int(scan_code);
-// }
+void clock_handler(int irq)
+{
+    DispStr("#");
+    p_proc_ready++;
+    if (p_proc_ready>=process_table+PROC_NUMBER) {
+        p_proc_ready = process_table;
+    }
+}

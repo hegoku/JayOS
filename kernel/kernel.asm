@@ -76,7 +76,7 @@ global	hwint15
 
 
 ; extern calltest
-; global tss
+extern tss
 extern ss3
 
 gdt times 128*64 db 0
@@ -109,7 +109,6 @@ IdtLen equ $-idt
 
 idt_ptr dw IdtLen-1
 idt_ptr_base dd idt
-
 [BITS 32]
 _start:
     mov esp, TOP_OF_KERNEL_STACK
@@ -122,7 +121,7 @@ _start:
 
     lidt [idt_ptr]
 
-    jmp GDT_SEL_KERNEL_CODE:test ;强制刷新
+    jmp GDT_SEL_KERNEL_CODE:csinit ;强制刷新
 
 moveGdt:
     ; movzx eax, word[gdt_ptr]
@@ -134,7 +133,7 @@ moveGdt:
     ; mov eax, gdt
     ; push eax ;dst
     
-    ; call MemCpy
+    ; call memcpy
     ; add esp, 12
 
     mov ax, GdtLen
@@ -218,18 +217,58 @@ extern spurious_irq
 	add	esp, 4
 	iretd
 %endmacro
-
+extern clock_handler
+extern keyboard_handler
+extern floppy_handler
+extern is_in_int
 hwint00:		; Interrupt routine for irq 0 (the clock).
-	iretd
+    sub esp,4
+    pushad
+    push ds
+    push es
+    push fs
+    push gs
+    mov dx,ss
+    mov ds, dx
+    mov es,dx
+
+    inc byte[gs:0]
+
+    mov al, EOI
+    out INT_M_CTL, al
+
+    inc dword[is_in_int]
+    cmp dword[is_in_int], 0
+    jne ret_to_proc
+
+    mov esp, TOP_OF_KERNEL_STACK
+
+    sti
+    push 0
+    call clock_handler
+    add esp, 4
+    cli
+
+extern p_proc_ready
+global restart
+restart:
+    mov	esp, [p_proc_ready]
+	lldt [esp + P_LDT_SEL]
+	lea	eax, [esp + P_STACKTOP]
+	mov	dword [tss + TSS3_S_SP0], eax
+ret_to_proc:
+    dec dword[is_in_int]
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    add esp,4
+    iretd
 
 ; ALIGN	16
 hwint01:		; Interrupt routine for irq 1 (keyboard)
-	hwint_master	1
-
-extern keyboard_handler
-; ALIGN	16
-hwint02:		; Interrupt routine for irq 2 (cascade!)
-    pushad
+	pushad
     push ds
     push es
     push fs
@@ -247,6 +286,12 @@ hwint02:		; Interrupt routine for irq 2 (cascade!)
     popad
     iretd
 
+
+; extern hd_handler
+; ALIGN	16
+hwint02:		; Interrupt routine for irq 2 (cascade!)
+   hwint_master 2
+
 ; ALIGN	16
 hwint03:		; Interrupt routine for irq 3 (second serial)
 	hwint_master	3
@@ -261,7 +306,23 @@ hwint05:		; Interrupt routine for irq 5 (XT winchester)
 
 ; ALIGN	16
 hwint06:		; Interrupt routine for irq 6 (floppy)
-	hwint_master	6
+	pushad
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov al, EOI ;设置EOI
+    out INT_M_CTL, al
+    ; sti
+	call floppy_handler
+
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    iretd
 
 ; ALIGN	16
 hwint07:		; Interrupt routine for irq 7 (printer)
@@ -302,18 +363,61 @@ hwint13:		; Interrupt routine for irq 13 (FPU exception)
 
 ; ALIGN	16
 hwint14:		; Interrupt routine for irq 14 (AT winchester)
-	hwint_slave	14
+	pushad
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov al, EOI ;设置EOI
+    out INT_M_CTL, al
+    nop
+    mov al, EOI ;设置EOI
+    out INT_S_CTL, al
+    ; sti
+	; call hd_handler
+
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    iretd
 
 ; ALIGN	16
 hwint15:		; Interrupt routine for irq 15
 	hwint_slave	15
 
-calltest:
-    mov eax, 0x4444
-    ; jmp $
-    ret
+global enable_irq
 
-test:
+enable_irq:
+	mov	ecx, [esp + 4]		; irq
+	pushf
+	cli
+	mov	ah, ~1
+	rol	ah, cl			; ah = ~(1 << (irq % 8))
+	cmp	cl, 8
+	jae	enable_8		; enable irq >= 8 at the slave 8259
+enable_0:
+	in	al, INT_M_CTLMASK
+	and	al, ah
+	out	INT_M_CTLMASK, al	; clear bit at master 8259
+	popf
+	ret
+enable_8:
+	in	al, INT_S_CTLMASK
+	and	al, ah
+	out	INT_S_CTLMASK, al	; clear bit at slave 8259
+	popf
+	ret
+
+; calltest:
+;     mov eax, 0x4444
+;     ; jmp $
+;     ret
+
+extern kernel_main
+csinit:
     ; call cstart
     ; int 6
     ; mov eax, TSS
@@ -322,13 +426,14 @@ test:
     ; jmp $
     ; mov eax,tss
     ; jmp $
-    sti
+    ; sti
     mov ax, GDT_SEL_TSS
     ltr ax
-    push GDT_SEL_USER_DATA
-    push TOP_OF_USER_STACK
-    push GDT_SEL_USER_CODE
-    push ring3
+    jmp kernel_main
+    ; push GDT_SEL_USER_DATA
+    ; push TOP_OF_USER_STACK
+    ; push GDT_SEL_USER_CODE
+    ; push ring3
 ; 	xor    eax, eax
 ;  mov    ax, 7E00H
 ;  shl    eax, 4
@@ -372,6 +477,7 @@ test:
 ;     db 0xff
 ; TssLen equ $-tss
 
+extern calltest
 ring3:
 	xor eax, eax
 	mov ax, GDT_SEL_USER_DATA
@@ -382,8 +488,9 @@ ring3:
 	; mov eax, tss
 	; jmp $
 	
-    call 0x0038:0
+    ; call 0x0038:0
 	; call GDT_SEL_USER_DATA:calltest
+	call calltest
     mov ax, GDT_SEL_VIDEO
     mov gs, ax
     mov edi, (80*14+20)*2

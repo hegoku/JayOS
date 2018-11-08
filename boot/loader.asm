@@ -283,7 +283,7 @@ InitKernel:
         push dword[SELF_CS*10h+MemCpySrc]
         push dword[SELF_CS*10h+MemCpyDst]
 
-        call MemCpy
+        call memcpy
         add esp, 12
 
         pop ebx
@@ -295,7 +295,7 @@ InitKernel:
 JmpToKernel:
     jmp [SELF_CS*10h+KernelEntry]
 
-; MemCpy:
+; memcpy:
 ; 	push	ebp
 ; 	mov	ebp, esp
 
