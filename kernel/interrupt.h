@@ -2,7 +2,7 @@
 #ifndef _INTERRUPT_H_
 #define _INTERRUPT_H_
 
-#include "kernel.h"
+#include "system/desc.h"
 
 /* 中断向量 */
 #define	INT_VECTOR_DIVIDE		0x0
@@ -42,6 +42,10 @@
 #define	PRINTER_IRQ	7
 #define	AT_WINI_IRQ	14	/* at winchester */
 
+#define IRQ_NUMBER 16
+
+typedef void (*irq_handler)(int irq);
+
 void init_idt_desc(GATE* idt, unsigned char vector, unsigned char desc_type, void* handler, unsigned char privilege);
 void init_8259A();
 
@@ -69,5 +73,8 @@ extern void hwint02();
 extern void hwint06();
 extern void hwint14();
 extern void enable_irq();
+extern void disable_irq();
+
+void spurious_irq(int irq);
 
 #endif

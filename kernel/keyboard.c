@@ -119,7 +119,7 @@ int keyboard_read()
 		code_with_E0 = 0;
 		scan_code = get_byte_from_kb_buf();
 
-		/* parse the scan code below */
+        /* parse the scan code below */
 		if (scan_code == 0xE1) {
 			int i;
 			unsigned char pausebreak_scan_code[] = {0xE1, 0x1D, 0x45, 0xE1, 0x9D, 0xC5};

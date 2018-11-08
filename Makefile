@@ -40,7 +40,7 @@ build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h kernel/process.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h
+build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h include/system/desc.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/desc.o : lib/desc.c include/system/desc.h

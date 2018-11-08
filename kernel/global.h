@@ -12,6 +12,8 @@ unsigned char in_byte(unsigned short port);
 // void MemSet(void* p_dst, char ch, int size);
 void port_read(unsigned short port, void* buf, int n);
 void port_write(unsigned short port, void* buf, int n);
+void disable_int();
+void enable_int();
 
 void disp_int(int input);
 // char *itoa(char *str, int num);

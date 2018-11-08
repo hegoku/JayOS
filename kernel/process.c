@@ -18,5 +18,5 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.gs = (SelectorVideo&SA_RPL_MASK)| SA_RPL3;
     p->regs.eip = process_entry;
     p->regs.esp = TOP_OF_USER_STACK;;
-    p->regs.eflags = 0x1202;
+    p->regs.eflags = 0x3202;
 }

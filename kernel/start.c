@@ -13,7 +13,15 @@
 
 unsigned short testcallS;
 unsigned short ss3;
+
 TSS tss;
+irq_handler irq_table[IRQ_NUMBER];
+unsigned short SelectorKernelCs;
+unsigned short SelectorKernelDs;
+unsigned short SelectorVideo;
+unsigned short SelectorUserCs;
+unsigned short SelectorUserDs;
+unsigned short SelectorTss;
 
 static void init_idt();
 static void init_gdt();
@@ -75,7 +83,11 @@ void init_idt()
 {
     init_8259A();
 
-	// 全部初始化成中断门(没有陷阱门)
+    for (int i; i < IRQ_NUMBER; i++) {
+        irq_table[i] = spurious_irq;
+    }
+
+    // 全部初始化成中断门(没有陷阱门)
 	init_idt_desc(idt, INT_VECTOR_DIVIDE, DA_386IGate, divide_error, PRIVILEGE_KRNL);
 
 	init_idt_desc(idt, INT_VECTOR_DEBUG, DA_386IGate, single_step_exception, PRIVILEGE_KRNL);
@@ -150,6 +162,12 @@ static void init_gdt()
 void kernel_main()
 {
     // DispStr("i'm kernel_main\n");
+    irq_table[CLOCK_IRQ] = clock_handler;
+    enable_irq(CLOCK_IRQ);
+
+    irq_table[KEYBOARD_IRQ] = keyboard_handler;
+    enable_irq(KEYBOARD_IRQ);
+
     is_in_int = 0;
     p_proc_ready = process_table;
     restart();
@@ -160,10 +178,10 @@ void TestA()
     int i = 0;
     while (1)
     {
-        DispStr("A");
-        disp_int(i++);
-        DispStr(".");
-        delay(1);
+        // DispStr("A");
+        // disp_int(i++);
+        // DispStr(".");
+        // delay(1);
     }
 }
 
@@ -182,13 +200,13 @@ void calltest()
 {
     DispStr("i'm calltest\n");
     int i = 0;
-    while (1)
-    {
-        DispStr("B");
-        disp_int(i++);
-        DispStr(".");
-        delay(1);
-    }
+    // while (1)
+    // {
+    //     DispStr("B");
+    //     disp_int(i++);
+    //     DispStr(".");
+    //     delay(1);
+    // }
 
     char output[2] = {'\0', '\0'};
     int key;
@@ -205,9 +223,10 @@ void calltest()
     while (1)
     {
         key = keyboard_read();
-        if (!(key & FLAG_EXT)) {
-        //     tty_input(&tty, key);
-        // tty_output(&tty);
+        if (!(key & FLAG_EXT))
+        {
+            //     tty_input(&tty, key);
+            // tty_output(&tty);
             output[0] = key & 0xff;
             DispStr(output);
         } else if(key==ENTER) {
@@ -243,7 +262,7 @@ void calltest()
 
 void clock_handler(int irq)
 {
-    DispStr("#");
+    // DispStr("#");
     p_proc_ready++;
     if (p_proc_ready>=process_table+PROC_NUMBER) {
         p_proc_ready = process_table;

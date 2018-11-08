@@ -2,6 +2,7 @@
 #define _KERNEL_H_
 
 #include "system/desc.h"
+#include "interrupt.h"
 // #define GDT_SIZE 128
 // #define IDT_SIZE 256
 
@@ -105,12 +106,13 @@ extern DESCRIPTOR gdt[GDT_SIZE];
 
 extern char idt_ptr[6];
 extern GATE idt[IDT_SIZE];
+extern irq_handler irq_table[];
 
-unsigned short SelectorKernelCs;
-unsigned short SelectorKernelDs;
-unsigned short SelectorVideo;
-unsigned short SelectorUserCs;
-unsigned short SelectorUserDs;
-unsigned short SelectorTss;
+extern unsigned short SelectorKernelCs;
+extern unsigned short SelectorKernelDs;
+extern unsigned short SelectorVideo;
+extern unsigned short SelectorUserCs;
+extern unsigned short SelectorUserDs;
+extern unsigned short SelectorTss;
 
 #endif
