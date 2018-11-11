@@ -1,4 +1,5 @@
-ENTERPOINT  = 0x7E00
+;ENTERPOINT  = 0x7E00
+ENTERPOINT  = 0x100000
 
 ASM			= nasm
 CC          = bin/bin/i386-elf-gcc
@@ -7,7 +8,7 @@ CFLAGS      = -c -fno-builtin -I include/
 
 TARGET		= boot.bin loader kernel k1
 
-OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/floppy.o build/desc.o build/stdlib.o build/process.o
+OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/floppy.o build/desc.o build/stdlib.o build/process.o build/unistd.o build/stdio.o build/string.o
 
 all : clean everything image
 
@@ -37,7 +38,7 @@ kernel : $(OBJS)
 build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 	$(ASM) -f elf -o $@ $<
 
-build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h kernel/process.h
+build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h kernel/process.h include/unistd.h include/stdio.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h include/system/desc.h
@@ -57,6 +58,21 @@ build/tty.o: kernel/tty.c kernel/tty.h
 
 build/stdlib.o: lib/stdlib.c include/stdlib.h
 	$(CC) $(CFLAGS) -o $@ $<
+
+build/unistd.o: lib/unistd.c include/unistd.h include/sys/types.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/stdio.o: lib/stdio.c include/stdarg.h include/unistd.h include/sys/types.h include/stdio.h include/string.h kernel/global.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/string_asm.o : lib/string.asm
+	$(ASM) -f elf -o $@ $<
+
+build/string_c.o : lib/string.c include/string.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/string.o : build/string_asm.o build/string_c.o
+	$(LD) -r -m elf_i386 -o build/string.o build/string_asm.o build/string_c.o
 
 build/process.o: kernel/process.c kernel/process.h
 	$(CC) $(CFLAGS) -o $@ $<

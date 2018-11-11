@@ -16,7 +16,8 @@ global _start
 TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
 TOP_OF_USER_STACK equ 0x6C00 ;用户栈顶
 BASE_OF_KERNEL_STACK equ 6C00H ;kernel栈基地址
-SELF_CS equ 7E0H ;当前程序的段基址
+; SELF_CS equ 7E0H ;当前程序的段基址
+SELF_CS equ 10000H ;当前程序的段基址
 GDT_SEL_KERNEL_CODE equ 0x8|SA_RPL0 ;因为loader的 GDT_SEL_CODE 选择子为 8
 GDT_SEL_KERNEL_DATA equ 0x10|SA_RPL0
 GDT_SEL_VIDEO equ 0x18|SA_RPL3
@@ -24,6 +25,7 @@ GDT_SEL_USER_CODE equ 0x20|SA_RPL3
 GDT_SEL_USER_DATA equ 0x28|SA_RPL3
 GDT_SEL_TSS equ 0x30|SA_RPL0
 ; SELF_ES equ 17E00H ;当前程序的段基址
+INT_VECTOR_SYS_CALL equ 0x80 ;系统中断号
 
 %include "include/pm.inc"
 %include "include/func.inc"
@@ -37,8 +39,10 @@ extern kernel_main
 extern SelectorTss
 extern tss
 extern irq_table
+extern sys_call_table
 extern p_proc_ready
 extern is_in_int
+extern ticks
 
 global gdt
 global gdt_ptr
@@ -79,6 +83,12 @@ global	hwint12
 global	hwint13
 global	hwint14
 global	hwint15
+global sys_call
+
+global sys_call_0_param
+global sys_call_1_param
+global sys_call_2_param
+global sys_call_3_param
 
 
 ; extern calltest
@@ -225,7 +235,7 @@ exception:
 	hlt
 
 %macro	hwint_master 1
-    sub esp,4
+    ; sub esp,4
     pushad
     push ds
     push es
@@ -235,6 +245,10 @@ exception:
     mov ds, dx
     mov es,dx
 
+    inc dword[is_in_int]
+    cmp dword[is_in_int], 0
+    jne ret_to_proc
+
     in al, INT_M_CTLMASK ;屏蔽当前中断
     or al, (1<<%1)
     out INT_M_CTLMASK, al
@@ -242,15 +256,10 @@ exception:
     out INT_M_CTL, al
     sti
 
-    inc dword[is_in_int]
-    cmp dword[is_in_int], 0
-    jne ret_to_proc
-
     mov esp, TOP_OF_KERNEL_STACK
 
     push %1
 	call [irq_table+4*%1]
-    ; call clock_handler
 	add	esp, 4
 
     cli
@@ -370,6 +379,38 @@ hwint14:		; Interrupt routine for irq 14 (AT winchester)
 hwint15:		; Interrupt routine for irq 15
 	hwint_slave	15
 
+sys_call:
+    ; sub esp,4
+    pushad
+    push ds
+    push es
+    push fs
+    push gs
+    mov edi,ss
+    mov ds, edi
+    mov es,edi
+
+    mov esi, esp ;进程表起始地址
+
+    inc dword[is_in_int]
+    cmp dword[is_in_int], 0
+    jne ret_to_proc
+
+    mov esp, TOP_OF_KERNEL_STACK
+
+    sti
+
+    push edx
+    push ecx
+    push ebx
+	call [sys_call_table+4*eax]
+    add esp, 4*3
+    mov [esi+EAXREG-P_STACKBASE], eax ;保存 [sys_call_table+4*eax]  函数的返回值到进程表的eax寄存器以便获取
+
+    cli
+    push restart
+	ret
+
 restart:
     mov	esp, [p_proc_ready]
 	lldt [esp + P_LDT_SEL]
@@ -382,8 +423,92 @@ ret_to_proc:
     pop es
     pop ds
     popad
-    add esp,4
+    ; add esp,4
     iretd
+
+; global get_ticks
+; get_ticks:
+;     push eax
+;     mov eax, 0
+;     mov ebx, 11
+;     mov ecx, 22
+;     mov edx, 33
+;     int INT_VECTOR_SYS_CALL
+;     pop eax
+;     ret
+
+; void sys_call_0_param(int index);
+sys_call_0_param:
+    push esi
+	mov	esi, esp
+    push ebx
+    push ecx
+    push edx
+	mov	eax, [esi + 8]	; system call table index, the index of sys_call_table[]
+	mov	ebx, [esi + 12]	; not used
+	mov	ecx, [esi + 16]	; not used
+	mov	edx, 0	; not used
+    int INT_VECTOR_SYS_CALL
+    pop edx
+    pop ecx
+    pop ebx
+    mov esp, esi
+    pop esi
+    ret
+
+sys_call_1_param:
+    push esi
+	mov	esi, esp
+    push ebx
+    push ecx
+    push edx
+	mov	eax, [esi + 8]	; system call table index, the index of sys_call_table[]
+	mov	ebx, [esi + 12]
+	mov	ecx, 0	; not used
+	mov	edx, 0	; not used
+    int INT_VECTOR_SYS_CALL
+    pop edx
+    pop ecx
+    pop ebx
+    mov esp, esi
+    pop esi
+    ret
+
+sys_call_2_param:
+    push esi
+	mov	esi, esp
+    push ebx
+    push ecx
+    push edx
+	mov	eax, [esi + 8]	; system call table index, the index of sys_call_table[]
+	mov	ebx, [esi + 12]
+	mov	ecx, [esi + 16]
+	mov	edx, 0	; not used
+    int INT_VECTOR_SYS_CALL
+    pop edx
+    pop ecx
+    pop ebx
+    mov esp, esi
+    pop esi
+    ret
+
+sys_call_3_param:
+    push esi
+	mov	esi, esp
+    push ebx
+    push ecx
+    push edx
+	mov	eax, [esi + 8]	; system call table index, the index of sys_call_table[]
+	mov	ebx, [esi + 12]
+	mov	ecx, [esi + 16]
+	mov	edx, [esi + 20]
+    int INT_VECTOR_SYS_CALL
+    pop edx
+    pop ecx
+    pop ebx
+    mov esp, esi
+    pop esi
+    ret
 
 ring3:
 	xor eax, eax

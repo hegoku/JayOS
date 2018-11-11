@@ -1,6 +1,10 @@
-#include "include/stdarg.h"
-#include "include/stdio.h"
-#include "include/string.h"
+#include "stdarg.h"
+#include "unistd.h"
+#include "stdio.h"
+#include "string.h"
+#include "../kernel/global.h"
+
+#define STR_DEFAULT_LEN 1024
 
 static char* i2a(int val, int base, char ** ps)
 {
@@ -16,21 +20,20 @@ static char* i2a(int val, int base, char ** ps)
 
 int vsprintf(char *buf, const char *fmt, va_list args)
 {
-	char*	p;
+	char* p;
 
 	va_list	p_next_arg = args;
 	int	m;
 
-	char	inner_buf[1024];
-	char	cs;
+	char inner_buf[STR_DEFAULT_LEN];
+	char cs;
 	int	align_nr;
 
 	for (p=buf;*fmt;fmt++) {
 		if (*fmt != '%') {
 			*p++ = *fmt;
 			continue;
-		}
-		else {		/* a format string begins */
+		} else {		/* a format string begins */
 			align_nr = 0;
 		}
 
@@ -39,12 +42,10 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 		if (*fmt == '%') {
 			*p++ = *fmt;
 			continue;
-		}
-		else if (*fmt == '0') {
+		} else if (*fmt == '0') {
 			cs = '0';
 			fmt++;
-		}
-		else {
+		} else {
 			cs = ' ';
 		}
 		while (((unsigned char)(*fmt) >= '0') && ((unsigned char)(*fmt) <= '9')) {
@@ -53,11 +54,12 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 			fmt++;
 		}
 
-		char * q = inner_buf;
-		memset(q, 0, sizeof(inner_buf));
+        char * q = inner_buf;
+		// memset(q, 0, sizeof(inner_buf));
 
-		switch (*fmt) {
-		case 'c':
+        switch (*fmt)
+        {
+        case 'c':
 			*q++ = *((char*)p_next_arg);
 			p_next_arg += 4;
 			break;
@@ -97,11 +99,22 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 
 	*p = 0;
 
-	return (p - buf);
+    return (p - buf);
 }
 
 int sprintf(char *buf, const char *fmt, ...)
 {
 	va_list arg = (va_list)((char*)(&fmt) + 4);        /* 4 是参数 fmt 所占堆栈中的大小 */
 	return vsprintf(buf, fmt, arg);
+}
+
+int printf(const char *fmt, ...)
+{
+    int i;
+    char buf[STR_DEFAULT_LEN];
+    va_list arg = (va_list)((char*)(&fmt)+4);//4为fmt所占堆栈中大小
+    i = vsprintf(buf, fmt, arg);
+    // DispStr((char*)buf);
+    write(1, buf, i);
+    return i;
 }

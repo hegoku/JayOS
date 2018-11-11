@@ -7,6 +7,8 @@
 #include "process.h"
 #include "system/desc.h"
 #include "kernel.h"
+#include "unistd.h"
+#include "stdio.h"
 
 // unsigned char gdt_ptr[6];
 // DESCRIPTOR gdt[GDT_SIZE];
@@ -16,6 +18,7 @@ unsigned short ss3;
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
+sys_call_handler sys_call_table[SYS_CALL_NUMBER];
 unsigned short SelectorKernelCs;
 unsigned short SelectorKernelDs;
 unsigned short SelectorVideo;
@@ -28,6 +31,9 @@ static void init_gdt();
 void kernel_main();
 int is_in_int;
 void clock_handler(int irq);
+int sys_get_ticks();
+int get_ticks();
+ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte);
 
 TTY tty;
 
@@ -87,6 +93,9 @@ void init_idt()
         irq_table[i] = spurious_irq;
     }
 
+    sys_call_table[0] = sys_get_ticks;
+    sys_call_table[1] = sys_write;
+
     // 全部初始化成中断门(没有陷阱门)
 	init_idt_desc(idt, INT_VECTOR_DIVIDE, DA_386IGate, divide_error, PRIVILEGE_KRNL);
 
@@ -120,6 +129,8 @@ void init_idt()
 
 	init_idt_desc(idt, INT_VECTOR_COPROC_ERR, DA_386IGate, copr_error, PRIVILEGE_KRNL);
 
+	init_idt_desc(idt, INT_VECTOR_SYS_CALL, DA_386IGate, sys_call, PRIVILEGE_USER);
+
     init_idt_desc(idt, INT_VECTOR_IRQ0 + 0, DA_386IGate, hwint00, PRIVILEGE_KRNL); //时钟
     init_idt_desc(idt, INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint01, PRIVILEGE_KRNL); //键盘
     init_idt_desc(idt, INT_VECTOR_IRQ0 + 6, DA_386IGate, hwint06, PRIVILEGE_KRNL); //软盘
@@ -137,7 +148,7 @@ static void init_gdt()
 	DESCRIPTOR kernel_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL0);
 	SelectorKernelDs=insert_descriptor(gdt, 2, kernel_ds, PRIVILEGE_KRNL);
 
-	DESCRIPTOR video = create_descriptor(0xB8000, 0xfffff, DA_DRW | DA_32 | DA_DPL3);
+	DESCRIPTOR video = create_descriptor(0xB8000, 0xBFFFF, DA_DRW | DA_32 | DA_DPL3);
 	SelectorVideo=insert_descriptor(gdt, 3, video, PRIVILEGE_USER);
 
 	DESCRIPTOR user_cs = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
@@ -162,6 +173,7 @@ static void init_gdt()
 void kernel_main()
 {
     // DispStr("i'm kernel_main\n");
+    ticks = 0;
     irq_table[CLOCK_IRQ] = clock_handler;
     enable_irq(CLOCK_IRQ);
 
@@ -175,13 +187,17 @@ void kernel_main()
 
 void TestA()
 {
-    int i = 0;
+    unsigned int i = 0;
     while (1)
     {
+        // printf("1111111111111111111111111111111");
+        // printf("%s.", "A31231\n");
+        printf("%s%x ", "A", get_ticks());
+        // printf("%s%x ", "A", i++);
         // DispStr("A");
-        // disp_int(i++);
+        // disp_int(get_ticks());
         // DispStr(".");
-        // delay(1);
+        delay(1);
     }
 }
 
@@ -198,15 +214,16 @@ void delay(int time)
 
 void calltest()
 {
-    DispStr("i'm calltest\n");
-    int i = 0;
-    // while (1)
-    // {
-    //     DispStr("B");
-    //     disp_int(i++);
-    //     DispStr(".");
-    //     delay(1);
-    // }
+    // DispStr("i'm calltest\n");
+    unsigned int i = 0;
+    while (1)
+    {
+        // DispStr("B");
+        // disp_int(i++);
+        // DispStr(".");
+        printf("%c%x.", 'B', i++);
+        delay(1);
+    }
 
     char output[2] = {'\0', '\0'};
     int key;
@@ -222,6 +239,8 @@ void calltest()
 
     while (1)
     {
+        printf("%c%x.", 'B', i++);
+        delay(1);
         key = keyboard_read();
         if (!(key & FLAG_EXT))
         {
@@ -229,29 +248,22 @@ void calltest()
             // tty_output(&tty);
             output[0] = key & 0xff;
             DispStr(output);
-        } else if(key==ENTER) {
-            DispStr("\n");
-        } else {
+            // disp_int(key);
+            // printf("%c", output[0]);
+            // tty_write(&tty, output, 1);
+        }
+        else
+        {
             int raw_code=key&MASK_RAW;
             switch (raw_code) {
                 case UP:
                     if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
-                        asm("cli");
-                        out_byte(0x3d4, 0xc);
-                        out_byte(0x3d5, ((80*15)>>8)&0xff);
-                        out_byte(0x3d4, 0xd);
-                        out_byte(0x3d5, (80*15)&0xff);
-                        asm("sti");
+                        scroll_screen(tty.console, SCR_UP);
                     }
                     break;
                 case DOWN:
                     if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
-                        asm("cli");
-                        out_byte(0x3d4, 0xc);
-                        out_byte(0x3d5, 0&0xff);
-                        out_byte(0x3d4, 0xd);
-                        out_byte(0x3d5, 0&0xff);
-                        asm("sti");
+                        scroll_screen(tty.console, SCR_DN);
                     }
                     break;
             }
@@ -263,8 +275,32 @@ void calltest()
 void clock_handler(int irq)
 {
     // DispStr("#");
+    // printf("#")
+    char a = '#';
+    tty_write(&tty, &a, 1);
+    ticks++;
     p_proc_ready++;
     if (p_proc_ready>=process_table+PROC_NUMBER) {
         p_proc_ready = process_table;
     }
+}
+
+int sys_get_ticks()
+{
+    // DispStr("\nAAAAA:");
+    // disp_int(a);
+    // DispStr("   BBBBB:");
+    // disp_int(b);
+    // DispStr("\n");
+    return ticks;
+}
+
+int get_ticks()
+{
+    return sys_call_0_param(0);
+}
+
+ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte)
+{
+    return tty_write(&tty, (char *)buf, nbyte);
 }

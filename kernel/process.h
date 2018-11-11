@@ -14,7 +14,7 @@ typedef struct s_stackframe {
     unsigned int edx;
     unsigned int ecx;
     unsigned int eax;
-    unsigned int retaddr; //return addr from kernel.asm::save()
+    // unsigned int retaddr; //return addr from kernel.asm::save()
     unsigned int eip;
     unsigned int cs;
     unsigned int eflags;

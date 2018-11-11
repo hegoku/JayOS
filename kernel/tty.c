@@ -61,22 +61,100 @@ void tty_output(TTY* tty)
     // }
 }
 
+unsigned int tty_write(TTY* tty, char* buf, int len)
+{
+    char *p = buf;
+    int i = len;
+    while (i)
+    {
+        console_out_char(tty->console, *p++);
+        i--;
+    }
+    return len;
+}
+
 static void console_out_char(CONSOLE* console, char ch)
 {
-    unsigned char *p_vmem = (unsigned char *)(V_MEM_BASE+console->cursor*2);
+    unsigned char *p_vmem = (unsigned char *)(V_MEM_BASE + console->cursor * 2);
+    // *p_vmem++ = ch;
+    // *p_vmem++ = DEFAULT_CHAR_COLOR;
+    // console->cursor++;
+    switch (ch) {
+        case '\n':
+            if (console->cursor < console->original_addr +
+                console->v_mem_limit - SCREEN_WIDTH) {
+                console->cursor = console->original_addr + SCREEN_WIDTH * 
+                    ((console->cursor - console->original_addr) /
+                    SCREEN_WIDTH + 1);
+            }
+            break;
+        case '\b':
+            if (console->cursor > console->original_addr) {
+                console->cursor--;
+                *(p_vmem-2) = ' ';
+                *(p_vmem-1) = DEFAULT_CHAR_COLOR;
+            }
+            break;
+        default:
+            if (console->cursor < console->original_addr + console->v_mem_limit - 1) {
+                *p_vmem++ = ch;
+                *p_vmem++ = DEFAULT_CHAR_COLOR;
+                console->cursor++;
+            }
+            break;
+    }
 
-    *p_vmem++ = ch;
-    *p_vmem++ = DEFAULT_CHAR_COLOR;
-    console->cursor++;
+    while (console->cursor >= console->current_start_addr + SCREEN_SIZE)
+    {
+        console->cursor = 0;
+        // scroll_screen(console, SCR_DN);
+    }
+
+    // flush(console);
+}
+
+static void flush(CONSOLE *console)
+{
     console_set_cursor(console->cursor);
+    set_console_start_addr(console->current_start_addr);
 }
 
 static void console_set_cursor(unsigned int position)
 {
     asm("cli");
-    out_byte(CRTC_ADDR_REG, 0xc);
-    out_byte(CRTC_DATA_REG, ((position/2)>>8)&0xff);
-    out_byte(CRTC_ADDR_REG, 0xd);
-    out_byte(CRTC_DATA_REG, position&0xff);
+    // disable_int();
+    out_byte(CRTC_ADDR_REG, CURSOR_H);
+    out_byte(CRTC_DATA_REG, (position >> 8) & 0xFF);
+	out_byte(CRTC_ADDR_REG, CURSOR_L);
+	out_byte(CRTC_DATA_REG, position & 0xFF);
+    // enable_int();
     asm("sti");
+}
+
+static void set_console_start_addr(unsigned int addr)
+{
+    asm("cli");
+    // disable_int();
+    out_byte(CRTC_ADDR_REG, START_ADDR_H);
+    out_byte(CRTC_DATA_REG, (addr>>8)&0xff);
+    out_byte(CRTC_ADDR_REG, START_ADDR_L);
+    out_byte(CRTC_DATA_REG, addr&0xff);
+    // enable_int();
+    asm("sti");
+}
+
+void scroll_screen(CONSOLE* p_con, int direction)
+{
+	if (direction == SCR_UP) {
+		if (p_con->current_start_addr > p_con->original_addr) {
+			p_con->current_start_addr -= SCREEN_WIDTH;
+		}
+	}else if (direction == SCR_DN) {
+		if (p_con->current_start_addr + SCREEN_SIZE < p_con->original_addr + p_con->v_mem_limit) {
+			p_con->current_start_addr += SCREEN_WIDTH;
+		}
+	}
+
+	set_console_start_addr(p_con->current_start_addr);
+	console_set_cursor(p_con->cursor);
 }

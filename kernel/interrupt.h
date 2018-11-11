@@ -21,6 +21,7 @@
 #define	INT_VECTOR_PROTECTION		0xD
 #define	INT_VECTOR_PAGE_FAULT		0xE
 #define	INT_VECTOR_COPROC_ERR		0x10
+#define	INT_VECTOR_SYS_CALL		0x80
 
 /* 8259A interrupt controller ports. */
 #define	INT_M_CTL	0x20	/* I/O port for interrupt controller         <Master> */
@@ -43,8 +44,10 @@
 #define	AT_WINI_IRQ	14	/* at winchester */
 
 #define IRQ_NUMBER 16
+#define SYS_CALL_NUMBER 2
 
 typedef void (*irq_handler)(int irq);
+typedef void *sys_call_handler;
 
 void init_idt_desc(GATE* idt, unsigned char vector, unsigned char desc_type, void* handler, unsigned char privilege);
 void init_8259A();
@@ -72,6 +75,8 @@ extern void hwint01();
 extern void hwint02();
 extern void hwint06();
 extern void hwint14();
+extern void sys_call();
+
 extern void enable_irq();
 extern void disable_irq();
 

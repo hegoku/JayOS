@@ -15,6 +15,12 @@
 #define	V_MEM_BASE	0xB8000	/* base of color video memory */
 #define	V_MEM_SIZE	0x8000	/* 32K: B8000H -> BFFFFH */
 
+#define SCR_UP	1	/* scroll upward */
+#define SCR_DN	-1	/* scroll downward */
+
+#define SCREEN_SIZE		(80 * 25)
+#define SCREEN_WIDTH		 80
+
 typedef struct s_console
 {
     unsigned int current_start_addr;
@@ -39,5 +45,10 @@ void tty_input(TTY* tty, int content);
 void tty_output(TTY* tty);
 static void console_out_char(CONSOLE *console, char ch);
 static void console_set_cursor(unsigned int position);
+static void set_console_start_addr(unsigned int addr);
+static void flush(CONSOLE *console);
+void scroll_screen(CONSOLE *p, int direction);
+
+unsigned int tty_write(TTY *tty, char *buf, int len);
 
 #endif
