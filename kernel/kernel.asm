@@ -249,20 +249,22 @@ exception:
     cmp dword[is_in_int], 0
     jne ret_to_proc
 
+    mov esp, TOP_OF_KERNEL_STACK
+
     in al, INT_M_CTLMASK ;屏蔽当前中断
     or al, (1<<%1)
     out INT_M_CTLMASK, al
     mov al, EOI
     out INT_M_CTL, al
-    sti
 
-    mov esp, TOP_OF_KERNEL_STACK
+    sti
 
     push %1
 	call [irq_table+4*%1]
 	add	esp, 4
 
     cli
+
     in al, INT_M_CTLMASK ;恢复当前中断
     and al, ~(1<<%1)
     out INT_M_CTLMASK, al

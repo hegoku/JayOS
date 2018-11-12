@@ -65,6 +65,13 @@ unsigned int tty_write(TTY* tty, char* buf, int len)
 {
     char *p = buf;
     int i = len;
+    // return len;
+    // DispStr(buf);
+    // while ((disp_pos/2) >= 80*25)
+    // {
+    //     disp_pos = 0;
+    // }
+    // return i;
     while (i)
     {
         console_out_char(tty->console, *p++);
@@ -106,11 +113,11 @@ static void console_out_char(CONSOLE* console, char ch)
 
     while (console->cursor >= console->current_start_addr + SCREEN_SIZE)
     {
-        console->cursor = 0;
-        // scroll_screen(console, SCR_DN);
+        // console->cursor = 0;
+        scroll_screen(console, SCR_DN);
     }
 
-    // flush(console);
+    flush(console);
 }
 
 static void flush(CONSOLE *console)

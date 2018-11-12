@@ -178,7 +178,7 @@ void kernel_main()
     enable_irq(CLOCK_IRQ);
 
     irq_table[KEYBOARD_IRQ] = keyboard_handler;
-    enable_irq(KEYBOARD_IRQ);
+    // enable_irq(KEYBOARD_IRQ);
 
     is_in_int = 0;
     p_proc_ready = process_table;
@@ -190,14 +190,29 @@ void TestA()
     unsigned int i = 0;
     while (1)
     {
+        // out_byte(INT_M_CTLMASK,0xF0);
         // printf("1111111111111111111111111111111");
         // printf("%s.", "A31231\n");
-        printf("%s%x ", "A", get_ticks());
-        // printf("%s%x ", "A", i++);
+        // char a = in_byte(INT_M_CTLMASK);
+    //     char *buf;
+    // int j=sprintf(buf, "%s%x.", "A", get_ticks());
+    // tty_write(&tty, buf, j);
+        // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_int, &is_in_int);
+        // printf("%x", disp_pos);
+        printf("%s%x.", "A", get_ticks());
+        // printf("%s%x.", "A", i++);
         // DispStr("A");
-        // disp_int(get_ticks());
+        // disp_int(get_tcks());
         // DispStr(".");
         delay(1);
+        // char a = in_byte(INT_M_CTLMASK);
+        // // printf("%d", a);
+        // if (a == 0xFF)
+        // {
+        //     printf("|");
+        // } else {
+        //     printf("+");
+        // }
     }
 }
 
@@ -222,6 +237,10 @@ void calltest()
         // disp_int(i++);
         // DispStr(".");
         printf("%c%x.", 'B', i++);
+
+    //     char *buf;
+    // int j=sprintf(buf, "%c%x.", 'B', i++);
+    // tty_write(&tty, buf, j);
         delay(1);
     }
 
@@ -276,11 +295,18 @@ void clock_handler(int irq)
 {
     // DispStr("#");
     // printf("#")
-    char a = '#';
-    tty_write(&tty, &a, 1);
+    // char a[2] = {'#', '\0'};
+    char *buf;
+    int i=sprintf(buf, "#");
+    tty_write(&tty, buf, i);
     ticks++;
     p_proc_ready++;
-    if (p_proc_ready>=process_table+PROC_NUMBER) {
+    // disp_int(p_proc_ready);
+    // if (disp_pos>80*25) {
+    //     disp_pos = 0;
+    // }
+    if (p_proc_ready >= process_table + PROC_NUMBER)
+    {
         p_proc_ready = process_table;
     }
 }
