@@ -29,7 +29,7 @@ unsigned short SelectorTss;
 static void init_idt();
 static void init_gdt();
 void kernel_main();
-int is_in_int;
+
 void clock_handler(int irq);
 int sys_get_ticks();
 int get_ticks();
@@ -43,6 +43,7 @@ PROCESS *p_proc_ready;
 void calltest();
 void TestA();
 void delay();
+void milli_delay(int mill_sec);
 
 void restart();
 
@@ -177,8 +178,12 @@ void kernel_main()
     irq_table[CLOCK_IRQ] = clock_handler;
     enable_irq(CLOCK_IRQ);
 
+    // out_byte(0x43, 0x34);
+    // out_byte(0x40, (unsigned char)(1193182L / 100));
+    // out_byte(0x40, (unsigned char)((1193182L / 100)>>8));
+
     irq_table[KEYBOARD_IRQ] = keyboard_handler;
-    // enable_irq(KEYBOARD_IRQ);
+    enable_irq(KEYBOARD_IRQ);
 
     is_in_int = 0;
     p_proc_ready = process_table;
@@ -205,6 +210,7 @@ void TestA()
         // disp_int(get_tcks());
         // DispStr(".");
         delay(1);
+        // milli_delay(1000);
         // char a = in_byte(INT_M_CTLMASK);
         // // printf("%d", a);
         // if (a == 0xFF)
@@ -231,18 +237,19 @@ void calltest()
 {
     // DispStr("i'm calltest\n");
     unsigned int i = 0;
-    while (1)
-    {
-        // DispStr("B");
-        // disp_int(i++);
-        // DispStr(".");
-        printf("%c%x.", 'B', i++);
+    // while (1)
+    // {
+    //     // DispStr("B");
+    //     // disp_int(i++);
+    //     // DispStr(".");
+    // //     printf("%c%x.", 'B', i++);
 
-    //     char *buf;
-    // int j=sprintf(buf, "%c%x.", 'B', i++);
-    // tty_write(&tty, buf, j);
-        delay(1);
-    }
+    // // //     char *buf;
+    // // // int j=sprintf(buf, "%c%x.", 'B', i++);
+    // // // tty_write(&tty, buf, j);
+    // //     delay(1);
+    //     // milli_delay(1000);
+    // }
 
     char output[2] = {'\0', '\0'};
     int key;
@@ -258,17 +265,17 @@ void calltest()
 
     while (1)
     {
-        printf("%c%x.", 'B', i++);
-        delay(1);
+        // printf("%c%x.", 'B', i++);
+        // delay(1);
         key = keyboard_read();
         if (!(key & FLAG_EXT))
         {
             //     tty_input(&tty, key);
             // tty_output(&tty);
             output[0] = key & 0xff;
-            DispStr(output);
+            // DispStr(output);
             // disp_int(key);
-            // printf("%c", output[0]);
+            printf("%c", output[0]);
             // tty_write(&tty, output, 1);
         }
         else
@@ -296,10 +303,17 @@ void clock_handler(int irq)
     // DispStr("#");
     // printf("#")
     // char a[2] = {'#', '\0'};
-    char *buf;
-    int i=sprintf(buf, "#");
-    tty_write(&tty, buf, i);
-    ticks++;
+    // char *buf;
+    // int i=sprintf(buf, "#");
+    // tty_write(&tty, buf, i);
+    if (++ticks>=MAX_TICKS) {
+        ticks = 0;
+    }
+    if (is_in_int!=0) {
+        // i=sprintf(buf, "!");
+        // tty_write(&tty, buf, i);
+        return;
+    }
     p_proc_ready++;
     // disp_int(p_proc_ready);
     // if (disp_pos>80*25) {
@@ -329,4 +343,10 @@ int get_ticks()
 ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte)
 {
     return tty_write(&tty, (char *)buf, nbyte);
+}
+
+void milli_delay(int mill_sec)
+{
+    int t = get_ticks();
+    while((get_ticks()-t)*1000/100){}
 }

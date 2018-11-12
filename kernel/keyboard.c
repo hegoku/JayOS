@@ -43,7 +43,10 @@ static void	kb_ack();
  *****************************************************************************/
 void keyboard_handler(int irq)
 {
-	unsigned char scan_code = in_byte(KB_DATA);
+    if (is_in_int!=0){
+        return;
+    }
+    unsigned char scan_code = in_byte(KB_DATA);
 
 	if (kb_in.count < KB_IN_BYTES) {
 		*(kb_in.p_head) = scan_code;

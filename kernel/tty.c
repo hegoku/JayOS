@@ -83,9 +83,6 @@ unsigned int tty_write(TTY* tty, char* buf, int len)
 static void console_out_char(CONSOLE* console, char ch)
 {
     unsigned char *p_vmem = (unsigned char *)(V_MEM_BASE + console->cursor * 2);
-    // *p_vmem++ = ch;
-    // *p_vmem++ = DEFAULT_CHAR_COLOR;
-    // console->cursor++;
     switch (ch) {
         case '\n':
             if (console->cursor < console->original_addr +
@@ -129,24 +126,20 @@ static void flush(CONSOLE *console)
 static void console_set_cursor(unsigned int position)
 {
     asm("cli");
-    // disable_int();
     out_byte(CRTC_ADDR_REG, CURSOR_H);
     out_byte(CRTC_DATA_REG, (position >> 8) & 0xFF);
 	out_byte(CRTC_ADDR_REG, CURSOR_L);
 	out_byte(CRTC_DATA_REG, position & 0xFF);
-    // enable_int();
     asm("sti");
 }
 
 static void set_console_start_addr(unsigned int addr)
 {
     asm("cli");
-    // disable_int();
     out_byte(CRTC_ADDR_REG, START_ADDR_H);
     out_byte(CRTC_DATA_REG, (addr>>8)&0xff);
     out_byte(CRTC_ADDR_REG, START_ADDR_L);
     out_byte(CRTC_DATA_REG, addr&0xff);
-    // enable_int();
     asm("sti");
 }
 

@@ -2,6 +2,8 @@
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
 
+#define	MAX_TICKS	0x7FFFABCD
+
 extern int disp_pos;
 
 void DispStr(char* msg);
@@ -18,5 +20,7 @@ void enable_int();
 void disp_int(int input);
 // char *itoa(char *str, int num);
 int printk(const char *fmt, ...);
+
+int is_in_int;
 
 #endif

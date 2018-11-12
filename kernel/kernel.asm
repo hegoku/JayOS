@@ -235,21 +235,22 @@ exception:
 	hlt
 
 %macro	hwint_master 1
+    call save
     ; sub esp,4
-    pushad
-    push ds
-    push es
-    push fs
-    push gs
-    mov dx,ss
-    mov ds, dx
-    mov es,dx
+    ; pushad
+    ; push ds
+    ; push es
+    ; push fs
+    ; push gs
+    ; mov dx,ss
+    ; mov ds, dx
+    ; mov es,dx
 
-    inc dword[is_in_int]
-    cmp dword[is_in_int], 0
-    jne ret_to_proc
+    ; inc dword[is_in_int]
+    ; cmp dword[is_in_int], 0
+    ; jne ret_to_proc
 
-    mov esp, TOP_OF_KERNEL_STACK
+    ; mov esp, TOP_OF_KERNEL_STACK
 
     in al, INT_M_CTLMASK ;屏蔽当前中断
     or al, (1<<%1)
@@ -269,7 +270,7 @@ exception:
     and al, ~(1<<%1)
     out INT_M_CTLMASK, al
 
-    push restart
+    ; push restart
 	ret
 %endmacro
 extern clock_handler
@@ -279,38 +280,45 @@ extern floppy_handler
 hwint00:		; Interrupt routine for irq 0 (the clock).
 hwint_master 0
     ; sub esp,4
-    ; pushad
-    ; push ds
-    ; push es
-    ; push fs
-    ; push gs
-    ; mov dx,ss
-    ; mov ds, dx
-    ; mov es,dx
+;     pushad
+;     push ds
+;     push es
+;     push fs
+;     push gs
+;     mov dx,ss
+;     mov ds, dx
+;     mov es,dx
 
-    ; ; inc byte[gs:0]
-    ; in al, INT_M_CTLMASK ;屏蔽当前中断
-    ; or al, (1<<0)
-    ; out INT_M_CTLMASK, al
-    ; mov al, EOI
-    ; out INT_M_CTL, al
-    ; sti
+;     inc dword[is_in_int]
+;     cmp dword[is_in_int], 0
+;     jne .1
+;     mov esp, TOP_OF_KERNEL_STACK
+;     push restart
+;     jmp .3
 
-    ; inc dword[is_in_int]
-    ; cmp dword[is_in_int], 0
-    ; jne ret_to_proc
+; .1:
+;     push ret_to_proc
+; .3:
 
-    ; mov esp, TOP_OF_KERNEL_STACK
+;     in al, INT_M_CTLMASK ;屏蔽当前中断
+;     or al, (1<<0)
+;     out INT_M_CTLMASK, al
+;     mov al, EOI
+;     out INT_M_CTL, al
 
-    ; ; sti
-    ; push 0
-    ; call clock_handler
-    ; add esp, 4
+;     sti
 
-    ; cli
-    ; in al, INT_M_CTLMASK ;恢复当前中断
-    ; and al, ~(1<<0)
-    ; out INT_M_CTLMASK, al
+;     push 0
+; 	call [irq_table+4*0]
+; 	add	esp, 4
+
+;     cli
+
+;     in al, INT_M_CTLMASK ;恢复当前中断
+;     and al, ~(1<<0)
+;     out INT_M_CTLMASK, al
+
+; 	ret
 
 ; ALIGN	16
 hwint01:		; Interrupt routine for irq 1 (keyboard)
@@ -382,23 +390,24 @@ hwint15:		; Interrupt routine for irq 15
 	hwint_slave	15
 
 sys_call:
+    call save
     ; sub esp,4
-    pushad
-    push ds
-    push es
-    push fs
-    push gs
-    mov edi,ss
-    mov ds, edi
-    mov es,edi
+    ; pushad
+    ; push ds
+    ; push es
+    ; push fs
+    ; push gs
+    ; mov edi,ss
+    ; mov ds, edi
+    ; mov es,edi
 
-    mov esi, esp ;进程表起始地址
+    ; mov esi, esp ;进程表起始地址
 
-    inc dword[is_in_int]
-    cmp dword[is_in_int], 0
-    jne ret_to_proc
+    ; inc dword[is_in_int]
+    ; cmp dword[is_in_int], 0
+    ; jne ret_to_proc
 
-    mov esp, TOP_OF_KERNEL_STACK
+    ; mov esp, TOP_OF_KERNEL_STACK
 
     sti
 
@@ -410,8 +419,31 @@ sys_call:
     mov [esi+EAXREG-P_STACKBASE], eax ;保存 [sys_call_table+4*eax]  函数的返回值到进程表的eax寄存器以便获取
 
     cli
-    push restart
+    ; push restart
 	ret
+
+save:
+    pushad
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov esi,ss
+    mov ds, esi
+    mov es,esi
+
+    mov esi, esp ;进程表起始地址
+
+    inc dword[is_in_int]
+    cmp dword[is_in_int], 0
+    jne .1
+    mov esp, TOP_OF_KERNEL_STACK
+    push restart
+    jmp [esi+RETADR-P_STACKBASE]
+.1:
+    push ret_to_proc
+    jmp [esi+RETADR-P_STACKBASE]
 
 restart:
     mov	esp, [p_proc_ready]
@@ -425,7 +457,7 @@ ret_to_proc:
     pop es
     pop ds
     popad
-    ; add esp,4
+    add esp,4
     iretd
 
 ; global get_ticks
