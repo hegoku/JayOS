@@ -37,11 +37,11 @@ typedef struct s_tty
     unsigned int* inbuf_tail;
     int inbuf_count;
 
-    CONSOLE *console;
+    CONSOLE console;
 } TTY;
 
 TTY tty_create(unsigned char id);
-void tty_input(TTY* tty, int content);
+void tty_input(TTY *tty, int content);
 void tty_output(TTY* tty);
 static void console_out_char(CONSOLE *console, char ch);
 static void console_set_cursor(unsigned int position);

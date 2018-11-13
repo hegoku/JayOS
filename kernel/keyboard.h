@@ -7,7 +7,7 @@
 
 #ifndef	_KEYBOARD_H_
 #define	_KEYBOARD_H_
-
+#include "tty.h"
 /* AT keyboard */
 /* 8042 ports */
 #define KB_DATA		0x60	/* I/O port for keyboard data
@@ -139,6 +139,6 @@ struct kb_inbuf {
 
 void keyboard_init();
 void keyboard_handler(int irq);
-int keyboard_read();
+void keyboard_read(TTY *tty);
 
 #endif /* _ORANGES_KEYBOARD_H_ */

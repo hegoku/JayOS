@@ -114,12 +114,6 @@ int printf(const char *fmt, ...)
     char buf[STR_DEFAULT_LEN];
     va_list arg = (va_list)((char*)(&fmt)+4);//4为fmt所占堆栈中大小
     i = vsprintf(buf, fmt, arg);
-	// DispStr(buf);
-    // while ((disp_pos/2) >= 80*25)
-    // {
-    //     disp_pos = 0;
-    // }
-    // return i;
     write(1, buf, i);
     return i;
 }

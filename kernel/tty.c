@@ -9,14 +9,14 @@ TTY tty_create(unsigned char id)
     tty.inbuf_count = 0;
     tty.inbuf_head = tty.inbuf_tail = tty.in_buff;
 
-    CONSOLE *console;
+    CONSOLE console;
     int v_mem_size = V_MEM_SIZE >> 1;
 
     int con_v_mem_size = v_mem_size / TTY_NUM;
-    console->original_addr = id*con_v_mem_size;
-    console->v_mem_limit = con_v_mem_size;
-    console->current_start_addr = console->original_addr;
-    console->cursor = console->current_start_addr;
+    console.original_addr = id*con_v_mem_size;
+    console.v_mem_limit = con_v_mem_size;
+    console.current_start_addr = console.original_addr;
+    console.cursor = console.current_start_addr;
     tty.console = console;
 
     return tty;
@@ -24,32 +24,48 @@ TTY tty_create(unsigned char id)
 
 void tty_input(TTY* tty, int content)
 {
-    if (!(content & FLAG_EXT)) {
-        console_out_char(tty->console, content& 0xff);
+    if (!(content & FLAG_EXT) || content==ENTER || content==BACKSPACE) {
+        char key = '\0';
+        switch (content)
+        {
+        case ENTER:
+            key = '\n';
+            break;
+        case BACKSPACE:
+            key = '\b';
+            break;
+        default:
+            key = content & 0xFF;
+            break;
+        }
+        // console_out_char(&(tty->console), content& 0xff);
+        if (tty->inbuf_count < TTY_IN_BYTES)
+        {
+            *(tty->inbuf_head) = key;
+            tty->inbuf_head++;
+            if (tty->inbuf_head == tty->in_buff + TTY_IN_BYTES)
+            {
+                tty->inbuf_head = tty->in_buff;
+            }
+            tty->inbuf_count++;
+        }
     }
-    // if (tty->inbuf_count<TTY_IN_BYTES) {
-    //     *(tty->inbuf_head) = content;
-    //     tty->inbuf_head++;
-    //     if (tty->inbuf_head==tty->in_buff+TTY_IN_BYTES) {
-    //         tty->inbuf_head = tty->in_buff;
-    //     }
-    //     tty->inbuf_count++;
-    // }
+    
 }
 
 void tty_output(TTY* tty)
 {
     if (tty->inbuf_count) {
-        char output[2] = {'\0', '\0'};
+        // char output[2] = {'\0', '\0'};
         char ch = *(tty->inbuf_tail);
-        output[0] = ch&0xff;
+        // output[0] = ch&0xff;
         tty->inbuf_tail++;
         if (tty->inbuf_tail==tty->in_buff+TTY_IN_BYTES) {
             tty->inbuf_tail = tty->in_buff;
         }
         tty->inbuf_count--;
         // DispStr(output);
-        console_out_char(tty->console, ch);
+        console_out_char(&(tty->console), ch);
     }
     // if (!(key & FLAG_EXT)) {
     // //     tty_input(&tty, key& 0xff);
@@ -67,14 +83,14 @@ unsigned int tty_write(TTY* tty, char* buf, int len)
     int i = len;
     // return len;
     // DispStr(buf);
-    // while ((disp_pos/2) >= 80*25)
+    // if ((disp_pos/2) >= 80*25)
     // {
     //     disp_pos = 0;
     // }
     // return i;
     while (i)
     {
-        console_out_char(tty->console, *p++);
+        console_out_char(&(tty->console), *p++);
         i--;
     }
     return len;
@@ -108,10 +124,10 @@ static void console_out_char(CONSOLE* console, char ch)
             break;
     }
 
-    while (console->cursor >= console->current_start_addr + SCREEN_SIZE)
+    if (console->cursor >= console->current_start_addr + SCREEN_SIZE)
     {
-        console->cursor = 0;
-        // scroll_screen(console, SCR_DN);
+        // console->cursor = 0;
+        scroll_screen(console, SCR_DN);
     }
 
     flush(console);

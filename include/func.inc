@@ -13,6 +13,7 @@ global enable_irq
 global disable_irq
 global disable_int
 global enable_int
+global disp_pos
 
 ;include/string.h
 ; global memcpy

@@ -13,6 +13,7 @@
 #include "global.h"
 #include "keyboard.h"
 #include "keymap.h"
+#include "tty.h"
 
 static	struct kb_inbuf	kb_in;
 static	int		code_with_E0;
@@ -43,12 +44,10 @@ static void	kb_ack();
  *****************************************************************************/
 void keyboard_handler(int irq)
 {
-    if (is_in_int!=0){
-        return;
-    }
+    // DispStr("@");
     unsigned char scan_code = in_byte(KB_DATA);
 
-	if (kb_in.count < KB_IN_BYTES) {
+    if (kb_in.count < KB_IN_BYTES) {
 		*(kb_in.p_head) = scan_code;
 		kb_in.p_head++;
 		if (kb_in.p_head == kb_in.buf + KB_IN_BYTES)
@@ -94,7 +93,7 @@ void keyboard_init()
  *
  * @param tty  Which TTY is reading the keyboard input.
  *****************************************************************************/
-int keyboard_read()
+void keyboard_read(TTY *tty)
 {
 	unsigned char scan_code;
 
@@ -118,7 +117,7 @@ int keyboard_read()
 	 */
 	unsigned int*	keyrow;
 
-	while (kb_in.count > 0) {
+    while (kb_in.count > 0) {
 		code_with_E0 = 0;
 		scan_code = get_byte_from_kb_buf();
 
@@ -311,7 +310,15 @@ int keyboard_read()
 			key |= alt_r	? FLAG_ALT_R	: 0;
 			key |= pad	? FLAG_PAD	: 0;
 
-            return key;
+            tty_input(tty, key);
+            // if (!(key & FLAG_EXT))
+            // {
+            //     char a[2]={'\0', '\0'};
+            //     a[1] = key & 0xFF;
+            //     tty_write(tty, a, 1);
+            // }
+
+            // return key;
             // in_process(tty, key);
         }
 	}

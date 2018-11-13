@@ -44,6 +44,7 @@ void calltest();
 void TestA();
 void delay();
 void milli_delay(int mill_sec);
+void task_tty();
 
 void restart();
 
@@ -84,6 +85,10 @@ void cstart()
     process_table[1].pid = 1;
     create_process(gdt, &process_table[1], (unsigned int)calltest);
     process_table[1].regs.esp = TOP_OF_USER_STACK-0x400;
+
+    process_table[2].pid = 2;
+    create_process(gdt, &process_table[2], (unsigned int)task_tty);
+    process_table[2].regs.esp = TOP_OF_USER_STACK-0x400*2;
 }
 
 void init_idt()
@@ -178,9 +183,9 @@ void kernel_main()
     irq_table[CLOCK_IRQ] = clock_handler;
     enable_irq(CLOCK_IRQ);
 
-    // out_byte(0x43, 0x34);
-    // out_byte(0x40, (unsigned char)(1193182L / 100));
-    // out_byte(0x40, (unsigned char)((1193182L / 100)>>8));
+    out_byte(0x43, 0x34);
+    out_byte(0x40, (unsigned char)(1193182L / 100));
+    out_byte(0x40, (unsigned char)((1193182L / 100)>>8));
 
     irq_table[KEYBOARD_IRQ] = keyboard_handler;
     enable_irq(KEYBOARD_IRQ);
@@ -205,7 +210,7 @@ void TestA()
         // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_int, &is_in_int);
         // printf("%x", disp_pos);
         // printf("%s%x.", "A", get_ticks());
-        // printf("%s%x.", "A", i++);
+        printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());
         // DispStr(".");
@@ -237,22 +242,22 @@ void calltest()
 {
     // DispStr("i'm calltest\n");
     unsigned int i = 0;
-    // while (1)
-    // {
-    //     // DispStr("B");
-    //     // disp_int(i++);
-    //     // DispStr(".");
-    //     printf("%c%x.", 'B', i++);
+    while (1)
+    {
+        // DispStr("B");
+        // disp_int(i++);
+        // DispStr(".");
+        printf("%c%x.", 'B', i++);
 
-    // // //     char *buf;
-    // // int j=sprintf(buf, "%c%x.", 'B', i++);
-    // // // tty_write(&tty, buf, j);
-    //     delay(1);
-    //     // milli_delay(1000);
-    // }
+    // //     char *buf;
+    // int j=sprintf(buf, "%c%x.", 'B', i++);
+    // // tty_write(&tty, buf, j);
+        delay(1);
+        // milli_delay(1000);
+    }
 
     char output[2] = {'\0', '\0'};
-    int key;
+    unsigned int key=0;
 
     // floppy_init();
     unsigned char *a="123456";
@@ -267,15 +272,17 @@ void calltest()
     {
         // printf("%c%x.", 'B', i++);
         // delay(1);
-        key = keyboard_read();
+        // key=keyboard_read(&tty);
+        
         if (!(key & FLAG_EXT))
         {
             //     tty_input(&tty, key);
             // tty_output(&tty);
-            output[0] = key & 0xff;
+            // output[0] = key & 0xff;
+            output[0] = '*';
             // DispStr(output);
             // disp_int(key);
-            printf("%c", output[0]);
+            printf("B");
             // tty_write(&tty, output, 1);
         }
         // else
@@ -302,18 +309,21 @@ void clock_handler(int irq)
 {
     // DispStr("#");
     // printf("#")
-    // char a[2] = {'#', '\0'};
+    char a[2] = {'#', '\0'};
     // char *buf;
     // int i=sprintf(buf, "#");
-    // tty_write(&tty, buf, i);
+    // tty_write(&tty, a, 1);
     if (++ticks>=MAX_TICKS) {
         ticks = 0;
     }
     if (is_in_int!=0) {
-        // i=sprintf(buf, "!");
-        // tty_write(&tty, buf, i);
+        // a[0]='1';
+        // // i=sprintf(buf, "!");
+        // tty_write(&tty, a, 1);
         return;
     }
+    
+    // disp_int((int)p_proc_ready);
     p_proc_ready++;
     // disp_int(p_proc_ready);
     // if (disp_pos>80*25) {
@@ -349,4 +359,14 @@ void milli_delay(int mill_sec)
 {
     int t = get_ticks();
     while((get_ticks()-t)*1000/100){}
+}
+
+void task_tty()
+{
+    unsigned int key = 0;
+    while (1)
+    {
+        keyboard_read(&tty);
+        tty_output(&tty);
+    }
 }

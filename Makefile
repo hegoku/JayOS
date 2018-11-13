@@ -50,7 +50,7 @@ build/desc.o : lib/desc.c include/system/desc.h
 build/k1.o : kernel/k1.asm include/pm.inc include/func.inc
 	$(ASM) -f elf -o $@ $<
 
-build/keyboard.o: kernel/keyboard.c kernel/keyboard.h kernel/keymap.h kernel/global.h
+build/keyboard.o: kernel/keyboard.c kernel/keyboard.h kernel/keymap.h kernel/global.h kernel/tty.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/tty.o: kernel/tty.c kernel/tty.h
