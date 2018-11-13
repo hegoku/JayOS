@@ -1,6 +1,6 @@
 ;include/string.h
-global memcpy
-global memset
+; global memcpy
+; global memset
 global strcpy
 global strlen
 

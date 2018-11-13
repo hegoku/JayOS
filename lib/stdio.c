@@ -18,7 +18,7 @@ static char* i2a(int val, int base, char ** ps)
 	return *ps;
 }
 
-int vsprintf(char *buf, const char *fmt, va_list args)
+int vsprintf(char *buf, const char *format, va_list args)
 {
 	char* p;
 
@@ -29,35 +29,35 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 	char cs;
 	int	align_nr;
 
-	for (p=buf;*fmt;fmt++) {
-		if (*fmt != '%') {
-			*p++ = *fmt;
+	for (p=buf;*format;format++) {
+		if (*format != '%') {
+			*p++ = *format;
 			continue;
 		} else {		/* a format string begins */
 			align_nr = 0;
 		}
 
-		fmt++;
+		format++;
 
-		if (*fmt == '%') {
-			*p++ = *fmt;
+		if (*format == '%') {
+			*p++ = *format;
 			continue;
-		} else if (*fmt == '0') {
+		} else if (*format == '0') {
 			cs = '0';
-			fmt++;
+			format++;
 		} else {
 			cs = ' ';
 		}
-		while (((unsigned char)(*fmt) >= '0') && ((unsigned char)(*fmt) <= '9')) {
+		while (((unsigned char)(*format) >= '0') && ((unsigned char)(*format) <= '9')) {
 			align_nr *= 10;
-			align_nr += *fmt - '0';
-			fmt++;
+			align_nr += *format - '0';
+			format++;
 		}
 
         char * q = inner_buf;
 		// memset(q, 0, sizeof(inner_buf));
 
-        switch (*fmt)
+        switch (*format)
         {
         case 'c':
 			*q++ = *((char*)p_next_arg);
@@ -102,18 +102,116 @@ int vsprintf(char *buf, const char *fmt, va_list args)
     return (p - buf);
 }
 
-int sprintf(char *buf, const char *fmt, ...)
+int sprintf(char *buf, const char *format, ...)
 {
-	va_list arg = (va_list)((char*)(&fmt) + 4);        /* 4 是参数 fmt 所占堆栈中的大小 */
-	return vsprintf(buf, fmt, arg);
+	va_list arg = (va_list)((char*)(&format) + 4);        /* 4 是参数 format 所占堆栈中的大小 */
+	return vsprintf(buf, format, arg);
 }
 
-int printf(const char *fmt, ...)
+int printf(const char *format, ...)
 {
     int i;
     char buf[STR_DEFAULT_LEN];
-    va_list arg = (va_list)((char*)(&fmt)+4);//4为fmt所占堆栈中大小
-    i = vsprintf(buf, fmt, arg);
+    va_list arg = (va_list)((char*)(&format)+4);//4为format所占堆栈中大小
+    i = vsprintf(buf, format, arg);
     write(1, buf, i);
     return i;
+}
+
+int sscanf(const char *str, const char *format, ...)
+{
+    return 0;
+}
+
+int scanf(const char *format, ...)
+{
+    int count;
+    char buf[STR_DEFAULT_LEN];
+    va_list arg = (va_list)((char*)(&format) + 4);
+    count = vsscanf (buf, format, arg);
+    return (count);
+}
+
+static int vsscanf (const char *buf, const char *s, va_list ap)
+{
+    int             count, noassign, width, base, lflag;
+    const char     *tc;
+    char           *t, tmp[STR_DEFAULT_LEN];
+
+    count = noassign = width = lflag = 0;
+    // while (*s && *buf) {
+	// while (isspace (*s))
+	//     s++;
+	// if (*s == '%') {
+	//     s++;
+	//     for (; *s; s++) {
+	// 	if (strchr ("dibouxcsefg%", *s))
+	// 	    break;
+	// 	if (*s == '*')
+	// 	    noassign = 1;
+	// 	else if (*s == 'l' || *s == 'L')
+	// 	    lflag = 1;
+	// 	else if (*s >= '1' && *s <= '9') {
+	// 	    for (tc = s; isdigit (*s); s++);
+	// 	    strncpy (tmp, tc, s - tc);
+	// 	    tmp[s - tc] = '\0';
+	// 	    atob (&width, tmp, 10);
+	// 	    s--;
+	// 	}
+	//     }
+	//     if (*s == 's') {
+	// 	while (isspace (*buf))
+	// 	    buf++;
+	// 	if (!width)
+	// 	    width = strcspn (buf, ISSPACE);
+	// 	if (!noassign) {
+	// 	    strncpy (t = va_arg (ap, char *), buf, width);
+	// 	    t[width] = '\0';
+	// 	}
+	// 	buf += width;
+	//     } else if (*s == 'c') {
+	// 	if (!width)
+	// 	    width = 1;
+	// 	if (!noassign) {
+	// 	    strncpy (t = va_arg (ap, char *), buf, width);
+	// 	    t[width] = '\0';
+	// 	}
+	// 	buf += width;
+	//     } else if (strchr ("dobxu", *s)) {
+	// 	while (isspace (*buf))
+	// 	    buf++;
+	// 	if (*s == 'd' || *s == 'u')
+	// 	    base = 10;
+	// 	else if (*s == 'x')
+	// 	    base = 16;
+	// 	else if (*s == 'o')
+	// 	    base = 8;
+	// 	else if (*s == 'b')
+	// 	    base = 2;
+	// 	if (!width) {
+	// 	    if (isspace (*(s + 1)) || *(s + 1) == 0)
+	// 		width = strcspn (buf, ISSPACE);
+	// 	    else
+	// 		width = strchr (buf, *(s + 1)) - buf;
+	// 	}
+	// 	strncpy (tmp, buf, width);
+	// 	tmp[width] = '\0';
+	// 	buf += width;
+	// 	if (!noassign)
+	// 	    atob (va_arg (ap, u_int32_t *), tmp, base);
+	//     }
+	//     if (!noassign)
+	// 	count++;
+	//     width = noassign = lflag = 0;
+	//     s++;
+	// } else {
+	//     while (isspace (*buf))
+	// 	buf++;
+	//     if (*s != *buf)
+	// 	break;
+	//     else
+	// 	s++, buf++;
+	// }
+    // }
+    return (count);
 }
