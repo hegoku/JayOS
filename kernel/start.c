@@ -204,7 +204,7 @@ void TestA()
     // tty_write(&tty, buf, j);
         // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_int, &is_in_int);
         // printf("%x", disp_pos);
-        printf("%s%x.", "A", get_ticks());
+        // printf("%s%x.", "A", get_ticks());
         // printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());
@@ -242,12 +242,12 @@ void calltest()
     //     // DispStr("B");
     //     // disp_int(i++);
     //     // DispStr(".");
-    // //     printf("%c%x.", 'B', i++);
+    //     printf("%c%x.", 'B', i++);
 
     // // //     char *buf;
-    // // // int j=sprintf(buf, "%c%x.", 'B', i++);
+    // // int j=sprintf(buf, "%c%x.", 'B', i++);
     // // // tty_write(&tty, buf, j);
-    // //     delay(1);
+    //     delay(1);
     //     // milli_delay(1000);
     // }
 
@@ -278,22 +278,22 @@ void calltest()
             printf("%c", output[0]);
             // tty_write(&tty, output, 1);
         }
-        else
-        {
-            int raw_code=key&MASK_RAW;
-            switch (raw_code) {
-                case UP:
-                    if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
-                        scroll_screen(tty.console, SCR_UP);
-                    }
-                    break;
-                case DOWN:
-                    if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
-                        scroll_screen(tty.console, SCR_DN);
-                    }
-                    break;
-            }
-        }
+        // else
+        // {
+        //     int raw_code=key&MASK_RAW;
+        //     switch (raw_code) {
+        //         case UP:
+        //             if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
+        //                 scroll_screen(tty.console, SCR_UP);
+        //             }
+        //             break;
+        //         case DOWN:
+        //             if ((key&FLAG_SHIFT_L) || (key&FLAG_SHIFT_R)) {
+        //                 scroll_screen(tty.console, SCR_DN);
+        //             }
+        //             break;
+        //     }
+        // }
         // tty_input(&tty, key);
     }
 }

@@ -432,6 +432,7 @@ save:
     mov esi,ss
     mov ds, esi
     mov es,esi
+    ; mov fs, esi
 
     mov esi, esp ;进程表起始地址
 

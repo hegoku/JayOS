@@ -110,8 +110,8 @@ static void console_out_char(CONSOLE* console, char ch)
 
     while (console->cursor >= console->current_start_addr + SCREEN_SIZE)
     {
-        // console->cursor = 0;
-        scroll_screen(console, SCR_DN);
+        console->cursor = 0;
+        // scroll_screen(console, SCR_DN);
     }
 
     flush(console);
