@@ -21,6 +21,11 @@ void disp_int(int input);
 // char *itoa(char *str, int num);
 int printk(const char *fmt, ...);
 
-int is_in_int;
+int is_in_ring0;
+
+int sys_get_ticks();
+int get_ticks();
+
+int printk(const char * format, ...);
 
 #endif

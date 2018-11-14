@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 char * itoa(char * str, int num)
 {
 	char *	p = str;

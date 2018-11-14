@@ -8,7 +8,9 @@ CFLAGS      = -c -fno-builtin -I include/
 
 TARGET		= boot.bin loader kernel k1
 
-OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/floppy.o build/desc.o build/stdlib.o build/process.o build/unistd.o build/stdio.o build/string.o
+OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o \
+				build/stdlib.o build/unistd.o build/stdio.o build/string.o \
+				build/floppy.o build/hd.o
 
 all : clean everything image
 
@@ -38,7 +40,7 @@ kernel : $(OBJS)
 build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 	$(ASM) -f elf -o $@ $<
 
-build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h kernel/process.h include/unistd.h include/stdio.h
+build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h kernel/process.h include/unistd.h include/stdio.h kernel/hd.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h include/system/desc.h
@@ -80,10 +82,10 @@ build/process.o: kernel/process.c kernel/process.h
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/hd.o: kernel/hd.c kernel/hd.h kernel/global.h
+build/hd.o: kernel/hd.c kernel/hd.h include/string.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/global.o: kernel/global.c kernel/global.h include/stdlib.h
+build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h include/stdio.h
 	$(CC) $(CFLAGS) -o $@ $<
 k1 : build/k1.o
 	$(LD) -s -Ttext $(ENTERPOINT) -m elf_i386 -o build/k1 build/k1.o

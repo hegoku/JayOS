@@ -1,4 +1,4 @@
-#include "../include/system/desc.h"
+#include <system/desc.h>
 
 DESCRIPTOR create_descriptor(unsigned int base, unsigned int limit, unsigned short attr)
 {

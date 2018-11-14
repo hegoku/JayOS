@@ -1191,4 +1191,4 @@ floppya: 1_44=a.img
 #megs: 16
 #megs: 8
 
-#ata0-master: type=disk, path="c.img", mode=flat
+ata0-master: type=disk, path="c.img", mode=flat

@@ -1,8 +1,7 @@
-#include "stdarg.h"
-#include "unistd.h"
-#include "stdio.h"
-#include "string.h"
-#include "../kernel/global.h"
+#include <stdarg.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
 
 #define STR_DEFAULT_LEN 1024
 

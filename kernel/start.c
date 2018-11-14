@@ -2,7 +2,7 @@
 #include "interrupt.h"
 #include "keyboard.h"
 #include "fd.h"
-// #include "hd.h"
+#include "hd.h"
 #include "tty.h"
 #include "process.h"
 #include "system/desc.h"
@@ -31,14 +31,7 @@ static void init_gdt();
 void kernel_main();
 
 void clock_handler(int irq);
-int sys_get_ticks();
-int get_ticks();
 ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte);
-
-TTY tty;
-
-PROCESS process_table[PROC_NUMBER];
-PROCESS *p_proc_ready;
 
 void calltest();
 void TestA();
@@ -70,7 +63,6 @@ void cstart()
     // DispStr("-----Move Gdt success-------\n\n");
     init_gdt();
     init_idt();
-    keyboard_init();
     // init_hd();
     // hd_open(0);
 
@@ -94,6 +86,7 @@ void cstart()
 void init_idt()
 {
     init_8259A();
+    enable_irq(CASCADE_IRQ); //开启从片
 
     for (int i; i < IRQ_NUMBER; i++) {
         irq_table[i] = spurious_irq;
@@ -140,7 +133,7 @@ void init_idt()
     init_idt_desc(idt, INT_VECTOR_IRQ0 + 0, DA_386IGate, hwint00, PRIVILEGE_KRNL); //时钟
     init_idt_desc(idt, INT_VECTOR_IRQ0 + 1, DA_386IGate, hwint01, PRIVILEGE_KRNL); //键盘
     init_idt_desc(idt, INT_VECTOR_IRQ0 + 6, DA_386IGate, hwint06, PRIVILEGE_KRNL); //软盘
-    init_idt_desc(idt, AT_WINI_IRQ, DA_386IGate, hwint14, PRIVILEGE_KRNL); //硬盘
+    init_idt_desc(idt, INT_VECTOR_IRQ8 + 6, DA_386IGate, hwint14, PRIVILEGE_KRNL); //硬盘
 }
 
 static void init_gdt()
@@ -187,10 +180,15 @@ void kernel_main()
     out_byte(0x40, (unsigned char)(1193182L / 100));
     out_byte(0x40, (unsigned char)((1193182L / 100)>>8));
 
+    keyboard_init();
     irq_table[KEYBOARD_IRQ] = keyboard_handler;
     enable_irq(KEYBOARD_IRQ);
 
-    is_in_int = 0;
+    init_hd();
+    irq_table[AT_WINI_IRQ] = hd_handler;
+    enable_irq(AT_WINI_IRQ);
+
+    is_in_ring0 = 0;
     p_proc_ready = process_table;
     restart();
 }
@@ -198,6 +196,7 @@ void kernel_main()
 void TestA()
 {
     unsigned int i = 0;
+    hd_identify(0);
     while (1)
     {
         // out_byte(INT_M_CTLMASK,0xF0);
@@ -207,9 +206,9 @@ void TestA()
     //     char *buf;
     // int j=sprintf(buf, "%s%x.", "A", get_ticks());
     // tty_write(&tty, buf, j);
-        // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_int, &is_in_int);
+        // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_ring0, &is_in_ring0);
         // printf("%x", disp_pos);
-        printf("%s%x.", "A", get_ticks());
+        // printf("%s%x.", "A", get_ticks());
         // printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());
@@ -247,7 +246,7 @@ void calltest()
         // DispStr("B");
         // disp_int(i++);
         // DispStr(".");
-        printf("%c%x.", 'B', i++);
+        // printf("%c%x.", 'B', i++);
 
     // //     char *buf;
     // int j=sprintf(buf, "%c%x.", 'B', i++);
@@ -316,7 +315,7 @@ void clock_handler(int irq)
     if (++ticks>=MAX_TICKS) {
         ticks = 0;
     }
-    if (is_in_int!=0) {
+    if (is_in_ring0!=0) {
         // a[0]='1';
         // // i=sprintf(buf, "!");
         // tty_write(&tty, a, 1);
@@ -333,21 +332,6 @@ void clock_handler(int irq)
     {
         p_proc_ready = process_table;
     }
-}
-
-int sys_get_ticks()
-{
-    // DispStr("\nAAAAA:");
-    // disp_int(a);
-    // DispStr("   BBBBB:");
-    // disp_int(b);
-    // DispStr("\n");
-    return ticks;
-}
-
-int get_ticks()
-{
-    return sys_call_0_param(0);
 }
 
 ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte)

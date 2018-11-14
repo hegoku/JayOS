@@ -41,7 +41,7 @@ extern tss
 extern irq_table
 extern sys_call_table
 extern p_proc_ready
-extern is_in_int
+extern is_in_ring0
 extern ticks
 
 global gdt
@@ -246,8 +246,8 @@ exception:
     ; mov ds, dx
     ; mov es,dx
 
-    ; inc dword[is_in_int]
-    ; cmp dword[is_in_int], 0
+    ; inc dword[is_in_ring0]
+    ; cmp dword[is_in_ring0], 0
     ; jne ret_to_proc
 
     ; mov esp, TOP_OF_KERNEL_STACK
@@ -289,8 +289,8 @@ hwint_master 0
 ;     mov ds, dx
 ;     mov es,dx
 
-;     inc dword[is_in_int]
-;     cmp dword[is_in_int], 0
+;     inc dword[is_in_ring0]
+;     cmp dword[is_in_ring0], 0
 ;     jne .1
 ;     mov esp, TOP_OF_KERNEL_STACK
 ;     push restart
@@ -350,10 +350,27 @@ hwint07:		; Interrupt routine for irq 7 (printer)
 
 ; ---------------------------------
 %macro	hwint_slave	1
-	push	%1
-	; call	spurious_irq
+	call save
+
+    in al, INT_S_CTLMASK ;屏蔽当前中断
+    or al, (1<<(%1-8))
+    out INT_S_CTLMASK, al
+    mov al, EOI
+    out INT_M_CTL, al
+    nop
+    out INT_S_CTL, al
+
+    sti
+    push %1
+	call [irq_table+4*%1]
 	add	esp, 4
-	iretd
+    cli
+
+    in al, INT_S_CTLMASK ;恢复当前中断
+    and al, ~(1<<(%1-8))
+    out INT_S_CTLMASK, al
+
+	ret
 %endmacro
 ; ---------------------------------
 
@@ -403,19 +420,21 @@ sys_call:
 
     ; mov esi, esp ;进程表起始地址
 
-    ; inc dword[is_in_int]
-    ; cmp dword[is_in_int], 0
+    ; inc dword[is_in_ring0]
+    ; cmp dword[is_in_ring0], 0
     ; jne ret_to_proc
 
     ; mov esp, TOP_OF_KERNEL_STACK
 
     sti
+    push esi
 
     push edx
     push ecx
     push ebx
 	call [sys_call_table+4*eax]
     add esp, 4*3
+    pop esi
     mov [esi+EAXREG-P_STACKBASE], eax ;保存 [sys_call_table+4*eax]  函数的返回值到进程表的eax寄存器以便获取
 
     cli
@@ -432,12 +451,11 @@ save:
     mov esi,ss
     mov ds, esi
     mov es,esi
-    ; mov fs, esi
 
     mov esi, esp ;进程表起始地址
 
-    inc dword[is_in_int]
-    cmp dword[is_in_int], 0
+    inc dword[is_in_ring0]
+    cmp dword[is_in_ring0], 0
     jne .1
     mov esp, TOP_OF_KERNEL_STACK
     push restart
@@ -452,7 +470,7 @@ restart:
 	lea	eax, [esp + P_STACKTOP]
 	mov	dword [tss + TSS3_S_SP0], eax
 ret_to_proc:
-    dec dword[is_in_int]
+    dec dword[is_in_ring0]
     pop gs
     pop fs
     pop es
