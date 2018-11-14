@@ -25,7 +25,6 @@ int vsprintf(char *buf, const char *format, va_list args)
 	va_list	p_next_arg = args;
 	int	m;
 
-	char inner_buf[STR_DEFAULT_LEN];
 	char cs;
 	int	align_nr;
 
@@ -54,8 +53,8 @@ int vsprintf(char *buf, const char *format, va_list args)
 			format++;
 		}
 
+		char inner_buf[STR_DEFAULT_LEN];
         char * q = inner_buf;
-		// memset(q, 0, sizeof(inner_buf));
 
         switch (*format)
         {

@@ -11,4 +11,9 @@ typedef signed int ssize_t;
 typedef unsigned int size_t;
 #endif
 
+#ifndef _PID_T
+#define _PID_T
+typedef unsigned int pid_t;
+#endif
+
 #endif

@@ -79,7 +79,7 @@ void cstart()
     // DispStr("----JayOS----\n\n");
 
     process_table[0].pid = 0;
-    create_process(gdt, &process_table[0], (unsigned int)TestA);
+    create_process(gdt, &process_table[0], (unsigned int)task_tty);
     process_table[0].regs.esp = TOP_OF_USER_STACK;
 
     process_table[1].pid = 1;
@@ -87,7 +87,7 @@ void cstart()
     process_table[1].regs.esp = TOP_OF_USER_STACK-0x400;
 
     process_table[2].pid = 2;
-    create_process(gdt, &process_table[2], (unsigned int)task_tty);
+    create_process(gdt, &process_table[2], (unsigned int)TestA);
     process_table[2].regs.esp = TOP_OF_USER_STACK-0x400*2;
 }
 
@@ -209,8 +209,8 @@ void TestA()
     // tty_write(&tty, buf, j);
         // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_int, &is_in_int);
         // printf("%x", disp_pos);
-        // printf("%s%x.", "A", get_ticks());
-        printf("%s%x.", "A", i++);
+        printf("%s%x.", "A", get_ticks());
+        // printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());
         // DispStr(".");

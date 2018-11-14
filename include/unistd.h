@@ -7,7 +7,7 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
-ssize_t write(int fildes, const void *buf, size_t nbyte);
-// ssize_t write(int, const void *, size_t);
+ssize_t write(int fd, const void *buf, size_t nbytes);
+pid_t fork(void);
 
 #endif
