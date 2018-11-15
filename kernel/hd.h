@@ -1,6 +1,7 @@
 #ifndef	_HD_H_
 #define	_HD_H_
 
+#include "process.h"
 /**
  * @struct part_ent
  * @brief  Partition Entry struct.
@@ -467,13 +468,13 @@ struct hd_identify_info
 };
 
 struct hd_cmd {
-	unsigned char	features;
-	unsigned char	count;
-	unsigned char	lba_low;
-	unsigned char	lba_mid;
-	unsigned char	lba_high;
-	unsigned char	device;
-	unsigned char	command;
+	unsigned char features;
+	unsigned char count;
+	unsigned char lba_low;
+	unsigned char lba_mid;
+	unsigned char lba_high;
+	unsigned char device;
+	unsigned char command;
 };
 
 struct part_info {
@@ -503,6 +504,29 @@ struct hd_info
 					      ((drv) << 4) |		\
 					      (lba_highest & 0xF) | 0xA0)
 
+#ifndef NULL
+#define NULL ((void *) 0)
+#endif
+
+struct request
+{
+  int dev;			/* -1 if no request */// 使用的设备号。
+  int cmd;			/* READ or WRITE */// 命令(READ 或WRITE)。
+  int errors;			//操作时产生的错误次数。
+  unsigned long sector;		// 起始扇区。(1 块=2 扇区)
+  unsigned long nr_sectors;	// 读/写扇区数。
+  char *buffer;			// 数据缓冲区。
+  struct s_proc *waiting;	// 任务等待操作执行完成的地方。
+//   struct buffer_head *bh;	// 缓冲区头指针(include/linux/fs.h,68)。
+  struct request *next;		// 指向下一请求项。
+};
+
+// 块设备结构。
+struct blk_dev_struct
+{
+  void (*request_fn) (void);	// 请求操作的函数指针。
+  struct request *current_request;	// 请求信息结构。
+};
 
 void init_hd ();
 void hd_open (int device);

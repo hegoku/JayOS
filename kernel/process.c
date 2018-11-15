@@ -19,4 +19,6 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.eip = process_entry;
     p->regs.esp = TOP_OF_USER_STACK;;
     p->regs.eflags = 0x3202;
+
+    p->status = 0;
 }

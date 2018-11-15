@@ -1,6 +1,8 @@
 #ifndef _PROCESS_H
 #define _PROCESS_H
 
+#include <system/desc.h>
+
 typedef struct s_stackframe {
     unsigned int gs;
     unsigned int fs;
@@ -28,6 +30,7 @@ typedef struct s_proc {
     DESCRIPTOR ldts[2];
     unsigned int pid;
     char p_name[16];
+    unsigned char status;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);

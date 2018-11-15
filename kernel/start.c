@@ -167,6 +167,7 @@ void TestA()
 {
     unsigned int i = 0;
     hd_identify(0);
+    hd_open(0);
     while (1)
     {
         // out_byte(INT_M_CTLMASK,0xF0);
@@ -293,15 +294,22 @@ void clock_handler(int irq)
     }
     
     // disp_int((int)p_proc_ready);
-    p_proc_ready++;
-    // disp_int(p_proc_ready);
-    // if (disp_pos>80*25) {
-    //     disp_pos = 0;
+    // p_proc_ready++;
+    // // disp_int(p_proc_ready);
+    // // if (disp_pos>80*25) {
+    // //     disp_pos = 0;
+    // // }
+    // if (p_proc_ready >= process_table + PROC_NUMBER)
+    // {
+    //     p_proc_ready = process_table;
     // }
-    if (p_proc_ready >= process_table + PROC_NUMBER)
-    {
-        p_proc_ready = process_table;
-    }
+    do {
+        p_proc_ready++;
+        if (p_proc_ready >= process_table + PROC_NUMBER)
+        {
+            p_proc_ready = process_table;
+        }
+    } while (p_proc_ready->status != 0);
 }
 
 void milli_delay(int mill_sec)

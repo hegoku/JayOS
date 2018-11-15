@@ -9,7 +9,7 @@ CFLAGS      = -c -fno-builtin -I include/
 TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
-				build/stdlib.o build/unistd.o build/stdio.o build/string.o \
+				build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o \
 				build/floppy.o build/hd.o
 
 all : clean everything image
@@ -76,13 +76,16 @@ build/string_c.o : lib/string.c include/string.h
 build/string.o : build/string_asm.o build/string_c.o
 	$(LD) -r -m elf_i386 -o build/string.o build/string_asm.o build/string_c.o
 
+build/math.o : lib/math.c include/math.h
+	$(CC) $(CFLAGS) -o $@ $<
+
 build/process.o: kernel/process.c kernel/process.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/hd.o: kernel/hd.c kernel/hd.h include/string.h kernel/global.h include/unistd.h
+build/hd.o: kernel/hd.c kernel/hd.h include/string.h kernel/global.h include/unistd.h kernel/process.h include/math.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h include/stdio.h

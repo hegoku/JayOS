@@ -12,8 +12,28 @@
 #include <stdio.h>
 #include "global.h"
 #include <unistd.h>
+#include <math.h>
 #include "hd.h"
+#include "kernel.h"
+#include "process.h"
 
+/* blk_dev_struct 块设备结构是：(kernel/blk_drv/blk.h,23)
+* do_request-address //对应主设备号的请求处理程序指针。
+* current-request // 该设备的下一个请求。
+*/
+// 该数组使用主设备号作为索引（下标）。
+struct blk_dev_struct blk_dev[7] = {
+	{NULL, NULL},		/* no_dev */// 0 - 无设备。
+	{NULL, NULL},		/* dev mem */// 1 - 内存。
+	{NULL, NULL},		/* dev fd */// 2 - 软驱设备。
+	{NULL, NULL},		/* dev hd */// 3 - 硬盘设备。
+	{NULL, NULL},		/* dev ttyx */// 4 - ttyx 设备。
+	{NULL, NULL},		/* dev tty */// 5 - tty 设备。
+	{NULL, NULL}		/* dev lp */// 6 - lp 打印机设备。
+};
+
+static void do_hd_request();
+static struct request *tail;
 /*****************************************************************************
  *                                init_hd
  *****************************************************************************/
@@ -23,15 +43,18 @@
  *****************************************************************************/
 void init_hd()
 {
-	int i;
-	/* Get the number of drives from the BIOS data area */
+    blk_dev[3].request_fn = do_hd_request;
+    blk_dev[3].current_request = NULL;
+    tail = NULL;
+    int i;
+    /* Get the number of drives from the BIOS data area */
 	unsigned char * hd_num = (unsigned char*)(0x475);
     printk("hd num: %d\n", *hd_num);
 
     for (i = 0; i < (sizeof(hd_info) / sizeof(hd_info[0])); i++) {
 		memset(&hd_info[i], 0, sizeof(hd_info[0]));
     }
-	// hd_info[0].open_cnt = 0;
+	hd_info[0].open_cnt = 0;
 }
 
 /*****************************************************************************
@@ -44,17 +67,17 @@ void init_hd()
  * 
  * @param device The device to be opened.
  *****************************************************************************/
-// void hd_open(int device)
-// {
-// 	int drive = DRV_OF_DEV(device);
+void hd_open(int device)
+{
+	int drive = DRV_OF_DEV(device);
 
-// 	hd_identify(drive);
+	hd_identify(drive);
 
-// 	if (hd_info[drive].open_cnt++ == 0) {
-// 		partition(drive * (NR_PART_PER_DRIVE + 1), P_PRIMARY);
-// 		print_hdinfo(&hd_info[drive]);
-// 	}
-// }
+	if (hd_info[drive].open_cnt++ == 0) {
+		partition(drive * (NR_PART_PER_DRIVE + 1), P_PRIMARY);
+		print_hdinfo(&hd_info[drive]);
+	}
+}
 
 /*****************************************************************************
  *                                get_part_table
@@ -97,56 +120,56 @@ static void get_part_table(int drive, int sect_nr, struct part_ent * entry)
  * @param device Device nr.
  * @param style  P_PRIMARY or P_EXTENDED.
  *****************************************************************************/
-// static void partition(int device, int style)
-// {
-// 	int i;
-// 	int drive = DRV_OF_DEV(device);
-// 	struct hd_info * hdi = &hd_info[drive];
+static void partition(int device, int style)
+{
+	int i;
+	int drive = DRV_OF_DEV(device);
+	struct hd_info * hdi = &hd_info[drive];
 
-// 	struct part_ent part_tbl[NR_SUB_PER_DRIVE];
+	struct part_ent part_tbl[NR_SUB_PER_DRIVE];
 
-// 	if (style == P_PRIMARY) {
-// 		get_part_table(drive, drive, part_tbl);
+	if (style == P_PRIMARY) {
+		get_part_table(drive, drive, part_tbl);
 
-// 		int nr_prim_parts = 0;
-// 		for (i = 0; i < NR_PART_PER_DRIVE; i++) { /* 0~3 */
-// 			if (part_tbl[i].sys_id == NO_PART) 
-// 				continue;
+		int nr_prim_parts = 0;
+		for (i = 0; i < NR_PART_PER_DRIVE; i++) { /* 0~3 */
+			if (part_tbl[i].sys_id == NO_PART) 
+				continue;
 
-// 			nr_prim_parts++;
-// 			int dev_nr = i + 1;		  /* 1~4 */
-// 			hdi->primary[dev_nr].base = part_tbl[i].start_sect;
-// 			hdi->primary[dev_nr].size = part_tbl[i].nr_sects;
+			nr_prim_parts++;
+			int dev_nr = i + 1;		  /* 1~4 */
+			hdi->primary[dev_nr].base = part_tbl[i].start_sect;
+			hdi->primary[dev_nr].size = part_tbl[i].nr_sects;
 
-// 			if (part_tbl[i].sys_id == EXT_PART) /* extended */
-// 				partition(device + dev_nr, P_EXTENDED);
-// 		}
-// 	}
-// 	else if (style == P_EXTENDED) {
-// 		int j = device % NR_PRIM_PER_DRIVE; /* 1~4 */
-// 		int ext_start_sect = hdi->primary[j].base;
-// 		int s = ext_start_sect;
-// 		int nr_1st_sub = (j - 1) * NR_SUB_PER_PART; /* 0/16/32/48 */
+			if (part_tbl[i].sys_id == EXT_PART) /* extended */
+				partition(device + dev_nr, P_EXTENDED);
+		}
+	}
+	else if (style == P_EXTENDED) {
+		int j = device % NR_PRIM_PER_DRIVE; /* 1~4 */
+		int ext_start_sect = hdi->primary[j].base;
+		int s = ext_start_sect;
+		int nr_1st_sub = (j - 1) * NR_SUB_PER_PART; /* 0/16/32/48 */
 
-// 		for (i = 0; i < NR_SUB_PER_PART; i++) {
-// 			int dev_nr = nr_1st_sub + i;/* 0~15/16~31/32~47/48~63 */
+		for (i = 0; i < NR_SUB_PER_PART; i++) {
+			int dev_nr = nr_1st_sub + i;/* 0~15/16~31/32~47/48~63 */
 
-// 			get_part_table(drive, s, part_tbl);
+			get_part_table(drive, s, part_tbl);
 
-// 			hdi->logical[dev_nr].base = s + part_tbl[0].start_sect;
-// 			hdi->logical[dev_nr].size = part_tbl[0].nr_sects;
+			hdi->logical[dev_nr].base = s + part_tbl[0].start_sect;
+			hdi->logical[dev_nr].size = part_tbl[0].nr_sects;
 
-// 			s = ext_start_sect + part_tbl[1].start_sect;
+			s = ext_start_sect + part_tbl[1].start_sect;
 
-// 			/* no more logical partitions
-// 			   in this extended partition */
-// 			if (part_tbl[1].sys_id == NO_PART)
-// 				break;
-// 		}
-// 	}
-// 	else {
-// 	}
-// }
+			/* no more logical partitions
+			   in this extended partition */
+			if (part_tbl[1].sys_id == NO_PART)
+				break;
+		}
+	}
+	else {
+	}
+}
 
 /*****************************************************************************
  *                                print_hdinfo
@@ -156,30 +179,30 @@ static void get_part_table(int drive, int sect_nr, struct part_ent * entry)
  * 
  * @param hdi  Ptr to struct hd_info.
  *****************************************************************************/
-// static void print_hdinfo(struct hd_info * hdi)
-// {
-// 	int i;
-// 	for (i = 0; i < NR_PART_PER_DRIVE + 1; i++) {
-// 		// DispStr("%sPART_%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
-// 		//        i == 0 ? " " : "     ",
-// 		//        i,
-// 		//        hdi->primary[i].base,
-// 		//        hdi->primary[i].base,
-// 		//        hdi->primary[i].size,
-// 		//        hdi->primary[i].size);
-// 	}
-// 	for (i = 0; i < NR_SUB_PER_DRIVE; i++) {
-// 		if (hdi->logical[i].size == 0)
-// 			continue;
-// 		// DispStr("         "
-// 		//        "%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
-// 		//        i,
-// 		//        hdi->logical[i].base,
-// 		//        hdi->logical[i].base,
-// 		//        hdi->logical[i].size,
-// 		//        hdi->logical[i].size);
-// 	}
-// }
+static void print_hdinfo(struct hd_info * hdi)
+{
+	int i;
+	for (i = 0; i < NR_PART_PER_DRIVE + 1; i++) {
+		printk("%sPART_%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
+		       i == 0 ? " " : "     ",
+		       i,
+		       hdi->primary[i].base,
+		       hdi->primary[i].base,
+		       hdi->primary[i].size,
+		       hdi->primary[i].size);
+	}
+	for (i = 0; i < NR_SUB_PER_DRIVE; i++) {
+		if (hdi->logical[i].size == 0)
+			continue;
+		printk("         "
+		       "%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
+		       i,
+		       hdi->logical[i].base,
+		       hdi->logical[i].base,
+		       hdi->logical[i].size,
+		       hdi->logical[i].size);
+	}
+}
 
 /*****************************************************************************
  *                                hd_identify
@@ -191,10 +214,29 @@ static void get_part_table(int drive, int sect_nr, struct part_ent * entry)
  *****************************************************************************/
 void hd_identify(int drive)
 {
-	struct hd_cmd cmd;
-	cmd.device  = MAKE_DEVICE_REG(0, drive, 0);
+    struct request a;
+    struct hd_identify_info_raw info_raw;
+    a.buffer = (char *)&info_raw;
+    a.cmd = 0;
+    a.dev = 3;
+    a.next = NULL;
+    a.waiting = p_proc_ready;
+    
+    if (blk_dev[3].current_request==NULL) {
+        blk_dev[3].current_request = &a;
+        tail = &a;
+    } else {
+        tail = &a;
+    }
+    tail = &a;
+    
+    struct hd_cmd cmd;
+    cmd.device  = MAKE_DEVICE_REG(0, drive, 0);
 	cmd.command = ATA_IDENTIFY;
 	hd_cmd_out(&cmd);
+    interrupt_wait(a.waiting);
+    struct hd_identify_info info = format_hd_info((struct hd_identify_info_raw*)a.buffer);
+    print_identify_info(&info);
 	// interrupt_wait();
 	// port_read(REG_DATA, hdbuf, SECTOR_SIZE);
 
@@ -259,8 +301,8 @@ static void print_identify_info(struct hd_identify_info* hdinfo)
 	printf("LBA48 supported: %s\n",
 	       (cmd_set_supported & 0x0400) ? "Yes" : "No");
 
-	// int sectors = ((int)hdinfo[61] << 16) + hdinfo[60];
-    printf("HD size: %dMB\n", hdinfo->dwTotalSectors * 512 / 1000000);
+	int sectors = hdinfo->dwTotalSectors * 512 / 1000000;
+    printf("HD size: %dMB\n", sectors);
 }
 
 /*****************************************************************************
@@ -303,9 +345,10 @@ static void hd_cmd_out(struct hd_cmd* cmd)
  * <Ring 1> Wait until a disk interrupt occurs.
  * 
  *****************************************************************************/
-static void interrupt_wait()
+static void interrupt_wait(PROCESS *p)
 {
-	
+    p->status = 0;
+    while (p->status == 1){}
 }
 
 /*****************************************************************************
@@ -337,12 +380,32 @@ static int waitfor(int mask, int val, int timeout)
 // <Ring 0>
 void hd_handler(int irq)
 {
-    hd_status = in_byte(REG_STATUS);
-    struct hd_identify_info_raw info_raw;
-    // port_read(REG_DATA, hdbuf, SECTOR_SIZE);
-    port_read(REG_DATA, &info_raw, 256);
-    struct hd_identify_info info=format_hd_info(&info_raw);
-    print_identify_info(&info);
+    if (blk_dev[3].current_request==NULL) {
+        return;
+    }
+    if (blk_dev[3].current_request->cmd==0) { //0=read 1=write
+        hd_status = in_byte(REG_STATUS);
+        struct hd_identify_info_raw info_raw;
+        port_read(REG_DATA, hdbuf, SECTOR_SIZE);
+        // port_read(REG_DATA, &info_raw, 256);
+        memcpy(blk_dev[3].current_request->buffer, hdbuf, 256);
+        blk_dev[3].current_request->waiting->status = 0;
+        // blk_dev[3].current_request->buffer = &info_raw;
+    } else if (blk_dev[3].current_request->cmd==0) {
+
+    } else {
+        printf("unknown hd-command in hd_handler\n");
+        return;
+    }
+
+    blk_dev[3].current_request = blk_dev[3].current_request->next;
+
+    // hd_status = in_byte(REG_STATUS);
+    // struct hd_identify_info_raw info_raw;
+    // // port_read(REG_DATA, hdbuf, SECTOR_SIZE);
+    // port_read(REG_DATA, &info_raw, 256);
+    // struct hd_identify_info info=format_hd_info(&info_raw);
+    // print_identify_info(&info);
 }
 
 struct hd_identify_info format_hd_info(struct hd_identify_info_raw *raw)
@@ -409,4 +472,60 @@ struct hd_identify_info format_hd_info(struct hd_identify_info_raw *raw)
     memcpy(info.wReserved89 ,raw->wReserved89, sizeof(raw->wReserved89));
 
     return info;
+}
+
+
+void hd_send_request()
+{
+
+}
+
+static void do_hd_request()
+{
+    struct request *current = blk_dev[3].current_request;
+    struct hd_cmd cmd;
+    int bytes_left = current->nr_sectors*SECTOR_SIZE;
+    cmd.device  = MAKE_DEVICE_REG(0, current->dev, 0);
+    cmd.lba_low = current->nr_sectors & 0xFF;
+    cmd.lba_mid = (current->nr_sectors >> 8) & 0xFF;
+    cmd.lba_high = (current->nr_sectors >> 16) & 0xFF;
+    cmd.count = bytes_left;
+    cmd.features = 0;
+    if (current->cmd == 0) //0=read 1=write
+    {
+        cmd.command = ATA_READ;
+    } else if (current->cmd==1) {
+        cmd.command = ATA_WRITE;
+    } else {
+        printk("unknow hd-command\n");
+        return;
+    }
+    hd_cmd_out(&cmd);
+	void * la = current->buffer;
+
+	while (bytes_left) {
+		int bytes = fmin((double)SECTOR_SIZE, (double)bytes_left);
+		if (current->cmd == 0) {
+            interrupt_wait(current->waiting);
+            port_read(REG_DATA, hdbuf, SECTOR_SIZE);
+            memcpy(la, hdbuf, bytes);
+        }
+		else {
+			if (!waitfor(STATUS_DRQ, STATUS_DRQ, HD_TIMEOUT)) {
+                printk("hd writing error.\n");
+                return;
+            }
+            port_write(REG_DATA, la, bytes);
+			interrupt_wait(current->waiting);
+		}
+		bytes_left -= SECTOR_SIZE;
+		la += SECTOR_SIZE;
+    }
+}
+
+void hd_read(int drive, unsigned long pos)
+{
+    int dev = DRV_OF_DEV(drive);
+
+
 }
