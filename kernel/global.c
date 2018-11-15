@@ -19,18 +19,3 @@ int printk(const char * format, ...)
     tty_write(&tty, buf, i);
     return i;
 }
-
-int sys_get_ticks()
-{
-    // DispStr("\nAAAAA:");
-    // disp_int(a);
-    // DispStr("   BBBBB:");
-    // disp_int(b);
-    // DispStr("\n");
-    return ticks;
-}
-
-int get_ticks()
-{
-    return sys_call_0_param(0);
-}

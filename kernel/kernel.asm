@@ -30,9 +30,6 @@ INT_VECTOR_SYS_CALL equ 0x80 ;系统中断号
 %include "include/pm.inc"
 %include "include/func.inc"
 
-; extern moveGdt
-; extern gdt_ptr
-; extern gdt
 extern exception_handler
 extern cstart
 extern kernel_main
@@ -42,7 +39,6 @@ extern irq_table
 extern sys_call_table
 extern p_proc_ready
 extern is_in_ring0
-extern ticks
 
 global gdt
 global gdt_ptr
@@ -90,36 +86,13 @@ global sys_call_1_param
 global sys_call_2_param
 global sys_call_3_param
 
-
-; extern calltest
-
-extern ss3
-
 gdt times 128*64 db 0
 GdtLen equ $-gdt
 
 gdt_ptr dw GdtLen-1
 gdt_ptr_base dd gdt
-; gdt: Descriptor 0, 0, 0
-; gdt_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL0
-; gdt_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL0
-; gdt_video: Descriptor 0B8000h, 0xfffff, DA_DRW|DA_DPL3
-; gdt_user_code: Descriptor 0, 0xfffff, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3
-; gdt_user_data: Descriptor 0, 0xfffff, DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3
-; gdt_tss: Descriptor 0xea13, 0x69-1, DA_386TSS
-; ; gdt_tst: Gate GDT_SEL_KERNEL_CODE, 0x8aa1f, 0, DA_386CGate | DA_DPL0
-; gdt_tst: dw 0x00000	 
-; dw 0x8c00	 
-; dw 0x0008 
-; dw 0xea3f
-; GdtLen equ $-gdt
-; gdt_ptr dw GdtLen-1
-; gdt_ptr_base       dd 0
 
 idt:
-; %rep 255
-; Gate GDT_SEL_KERNEL_CODE, inval_opcode_limit, 0, DA_386IGate
-; %endrep
 times 256*64 db 0
 IdtLen equ $-idt
 
@@ -129,11 +102,8 @@ idt_ptr_base dd idt
 [BITS 32]
 _start:
     mov esp, TOP_OF_KERNEL_STACK
-    ; mov eax, SELF_CS
 
-    ; sgdt [gdt_ptr]
 	call cstart
-    ; call moveGdt
     lgdt [gdt_ptr]
     lidt [idt_ptr]
     jmp GDT_SEL_KERNEL_CODE:csinit ;强制刷新
@@ -142,32 +112,8 @@ csinit:
     mov ax, GDT_SEL_TSS
     ltr ax
     jmp kernel_main
-    ; push GDT_SEL_USER_DATA
-    ; push TOP_OF_USER_STACK
-    ; push GDT_SEL_USER_CODE
-    ; push ring3
     retf
     jmp $
-
-moveGdt:
-    ; movzx eax, word[gdt_ptr]
-    ; push eax ;size
-
-    ; mov eax, dword[gdt_ptr_base]
-    ; push eax ;src
-    
-    ; mov eax, gdt
-    ; push eax ;dst
-    
-    ; call memcpy
-    ; add esp, 12
-
-    mov ax, GdtLen
-    mov word[gdt_ptr], ax
-
-    mov eax, gdt
-    mov dword[gdt_ptr_base], eax
-    ret
 
 ; 中断和异常 -- 异常
 divide_error:
@@ -273,9 +219,6 @@ exception:
     ; push restart
 	ret
 %endmacro
-extern clock_handler
-extern keyboard_handler
-extern floppy_handler
 
 hwint00:		; Interrupt routine for irq 0 (the clock).
 hwint_master 0
@@ -479,17 +422,6 @@ ret_to_proc:
     add esp,4
     iretd
 
-; global get_ticks
-; get_ticks:
-;     push eax
-;     mov eax, 0
-;     mov ebx, 11
-;     mov ecx, 22
-;     mov edx, 33
-;     int INT_VECTOR_SYS_CALL
-;     pop eax
-;     ret
-
 ; void sys_call_0_param(int index);
 sys_call_0_param:
     push esi
@@ -562,30 +494,5 @@ sys_call_3_param:
     mov esp, esi
     pop esi
     ret
-
-ring3:
-	xor eax, eax
-	mov ax, GDT_SEL_USER_DATA
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	; int 6
-	; mov eax, tss
-	; jmp $
-	
-    ; call 0x0038:0
-	; call GDT_SEL_USER_DATA:calltest
-	; call calltest
-    mov ax, GDT_SEL_VIDEO
-    mov gs, ax
-    mov edi, (80*14+20)*2
-    mov ah, 0ch
-    mov al, '3'
-    mov [gs:edi], ax
-    ; mov eax, GDT_SEL_USER_DATA
-    ; mov ds, eax
-    ; mov word[0x27a00], 0x3355
-    jmp $
-
 
 

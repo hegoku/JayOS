@@ -4,8 +4,6 @@
 
 #define	MAX_TICKS	0x7FFFABCD
 
-extern int disp_pos;
-
 void DispStr(char* msg);
 // void memcpy(void *pDest, void *pSrc, int iSize);
 void DispColorStr(char * info, int color);
@@ -22,9 +20,6 @@ void disp_int(int input);
 int printk(const char *fmt, ...);
 
 int is_in_ring0;
-
-int sys_get_ticks();
-int get_ticks();
 
 int printk(const char * format, ...);
 

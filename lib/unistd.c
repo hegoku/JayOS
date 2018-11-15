@@ -14,3 +14,9 @@ pid_t fork(void)
 {
     return 0;
 }
+
+//临时
+int get_ticks()
+{
+    return sys_call_0_param(0);
+}

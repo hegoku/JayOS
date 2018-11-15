@@ -9,12 +9,7 @@
 #include "kernel.h"
 #include "unistd.h"
 #include "stdio.h"
-
-// unsigned char gdt_ptr[6];
-// DESCRIPTOR gdt[GDT_SIZE];
-
-unsigned short testcallS;
-unsigned short ss3;
+#include <system/system_call.h>
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -31,7 +26,6 @@ static void init_gdt();
 void kernel_main();
 
 void clock_handler(int irq);
-ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte);
 
 void calltest();
 void TestA();
@@ -39,36 +33,15 @@ void delay();
 void milli_delay(int mill_sec);
 void task_tty();
 
-void restart();
-
-static void moveGdt()
-{
-    // memcpy(&gdt,
-    //     (void*)(*((unsigned int*) (&gdt_ptr[2]))),
-    //     *((unsigned short*) (&gdt_ptr[0])) +1
-    // );
-
-    // unsigned short *p_gdt_limit = (unsigned short *)(&gdt_ptr[0]);
-    // unsigned int *p_gdt_base = (unsigned int *)(&gdt_ptr[2]);
-    // *p_gdt_limit = GDT_SIZE * sizeof(DESCRIPTOR) - 1;
-    // *p_gdt_base = (unsigned int)&gdt;
-
-    // DispStr("-----Move Gdt success-------\n"
-    // "----JayOS----\n"
-    // );
-}
+extern void restart();
 
 void cstart()
 {
-    // DispStr("-----Move Gdt success-------\n\n");
     init_gdt();
     init_idt();
-    // init_hd();
     // hd_open(0);
 
     tty = tty_create(0);
-    // DispStr("----Init idt success----\n\n");
-    // DispStr("----JayOS----\n\n");
 
     process_table[0].pid = 0;
     create_process(gdt, &process_table[0], (unsigned int)task_tty);
@@ -91,9 +64,6 @@ void init_idt()
     for (int i; i < IRQ_NUMBER; i++) {
         irq_table[i] = spurious_irq;
     }
-
-    sys_call_table[0] = sys_get_ticks;
-    sys_call_table[1] = sys_write;
 
     // 全部初始化成中断门(没有陷阱门)
 	init_idt_desc(idt, INT_VECTOR_DIVIDE, DA_386IGate, divide_error, PRIVILEGE_KRNL);
@@ -158,7 +128,6 @@ static void init_gdt()
 
 	tss.esp0 = TOP_OF_KERNEL_STACK;
 	tss.ss0 = SelectorKernelDs;
-    // disp_int((unsigned int)&tss);while(1){}
     DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
     SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
 	
@@ -171,8 +140,9 @@ static void init_gdt()
 
 void kernel_main()
 {
-    // DispStr("i'm kernel_main\n");
     ticks = 0;
+    init_system_call(sys_call_table);
+
     irq_table[CLOCK_IRQ] = clock_handler;
     enable_irq(CLOCK_IRQ);
 
@@ -332,11 +302,6 @@ void clock_handler(int irq)
     {
         p_proc_ready = process_table;
     }
-}
-
-ssize_t sys_write(int fildes, const void *buf, unsigned int nbyte)
-{
-    return tty_write(&tty, (char *)buf, nbyte);
 }
 
 void milli_delay(int mill_sec)

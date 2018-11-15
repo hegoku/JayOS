@@ -44,10 +44,8 @@
 #define	AT_WINI_IRQ	14	/* at winchester */
 
 #define IRQ_NUMBER 16
-#define SYS_CALL_NUMBER 2
 
 typedef void (*irq_handler)(int irq);
-typedef void *sys_call_handler;
 
 void init_idt_desc(GATE* idt, unsigned char vector, unsigned char desc_type, void* handler, unsigned char privilege);
 void init_8259A();

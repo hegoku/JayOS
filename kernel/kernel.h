@@ -3,6 +3,7 @@
 
 #include "system/desc.h"
 #include "interrupt.h"
+#include <system/system_call.h>
 #include "tty.h"
 #include "process.h"
 // #define GDT_SIZE 128
@@ -33,10 +34,5 @@ TTY tty;
 
 PROCESS process_table[PROC_NUMBER];
 PROCESS *p_proc_ready;
-
-extern int sys_call_0_param(int index);
-extern int sys_call_1_param(int index, ...);
-extern int sys_call_2_param(int index, ...);
-extern int sys_call_3_param(int index, ...);
 
 #endif
