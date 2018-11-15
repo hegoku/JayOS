@@ -91,6 +91,21 @@ void hd_open(int device)
  *****************************************************************************/
 static void get_part_table(int drive, int sect_nr, struct part_ent * entry)
 {
+    struct request a;
+    char buf[SECTOR_SIZE*2];
+    a.buffer = buf;
+    a.cmd = 0;
+    a.dev = 3;
+    a.next = NULL;
+    a.waiting = p_proc_ready;
+    if (blk_dev[3].current_request==NULL) {
+        blk_dev[3].current_request = &a;
+        tail = &a;
+    } else {
+        tail = &a;
+    }
+    tail = &a;
+
 	struct hd_cmd cmd;
 	cmd.features	= 0;
 	cmd.count	= 1;
@@ -101,12 +116,13 @@ static void get_part_table(int drive, int sect_nr, struct part_ent * entry)
 					  drive,
 					  (sect_nr >> 24) & 0xF);
 	cmd.command	= ATA_READ;
-	hd_cmd_out(&cmd);
-	interrupt_wait();
+    a.waiting->status = 1;
+    hd_cmd_out(&cmd);
+    interrupt_wait(a.waiting);
 
-	port_read(REG_DATA, hdbuf, SECTOR_SIZE);
+	// port_read(REG_DATA, hdbuf, SECTOR_SIZE);
 	memcpy(entry,
-	       hdbuf + PARTITION_TABLE_OFFSET,
+	       a.buffer + PARTITION_TABLE_OFFSET,
 	       sizeof(struct part_ent) * NR_PART_PER_DRIVE);
 }
 
@@ -129,15 +145,15 @@ static void partition(int device, int style)
 	struct part_ent part_tbl[NR_SUB_PER_DRIVE];
 
 	if (style == P_PRIMARY) {
-		get_part_table(drive, drive, part_tbl);
+        get_part_table(drive, drive, part_tbl);
 
-		int nr_prim_parts = 0;
+        int nr_prim_parts = 0;
 		for (i = 0; i < NR_PART_PER_DRIVE; i++) { /* 0~3 */
 			if (part_tbl[i].sys_id == NO_PART) 
 				continue;
 
-			nr_prim_parts++;
-			int dev_nr = i + 1;		  /* 1~4 */
+            nr_prim_parts++;
+            int dev_nr = i + 1;		  /* 1~4 */
 			hdi->primary[dev_nr].base = part_tbl[i].start_sect;
 			hdi->primary[dev_nr].size = part_tbl[i].nr_sects;
 
@@ -233,7 +249,8 @@ void hd_identify(int drive)
     struct hd_cmd cmd;
     cmd.device  = MAKE_DEVICE_REG(0, drive, 0);
 	cmd.command = ATA_IDENTIFY;
-	hd_cmd_out(&cmd);
+    a.waiting->status = 1;
+    hd_cmd_out(&cmd);
     interrupt_wait(a.waiting);
     struct hd_identify_info info = format_hd_info((struct hd_identify_info_raw*)a.buffer);
     print_identify_info(&info);
@@ -244,9 +261,9 @@ void hd_identify(int drive)
 
 	// unsigned short* hdinfo = (unsigned  short*)hdbuf;
 
-	// hd_info[drive].primary[0].base = 0;
-	// /* Total Nr of User Addressable Sectors */
-	// hd_info[drive].primary[0].size = ((int)hdinfo[61] << 16) + hdinfo[60];
+	hd_info[drive].primary[0].base = 0;
+	/* Total Nr of User Addressable Sectors */
+	hd_info[drive].primary[0].size = info.dwTotalSectors;
 }
 
 /*****************************************************************************
@@ -347,7 +364,7 @@ static void hd_cmd_out(struct hd_cmd* cmd)
  *****************************************************************************/
 static void interrupt_wait(PROCESS *p)
 {
-    p->status = 0;
+    printk("1 %d name:%s mem:%x\n", p->status, p->p_name, p);
     while (p->status == 1){}
 }
 
@@ -381,23 +398,28 @@ static int waitfor(int mask, int val, int timeout)
 void hd_handler(int irq)
 {
     if (blk_dev[3].current_request==NULL) {
+        printk("no hd request\n");
         return;
     }
     if (blk_dev[3].current_request->cmd==0) { //0=read 1=write
         hd_status = in_byte(REG_STATUS);
-        struct hd_identify_info_raw info_raw;
+        // struct hd_identify_info_raw info_raw;
         port_read(REG_DATA, hdbuf, SECTOR_SIZE);
         // port_read(REG_DATA, &info_raw, 256);
-        memcpy(blk_dev[3].current_request->buffer, hdbuf, 256);
-        blk_dev[3].current_request->waiting->status = 0;
+        memcpy(blk_dev[3].current_request->buffer, hdbuf, SECTOR_SIZE);
         // blk_dev[3].current_request->buffer = &info_raw;
-    } else if (blk_dev[3].current_request->cmd==0) {
-
+        printk("status: %x, %x\n", hd_status, hdbuf);
+    }
+    else if (blk_dev[3].current_request->cmd == 0)
+    {
     } else {
         printf("unknown hd-command in hd_handler\n");
         return;
     }
 
+    printk("2 %d name:%s mem:%x\n", blk_dev[3].current_request->waiting->status, blk_dev[3].current_request->waiting->p_name, blk_dev[3].current_request->waiting);
+    blk_dev[3].current_request->waiting->status = 0;
+    printk("%d mem_n:\n", blk_dev[3].current_request->waiting->status, blk_dev[3].current_request->next);
     blk_dev[3].current_request = blk_dev[3].current_request->next;
 
     // hd_status = in_byte(REG_STATUS);
@@ -500,8 +522,9 @@ static void do_hd_request()
         printk("unknow hd-command\n");
         return;
     }
+    current->waiting->status = 1;
     hd_cmd_out(&cmd);
-	void * la = current->buffer;
+    void * la = current->buffer;
 
 	while (bytes_left) {
 		int bytes = fmin((double)SECTOR_SIZE, (double)bytes_left);

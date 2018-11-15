@@ -53,7 +53,7 @@ int vsprintf(char *buf, const char *format, va_list args)
 		}
 
 		char inner_buf[STR_DEFAULT_LEN];
-        char * q = inner_buf;
+        char *q = inner_buf;
 
         switch (*format)
         {

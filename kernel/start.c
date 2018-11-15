@@ -44,14 +44,20 @@ void cstart()
     tty = tty_create(0);
 
     process_table[0].pid = 0;
+    process_table[0].p_name[0] = 't';
+    process_table[0].p_name[1]='\0';
     create_process(gdt, &process_table[0], (unsigned int)task_tty);
     process_table[0].regs.esp = TOP_OF_USER_STACK;
 
     process_table[1].pid = 1;
+    process_table[1].p_name[0]='B';
+    process_table[1].p_name[1]='\0';
     create_process(gdt, &process_table[1], (unsigned int)calltest);
     process_table[1].regs.esp = TOP_OF_USER_STACK-0x400;
 
     process_table[2].pid = 2;
+    process_table[2].p_name[0] = 'A';
+    process_table[2].p_name[1] = '\0';
     create_process(gdt, &process_table[2], (unsigned int)TestA);
     process_table[2].regs.esp = TOP_OF_USER_STACK-0x400*2;
 }
@@ -166,7 +172,6 @@ void kernel_main()
 void TestA()
 {
     unsigned int i = 0;
-    hd_identify(0);
     hd_open(0);
     while (1)
     {
