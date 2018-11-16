@@ -77,12 +77,12 @@ struct part_ent {
 				 *   value of 1023.
 				 */
 
-	unsigned short start_sect;	/**
+	unsigned long start_sect;	/**
 				 * starting sector counting from
 				 * 0 / Relative Sector. / start in LBA
 				 */
 
-	unsigned short nr_sects;		/**
+	unsigned long nr_sects;		/**
 				 * nr of sectors in partition
 				 */
 
@@ -238,7 +238,9 @@ struct part_ent {
 
 #define ORANGES_PART	0x99	/* Orange'S partition */
 #define NO_PART		0x00	/* unused entry */
+#define FAT12_PART		0x01	/* FAT entry */
 #define EXT_PART	0x05	/* extended partition */
+#define LINUX_PART 0x83
 
 #define TIMER_FREQ     1193182L/* clock frequency for timer in PC and AT */
 #define HZ             100  /* clock freq (software settable on IBM-PC) */
@@ -486,8 +488,10 @@ struct part_info {
 struct hd_info
 {
 	int			open_cnt;
-	struct part_info	primary[NR_PRIM_PER_DRIVE];
-	struct part_info	logical[NR_SUB_PER_DRIVE];
+	// struct part_info	primary[NR_PRIM_PER_DRIVE];
+	// struct part_info	logical[NR_SUB_PER_DRIVE];
+	struct part_ent	primary[NR_PRIM_PER_DRIVE];
+	struct part_ent	logical[NR_SUB_PER_DRIVE];
 };
 
 
@@ -515,9 +519,9 @@ struct request
   int errors;			//操作时产生的错误次数。
   unsigned long sector;		// 起始扇区。(1 块=2 扇区)
   unsigned long nr_sectors;	// 读/写扇区数。
-  char *buffer;			// 数据缓冲区。
+  char *buffer;             // 数据缓冲区。
   struct s_proc *waiting;	// 任务等待操作执行完成的地方。
-//   struct buffer_head *bh;	// 缓冲区头指针(include/linux/fs.h,68)。
+  char *bh;	// 缓冲区头指针
   struct request *next;		// 指向下一请求项。
 };
 
@@ -527,6 +531,17 @@ struct blk_dev_struct
   void (*request_fn) (void);	// 请求操作的函数指针。
   struct request *current_request;	// 请求信息结构。
 };
+
+//设备号宏， 来自linux
+#define MINORBITS 20 /*次设备号*/  
+
+#define MINORMASK ((1U << MINORBITS) - 1) /*次设备号掩码*/  
+
+#define MAJOR(dev) ((unsigned int) ((dev) >> MINORBITS)) /*dev右移20位得到主设备号*/  
+
+#define MINOR(dev) ((unsigned int) ((dev) & MINORMASK)) /*与次设备掩码与，得到次设备号*/ 
+
+#define MKDEV(ma,mi) (((ma) << MINORBITS) | (mi))
 
 void init_hd ();
 void hd_open (int device);
