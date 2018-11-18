@@ -50,7 +50,7 @@ static void set_console_start_addr(unsigned int addr);
 static void flush(CONSOLE *console);
 void scroll_screen(CONSOLE *p, int direction);
 
-unsigned int tty_write(TTY *tty, char *buf, int len);
+unsigned int tty_write(int mi_dev, char *buf, int len);
 
 extern TTY tty_table[];
 extern TTY *current_tty;

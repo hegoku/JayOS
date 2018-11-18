@@ -75,5 +75,7 @@ extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
 
 int sys_open(const char *path, int flags, ...);
-int get_inode_by_filename(const char *filename, struct inode *res_inode);
+int sys_write(int fd, const void *buf, unsigned int nbyte);
+int sys_close(int fd);
+int get_inode_by_filename(const char *filename, struct inode **res_inode);
 #endif

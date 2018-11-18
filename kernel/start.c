@@ -178,7 +178,7 @@ void kernel_main()
         a.mode = FILE_MODE_CHR;
         inode_table[i] = a;
     }
-    
+
     restart();
 }
 
@@ -323,7 +323,7 @@ void clock_handler(int irq)
     char a[2] = {'#', '\0'};
     // char *buf;
     // int i=sprintf(buf, "#");
-    // tty_write(&tty, a, 1);
+    // tty_write(0, a, 1);
     if (++ticks>=MAX_TICKS) {
         ticks = 0;
     }

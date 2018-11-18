@@ -10,7 +10,7 @@ TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
-				build/floppy.o build/hd.o
+				build/floppy.o build/hd.o build/dev.o
 
 all : clean everything image
 
@@ -89,7 +89,8 @@ build/process.o: kernel/process.c kernel/process.h
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/hd.o: kernel/hd1.c kernel/hd.h include/string.h kernel/global.h include/unistd.h kernel/process.h include/math.h
+build/hd.o: kernel/hd1.c kernel/hd.h include/string.h kernel/global.h include/unistd.h \
+			kernel/process.h include/math.h include/system/dev.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h include/stdio.h
@@ -104,4 +105,7 @@ build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tt
 build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h \
 			kernel/process.h include/system/desc.h kernel/kernel.h \
 			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/dev.o: fs/dev.c include/system/dev.h
 	$(CC) $(CFLAGS) -o $@ $<

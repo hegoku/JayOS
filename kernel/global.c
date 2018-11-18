@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "kernel.h"
+#include <system/dev.h>
 
 void disp_int(int input)
 {
@@ -16,6 +17,6 @@ int printk(const char * format, ...)
     char buf[1024];
     va_list arg = (va_list)((char*)(&format)+4);//4为format所占堆栈中大小
     i = vsprintf(buf, format, arg);
-    tty_write(current_tty, buf, i);
+    tty_write(0, buf, i);
     return i;
 }

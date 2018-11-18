@@ -6,27 +6,15 @@
 #include "hd.h"
 #include "kernel.h"
 #include "process.h"
+#include <system/dev.h>
 
 #define MAJOR_NR 3
-
-/* blk_dev_struct 块设备结构是：(kernel/blk_drv/blk.h,23)
-* do_request-address //对应主设备号的请求处理程序指针。
-* current-request // 该设备的下一个请求。
-*/
-// 该数组使用主设备号作为索引（下标）。
-struct blk_dev_struct blk_dev[5] = {
-	{NULL, NULL},		/* no_dev */// 0 - 无设备。
-	{NULL, NULL},		/* dev mem */// 1 - 内存。
-	{NULL, NULL},		/* dev fd */// 2 - 软驱设备。
-	{NULL, NULL},		/* dev hd */// 3 - 硬盘设备。
-	{NULL, NULL},		/* dev tty */// 4 - tty 设备。
-};
 
 static unsigned char hd_status;
 static unsigned char hdbuf[SECTOR_SIZE * 2];
 static struct hd_info hd_info[MAX_DRIVES];
 static unsigned char hd_num;
-static struct request *tail;
+static struct blk_request *tail;
 static void(*hd_callback)();
 
 static void do_hd_request();
@@ -34,15 +22,17 @@ static void get_part_table(int drive, int sect_nr, struct part_ent *entry, int e
 static void partition(int drive);
 static int waitfor (int mask, int val, int timeout);
 static void	interrupt_wait ();
-static void add_request(struct request *r);
+static void add_request(struct blk_request *r);
 static void print_hdinfo(struct hd_info *hdi);
 static void do_read();
 static void do_write();
+static int do_request(int mi_dev, int cmd, unsigned long sector, unsigned char* buf, unsigned long bytes);
 
 void init_hd()
 {
-    blk_dev[MAJOR_NR].request_fn = do_hd_request;
-    blk_dev[MAJOR_NR].current_request = NULL;
+    dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
+    // dev_table[MAJOR_NR].request_fn = do_request;
+    dev_table[MAJOR_NR].current_request = NULL;
     tail = NULL;
 }
 
@@ -119,7 +109,7 @@ static void interrupt_wait(PROCESS *p)
 
 void hd_handler(int irq)
 {
-    if (blk_dev[MAJOR_NR].current_request==NULL) {
+    if (dev_table[MAJOR_NR].current_request==NULL) {
         printk("no hd request\n");
         return;
     }
@@ -130,7 +120,7 @@ void hd_handler(int irq)
 
 void do_hd_request()
 {
-    struct request *current = blk_dev[MAJOR_NR].current_request;
+    struct blk_request *current = dev_table[MAJOR_NR].current_request;
     struct hd_cmd cmd;
     
     cmd.device  = MAKE_DEVICE_REG(1, current->dev, (current->sector >> 24) & 0xF);
@@ -160,7 +150,7 @@ void do_hd_request()
 
 static void do_read()
 {
-    struct request *current = blk_dev[MAJOR_NR].current_request;
+    struct blk_request *current = dev_table[MAJOR_NR].current_request;
     unsigned int bytes_left = (int)fmin(SECTOR_SIZE, current->bytes);
 
     memset(hdbuf, 0, SECTOR_SIZE);
@@ -177,13 +167,13 @@ static void do_read()
 
     current->waiting->status = 0;
     // printk("end read\n");
-    blk_dev[MAJOR_NR].current_request = current->next;
+    dev_table[MAJOR_NR].current_request = current->next;
     // do_hd_request ();
 }
 
 static void do_write()
 {
-    struct request *current = blk_dev[MAJOR_NR].current_request;
+    struct blk_request *current = dev_table[MAJOR_NR].current_request;
     unsigned int bytes_left = (int)fmin(SECTOR_SIZE, current->bytes);
     
     if (current->nr_sectors--)
@@ -204,25 +194,25 @@ static void do_write()
     }
 
     current->waiting->status = 0;
-    blk_dev[MAJOR_NR].current_request = current->next;
+    dev_table[MAJOR_NR].current_request = current->next;
 }
 
 static void get_part_table(int drive, int sect_nr, struct part_ent * entry, int entry_count)
 {
-    struct request a;
+    struct blk_request a;
     char buf[SECTOR_SIZE*2];
     hd_rw(drive, 0, buf, sect_nr, SECTOR_SIZE);
     memcpy(entry, buf + PARTITION_TABLE_OFFSET, sizeof(struct part_ent) * entry_count);
 }
 
-static void add_request(struct request *r)
+static void add_request(struct blk_request *r)
 {
     r->bh = r->buffer;
     r->next = NULL;
     r->waiting = current_process;
-    if (blk_dev[MAJOR_NR].current_request == NULL)
+    if (dev_table[MAJOR_NR].current_request == NULL)
     {
-        blk_dev[MAJOR_NR].current_request = r;
+        dev_table[MAJOR_NR].current_request = r;
         tail = r;
     } else {
         tail->next = r;
@@ -230,12 +220,13 @@ static void add_request(struct request *r)
     tail = r;
 }
 
-void hd_rw(int drive, int cmd, unsigned char* buf, unsigned long sector, unsigned long bytes)
+int hd_rw(int drive, int cmd, unsigned char* buf, unsigned long sector, unsigned long bytes)
 {
-    struct request r;
+    struct blk_request r;
     r.buffer = buf;
     r.cmd = cmd;
-    if (hd_info[drive].is_master==1) {
+    if (hd_info[drive].is_master == 1)
+    {
         r.dev = 0;
     } else {
         r.dev = 1;
@@ -246,6 +237,13 @@ void hd_rw(int drive, int cmd, unsigned char* buf, unsigned long sector, unsigne
     add_request(&r);
     do_hd_request();
     interrupt_wait(r.waiting);
+    return bytes;
+}
+
+int do_request(int mi_dev, int cmd, unsigned long sector, unsigned char* buf, unsigned long bytes)
+{
+    int drive = GET_DRIVER_INDEX_BYMINOR(mi_dev);
+    return hd_rw(drive, cmd, buf, sector, bytes);
 }
 
 static void partition(int drive)

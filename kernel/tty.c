@@ -1,9 +1,14 @@
 #include "tty.h"
+#include <system/dev.h>
 #include "global.h"
 #include "keyboard.h"
 
+#define MAJOR_NR 4
+
 TTY tty_table[TTY_NUM];
 TTY *current_tty;
+
+static int do_request();
 
 void init_tty()
 {
@@ -11,6 +16,8 @@ void init_tty()
         tty_table[i]=tty_create(i);
     }
     current_tty = &tty_table[0];
+    dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
+    dev_table[MAJOR_NR].request_fn = do_request;
 }
 
 TTY tty_create(unsigned char id)
@@ -88,8 +95,19 @@ void tty_output(TTY* tty)
     // }
 }
 
-unsigned int tty_write(TTY* tty, char* buf, int len)
+int do_request(unsigned mi_dev, int cmd, char * buf,int len)
 {
+    if (cmd==DEV_WRITE) {
+        return tty_write(mi_dev, buf, len);
+    }
+    else if (cmd == DEV_READ)
+    {
+    }
+}
+
+unsigned int tty_write(int mi_dev, char* buf, int len)
+{
+    TTY *tty=&tty_table[mi_dev];
     char *p = buf;
     int i = len;
     // return len;

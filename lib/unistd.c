@@ -15,6 +15,11 @@ ssize_t write(int fd, const void *buf, unsigned int nbytes)
     return sys_call_3_param(SYS_CALL_WRITE, fd, buf, nbytes);
 }
 
+int close(int fd)
+{
+    return sys_call_1_param(SYS_CALL_CLOSE, fd);
+}
+
 pid_t fork(void)
 {
     return 0;
