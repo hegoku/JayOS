@@ -2,6 +2,7 @@
 #define _PROCESS_H
 
 #include <system/desc.h>
+#include <system/fs.h>
 
 typedef struct s_stackframe {
     unsigned int gs;
@@ -31,6 +32,8 @@ typedef struct s_proc {
     unsigned int pid;
     char p_name[16];
     unsigned char status;
+    int tty;
+    struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);

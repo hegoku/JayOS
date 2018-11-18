@@ -113,7 +113,7 @@ int printf(const char *format, ...)
     char buf[STR_DEFAULT_LEN];
     va_list arg = (va_list)((char*)(&format)+4);//4为format所占堆栈中大小
     i = vsprintf(buf, format, arg);
-    write(1, buf, i);
+    write(STDIN_FILENO, buf, i);
     return i;
 }
 

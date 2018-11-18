@@ -40,6 +40,7 @@ typedef struct s_tty
     CONSOLE console;
 } TTY;
 
+void init_tty();
 TTY tty_create(unsigned char id);
 void tty_input(TTY *tty, int content);
 void tty_output(TTY* tty);
@@ -50,5 +51,8 @@ static void flush(CONSOLE *console);
 void scroll_screen(CONSOLE *p, int direction);
 
 unsigned int tty_write(TTY *tty, char *buf, int len);
+
+extern TTY tty_table[];
+extern TTY *current_tty;
 
 #endif

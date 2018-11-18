@@ -4,5 +4,4 @@ linux-img/
 bochsout.txt
 dankos.img
 *.DS_Store
-a.img
-c.img
+*.img

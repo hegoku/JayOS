@@ -30,9 +30,7 @@ extern unsigned short SelectorUserDs;
 extern unsigned short SelectorTss;
 
 int ticks;
-TTY tty;
 
-PROCESS process_table[PROC_NUMBER];
-PROCESS *p_proc_ready;
+extern PROCESS *current_process;
 
 #endif

@@ -1,6 +1,8 @@
 org 0x0 ;和boot.asm的 OFFSET_OF_LOADER一样
 
 TOP_OF_STACK equ 0x7C00 ;loader栈顶
+BIOS_ADDR equ 7E00H ;bios信息存放起始地址
+BIOS_HD equ 0080H ;bios存放硬盘信息的偏移量
 TOP_OF_KERNEL_STACK equ 27E00H ;保护模式下栈顶
 ; TOP_OF_KERNEL_STACK equ 7C00H ;kernel栈顶
 BASE_OF_KERNEL_STACK equ 6C00H ;kernel栈基地址
@@ -26,8 +28,94 @@ start:
     mov ss, ax
     mov sp, TOP_OF_STACK
     call ClearScreen
+    ; call ReadBIOS
     call FindKernel
     jmp $
+
+ReadBIOS1:
+    push ds
+    push es
+    ;// 取第一个硬盘的信息（复制硬盘参数表）。
+    ;// 第1 个硬盘参数表的首地址竟然是中断向量41 的向量值！而第2 个硬盘
+    ;// 参数表紧接第1 个表的后面，中断向量46 的向量值也指向这第2 个硬盘
+    ;// 的参数表首址。表的长度是16 个字节(10)。
+    ;// 下面两段程序分别复制BIOS 有关两个硬盘的参数表，7E080 处存放第1 个
+    ;// 硬盘的表，7E090 处存放第2 个硬盘的表。
+    mov	ax,0000h
+    mov	ds,ax
+    lds	si,[ds:4*41h]		;// 取中断向量41 的值，也即hd0 参数表的地址 ds:si
+    mov	ax,BIOS_ADDR
+    mov	es,ax
+    mov	di,BIOS_HD		;// 传输的目的地址: 7E00:0080 -> es:di
+    mov	cx,10h			;// 共传输10 字节。
+    rep movsb
+    ;// Get hd1 data
+	mov	ax,0000h
+	mov	ds,ax
+	lds	si,[ds:4*46h]		;// 取中断向量46 的值，也即hd1 参数表的地址 -> ds:si
+	mov	ax,BIOS_ADDR
+	mov	es,ax
+	mov	di,BIOS_HD+10H		;// 传输的目的地址: 7E00:0090 -> es:di
+	mov	cx,10h
+	rep movsb
+    ;// 检查系统是否存在第2 个硬盘，如果不存在则第2 个表清零。
+    ;// 利用BIOS 中断调用13 的取盘类型功能。
+    ;// 功能号ah = 15；
+    ;// 输入：dl = 驱动器号（8X 是硬盘：80 指第1 个硬盘，81 第2 个硬盘）
+    ;// 输出：ah = 类型码；00 --没有这个盘，CF 置位； 01 --是软驱，没有change-line 支持；
+    ;//  02--是软驱(或其它可移动设备)，有change-line 支持； 03 --是硬盘。
+	mov	ax,1500h
+	mov	dl,80h
+	int	13h
+	jc	no_disk1
+	cmp	ah,3			;// 是硬盘吗？(类型= 3 ？)。
+	je	has_disk1
+no_disk1:
+	mov	ax,BIOS_ADDR		;// 第2个硬盘不存在，则对第2个硬盘表清零。
+	mov	es,ax
+	mov	di,BIOS_HD+10H
+	mov	cx,10h
+	mov	ax,00h
+	rep stosb
+has_disk1:
+    pop es
+    pop ds
+    ret
+
+ReadBIOS:
+    push ds
+    xor ax, ax
+    mov ds, ax
+    mov ax,0
+    mov [ds:0x475], ax
+
+    mov cl, 80h
+.hd_loop:
+    push cx
+    mov	ax,1500
+	mov	dl, cl
+	int	13h
+	jc	.hd_add_cl
+	cmp	ah,3			;// 是硬盘吗？(类型= 3 ？)。
+	je	.has_disk
+
+    jz .hd_count_finish
+.has_disk:
+    mov ax, [ds:0x475]
+    inc ax
+    mov [ds:0x475], ax
+    jmp .hd_add_cl
+
+.hd_add_cl:
+    pop cx
+    inc cl
+    cmp cl, 90H
+    je .hd_count_finish
+    jmp .hd_loop
+
+.hd_count_finish:
+    pop ds
+    ret
 
 FindKernel:
     xor ah, ah

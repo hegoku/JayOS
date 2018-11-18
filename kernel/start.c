@@ -10,6 +10,8 @@
 #include "unistd.h"
 #include "stdio.h"
 #include <system/system_call.h>
+#include <string.h>
+#include <fcntl.h>
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -20,6 +22,8 @@ unsigned short SelectorVideo;
 unsigned short SelectorUserCs;
 unsigned short SelectorUserDs;
 unsigned short SelectorTss;
+PROCESS process_table[PROC_NUMBER];
+PROCESS *current_process;
 
 static void init_idt();
 static void init_gdt();
@@ -40,8 +44,6 @@ void cstart()
     init_gdt();
     init_idt();
     // hd_open(0);
-
-    tty = tty_create(0);
 
     process_table[0].pid = 0;
     process_table[0].p_name[0] = 't';
@@ -149,6 +151,8 @@ void kernel_main()
     ticks = 0;
     init_system_call(sys_call_table);
 
+    init_tty();
+
     irq_table[CLOCK_IRQ] = clock_handler;
     enable_irq(CLOCK_IRQ);
 
@@ -165,14 +169,31 @@ void kernel_main()
     enable_irq(AT_WINI_IRQ);
 
     is_in_ring0 = 0;
-    p_proc_ready = process_table;
+    current_process = process_table;
+
+    for (int i = 0; i < TTY_NUM; i++) {
+        struct inode a;
+        a.num = i + 1;
+        a.dev_num = MKDEV(4, i);
+        a.mode = FILE_MODE_CHR;
+        inode_table[i] = a;
+    }
+    
     restart();
 }
 
 void TestA()
 {
     unsigned int i = 0;
-    hd_open(0);
+    hd_setup();
+    int stdin = open("/tty1", O_RDWR);
+    int stdout = open("/tty1", O_RDWR);
+    int errout = open("/tty1", O_RDWR);
+    char a[513];
+    // hd_rw(0, 1, a, 0, sizeof(a));
+    memset(a, 3, 513);
+    // hd_open(0);
+    // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)
     {
         // out_byte(INT_M_CTLMASK,0xF0);
@@ -184,11 +205,12 @@ void TestA()
     // tty_write(&tty, buf, j);
         // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_ring0, &is_in_ring0);
         // printf("%x", disp_pos);
-        // printf("%s%x.", "A", get_ticks());
+        printf("%s%x.", "A", get_ticks());
         // printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());
         // DispStr(".");
+        // hd_rw(0, 1, a, 0, sizeof(a));
         delay(1);
         // milli_delay(1000);
         // char a = in_byte(INT_M_CTLMASK);
@@ -215,19 +237,33 @@ void delay(int time)
 
 void calltest()
 {
+    int stdin = open("/tty1", O_RDWR);
+    int stdout = open("/tty1", O_RDWR);
+    int errout = open("/tty1", O_RDWR);
     // DispStr("i'm calltest\n");
+    char *buf = "ABCD1234";
     unsigned int i = 0;
+    // struct request r;
+    // r.buffer = buf;
+    // r.cmd = 1;
+    // r.dev = 0;
+    // r.nr_sectors = 1;
+    // r.sector = 2;
+    // make_request(&r);
+    // hd_open(0);
+    // hd_rw(0, 1, buf, 2, sizeof(buf));
     while (1)
     {
         // DispStr("B");
         // disp_int(i++);
         // DispStr(".");
-        // printf("%c%x.", 'B', i++);
+        printf("%c%x.", 'B', i++);
 
     // //     char *buf;
     // int j=sprintf(buf, "%c%x.", 'B', i++);
     // // tty_write(&tty, buf, j);
         delay(1);
+        // hd_rw(0, 1, buf, 1, strlen(buf));
         // milli_delay(1000);
     }
 
@@ -298,23 +334,23 @@ void clock_handler(int irq)
         return;
     }
     
-    // disp_int((int)p_proc_ready);
-    p_proc_ready++;
-    // disp_int(p_proc_ready);
+    // disp_int((int)current_process);
+    current_process++;
+    // disp_int(current_process);
     // if (disp_pos>80*25) {
     //     disp_pos = 0;
     // }
-    if (p_proc_ready >= process_table + PROC_NUMBER)
+    if (current_process >= process_table + PROC_NUMBER)
     {
-        p_proc_ready = process_table;
+        current_process = process_table;
     }
     // do {
-    //     p_proc_ready++;
-    //     if (p_proc_ready >= process_table + PROC_NUMBER)
+    //     current_process++;
+    //     if (current_process >= process_table + PROC_NUMBER)
     //     {
-    //         p_proc_ready = process_table;
+    //         current_process = process_table;
     //     }
-    // } while (p_proc_ready->status != 0);
+    // } while (current_process->status != 0);
 }
 
 void milli_delay(int mill_sec)
@@ -328,7 +364,7 @@ void task_tty()
     unsigned int key = 0;
     while (1)
     {
-        keyboard_read(&tty);
-        tty_output(&tty);
+        keyboard_read(current_tty);
+        tty_output(current_tty);
     }
 }

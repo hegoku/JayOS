@@ -12,6 +12,10 @@
 typedef unsigned int size_t;
 #endif
 
+typedef struct _file_desc {
+
+} FILE;
+
 static int vsscanf(const char *buf, const char *s, va_list ap);
 
 int sprintf(char *str, const char *format, ...);
@@ -19,5 +23,10 @@ int vsprintf(char *str, const char *format, va_list arg );
 int printf(const char *format, ...);
 int scanf(const char *format, ...);
 int sscanf(const char *str, const char *format, ...);
+
+FILE *fopen(const char * restrict filename, const char * restrict mode);
+int fclose(FILE *steam);
+size_t fwrite(const void *restrict filename, size_t size, size_t, FILE *restrict);
+size_t fread(void *restrict ptr, size_t size, size_t nitems, FILE *restrict stream);
 
 #endif

@@ -9,7 +9,7 @@ CFLAGS      = -c -fno-builtin -I include/
 TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
-				build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o \
+				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
 				build/floppy.o build/hd.o
 
 all : clean everything image
@@ -40,7 +40,8 @@ kernel : $(OBJS)
 build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 	$(ASM) -f elf -o $@ $<
 
-build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h kernel/process.h include/unistd.h include/stdio.h kernel/hd.h
+build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h \
+				kernel/process.h include/unistd.h include/stdio.h kernel/hd.h include/string.h include/fcntl.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h include/system/desc.h
@@ -56,6 +57,9 @@ build/keyboard.o: kernel/keyboard.c kernel/keyboard.h kernel/keymap.h kernel/glo
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/tty.o: kernel/tty.c kernel/tty.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/assert.o: lib/assert.c include/assert.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/stdlib.o: lib/stdlib.c include/stdlib.h
@@ -85,7 +89,7 @@ build/process.o: kernel/process.c kernel/process.h
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/hd.o: kernel/hd.c kernel/hd.h include/string.h kernel/global.h include/unistd.h kernel/process.h include/math.h
+build/hd.o: kernel/hd1.c kernel/hd.h include/string.h kernel/global.h include/unistd.h kernel/process.h include/math.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h include/stdio.h
@@ -93,6 +97,11 @@ build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h
 k1 : build/k1.o
 	$(LD) -s -Ttext $(ENTERPOINT) -m elf_i386 -o build/k1 build/k1.o
 
-build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tty.h include/sys/types.h
+build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tty.h \
+					include/sys/types.h include/system/fs.h kernel/kernel.h
 	$(CC) $(CFLAGS) -o $@ $<
 
+build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h \
+			kernel/process.h include/system/desc.h kernel/kernel.h \
+			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
+	$(CC) $(CFLAGS) -o $@ $<

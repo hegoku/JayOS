@@ -2,6 +2,17 @@
 #include "global.h"
 #include "keyboard.h"
 
+TTY tty_table[TTY_NUM];
+TTY *current_tty;
+
+void init_tty()
+{
+    for (int i=0; i < TTY_NUM;i++) {
+        tty_table[i]=tty_create(i);
+    }
+    current_tty = &tty_table[0];
+}
+
 TTY tty_create(unsigned char id)
 {
     TTY tty;
@@ -124,7 +135,7 @@ static void console_out_char(CONSOLE* console, char ch)
             break;
     }
 
-    if (console->cursor >= console->current_start_addr + SCREEN_SIZE)
+    while (console->cursor >= console->current_start_addr + SCREEN_SIZE)
     {
         // console->cursor = 0;
         scroll_screen(console, SCR_DN);
@@ -167,8 +178,8 @@ void scroll_screen(CONSOLE* p_con, int direction)
 		}
 	}else if (direction == SCR_DN) {
 		if (p_con->current_start_addr + SCREEN_SIZE < p_con->original_addr + p_con->v_mem_limit) {
-			p_con->current_start_addr += SCREEN_WIDTH;
-		}
+            p_con->current_start_addr += SCREEN_WIDTH;
+        }
 	}
 
 	set_console_start_addr(p_con->current_start_addr);

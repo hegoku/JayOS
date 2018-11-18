@@ -221,9 +221,9 @@ struct part_ent {
 #define SECTOR_BITS		(SECTOR_SIZE * 8)
 #define SECTOR_SIZE_SHIFT	9
 
-#define	MAX_DRIVES		2
-#define	NR_PART_PER_DRIVE	4
-#define	NR_SUB_PER_PART		16
+#define	MAX_DRIVES 4
+#define	NR_PART_PER_DRIVE	4 //主分区数
+#define	NR_SUB_PER_PART		16 //1个硬盘支持的总分区数-1, 因为第0个表示整个硬盘
 #define	NR_SUB_PER_DRIVE	(NR_SUB_PER_PART * NR_PART_PER_DRIVE)
 #define	NR_PRIM_PER_DRIVE	(NR_PART_PER_DRIVE + 1)
 
@@ -235,6 +235,7 @@ struct part_ent {
 
 #define	P_PRIMARY	0
 #define	P_EXTENDED	1
+#define P_LOGICAL 2
 
 #define ORANGES_PART	0x99	/* Orange'S partition */
 #define NO_PART		0x00	/* unused entry */
@@ -480,18 +481,25 @@ struct hd_cmd {
 };
 
 struct part_info {
-	unsigned short	base;	/* # of start sector (NOT byte offset, but SECTOR) */
-	unsigned short	size;	/* how many sectors in this partition */
+    unsigned char style;
+    unsigned char boot_ind;
+    unsigned char sys_id;
+    unsigned int extended_part_dev; //父扩展分区次设备号
+    unsigned long base; /* # of start sector (NOT byte offset, but SECTOR) */
+    unsigned long size;	/* how many sectors in this partition */
 };
 
 /* main drive struct, one entry per drive */
 struct hd_info
 {
-	int			open_cnt;
-	// struct part_info	primary[NR_PRIM_PER_DRIVE];
-	// struct part_info	logical[NR_SUB_PER_DRIVE];
-	struct part_ent	primary[NR_PRIM_PER_DRIVE];
-	struct part_ent	logical[NR_SUB_PER_DRIVE];
+	int open_cnt;
+    unsigned char channel; //IDE通道id
+    unsigned char is_master; //IDE通道的master还是slave
+    // struct part_info	primary[NR_PRIM_PER_DRIVE];
+    // struct part_info	logical[NR_SUB_PER_DRIVE];
+    // struct part_ent	primary[NR_PRIM_PER_DRIVE];
+    // struct part_ent	logical[NR_SUB_PER_DRIVE];
+    struct part_info part[NR_SUB_PER_PART];
 };
 
 
@@ -519,6 +527,7 @@ struct request
   int errors;			//操作时产生的错误次数。
   unsigned long sector;		// 起始扇区。(1 块=2 扇区)
   unsigned long nr_sectors;	// 读/写扇区数。
+  unsigned long bytes;
   char *buffer;             // 数据缓冲区。
   struct s_proc *waiting;	// 任务等待操作执行完成的地方。
   char *bh;	// 缓冲区头指针
@@ -533,35 +542,31 @@ struct blk_dev_struct
 };
 
 //设备号宏， 来自linux
-#define MINORBITS 20 /*次设备号*/  
+#define MINORBITS 20 /*次设备号*/
 
-#define MINORMASK ((1U << MINORBITS) - 1) /*次设备号掩码*/  
+#define MINORMASK ((1U << MINORBITS) - 1 ) /*次设备号掩码*/
 
-#define MAJOR(dev) ((unsigned int) ((dev) >> MINORBITS)) /*dev右移20位得到主设备号*/  
+#define MAJOR(dev) ((unsigned int) ((dev) >> MINORBITS)) /*dev右移20位得到主设备号*/
 
-#define MINOR(dev) ((unsigned int) ((dev) & MINORMASK)) /*与次设备掩码与，得到次设备号*/ 
+#define MINOR(dev) ((unsigned int) ((dev) & MINORMASK)) /*与次设备掩码与，得到次设备号*/
 
-#define MKDEV(ma,mi) (((ma) << MINORBITS) | (mi))
+#define MKDEV(ma,mi) (((ma) << MINORBITS) | (mi)) //通过主设备号和此设备号求出总设备号
+
+#define GET_DRIVER_INDEX_BYMINOR(mi) ((unsigned int) (mi/NR_SUB_PER_PART)) //通过次设备号算出属于第几块硬盘的下标
 
 void init_hd ();
-void hd_open (int device);
-static void	hd_cmd_out (struct hd_cmd* cmd);
-static void	get_part_table (int drive, int sect_nr, struct part_ent * entry);
-static void	partition (int device, int style);
-static void	print_hdinfo (struct hd_info * hdi);
-static int	waitfor	(int mask, int val, int timeout);
-static void	interrupt_wait ();
+void hd_open (int drive);
 void hd_identify (int drive);
-static void	print_identify_info	(struct hd_identify_info* hdinfo);
-struct hd_identify_info format_hd_info(struct hd_identify_info_raw *raw);
-
-static unsigned char hd_status;
-static unsigned char hdbuf[SECTOR_SIZE * 2];
-static struct hd_info hd_info[1];
+void hd_handler(int irq);
+void make_request(struct request *r);
+void hd_rw(int drive, int cmd, unsigned char *buf, unsigned long sector, unsigned long bytes);
+void hd_setup();
+void hd_w(int drive, unsigned char *buf, unsigned long sector, unsigned long bytes);
 
 #define	DRV_OF_DEV(dev) (dev <= MAX_PRIM ? \
 			 dev / NR_PRIM_PER_DRIVE : \
 			 (dev - MINOR_hd1a) / NR_SUB_PER_DRIVE)
 
-void hd_handler(int irq);
+
+
 #endif

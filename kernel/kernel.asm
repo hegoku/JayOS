@@ -37,7 +37,7 @@ extern SelectorTss
 extern tss
 extern irq_table
 extern sys_call_table
-extern p_proc_ready
+extern current_process
 extern is_in_ring0
 
 global gdt
@@ -408,7 +408,7 @@ save:
     jmp [esi+RETADR-P_STACKBASE]
 
 restart:
-    mov	esp, [p_proc_ready]
+    mov	esp, [current_process]
 	lldt [esp + P_LDT_SEL]
 	lea	eax, [esp + P_STACKTOP]
 	mov	dword [tss + TSS3_S_SP0], eax

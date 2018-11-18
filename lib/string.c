@@ -37,6 +37,24 @@ size_t strcspn(const char *str1, const char *str2)
 	return count;
 }
 
+size_t strcmp(const char * str1, const char *str2)
+{
+	if ((str1 == 0) || (str2 == 0)) { /* for robustness */
+		return (str1 - str2);
+	}
+
+	const char * p1 = str1;
+	const char * p2 = str2;
+
+	for (; *p1 && *p2; p1++,p2++) {
+		if (*p1 != *p2) {
+			break;
+		}
+	}
+
+	return (*p1 - *p2);
+}
+
 void *memcpy(void *dest, const void *src, size_t n)
 {
 	char *tmp = dest;
