@@ -1,12 +1,13 @@
 #ifndef _SYSTEM_SYSTEM_CALL_H
 #define _SYSTEM_SYSTEM_CALL_H
 
-#define SYS_CALL_NUMBER 3
+#define SYS_CALL_NUMBER 190
 
-#define SYS_CALL_READ 0
-#define SYS_CALL_WRITE 1
-#define SYS_CALL_OPEN 2
-#define SYS_CALL_CLOSE 3
+#define SYS_CALL_READ 3
+#define SYS_CALL_WRITE 4
+#define SYS_CALL_OPEN 5
+#define SYS_CALL_CLOSE 6
+#define SYS_CALL_LSEEK 19
 
 typedef void *sys_call_handler;
 

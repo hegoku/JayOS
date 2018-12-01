@@ -12,8 +12,10 @@ void init_system_call(sys_call_handler sys_call_table[])
 {
     sys_call_table[0] = sys_get_ticks;
     sys_call_table[SYS_CALL_WRITE] = sys_write;
+    sys_call_table[SYS_CALL_READ] = sys_read;
     sys_call_table[SYS_CALL_OPEN] = sys_open;
     sys_call_table[SYS_CALL_CLOSE] = sys_close;
+    sys_call_table[SYS_CALL_LSEEK] = sys_lseek;
 }
 
 static int sys_get_ticks()

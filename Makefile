@@ -56,7 +56,7 @@ build/k1.o : kernel/k1.asm include/pm.inc include/func.inc
 build/keyboard.o: kernel/keyboard.c kernel/keyboard.h kernel/keymap.h kernel/global.h kernel/tty.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/tty.o: kernel/tty.c kernel/tty.h
+build/tty.o: kernel/tty.c kernel/tty.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/assert.o: lib/assert.c include/assert.h kernel/global.h
@@ -65,7 +65,7 @@ build/assert.o: lib/assert.c include/assert.h kernel/global.h
 build/stdlib.o: lib/stdlib.c include/stdlib.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/unistd.o: lib/unistd.c include/unistd.h include/sys/types.h
+build/unistd.o: lib/unistd.c include/unistd.h include/sys/types.h include/system/system_call.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/stdio.o: lib/stdio.c include/stdarg.h include/unistd.h include/sys/types.h include/stdio.h include/string.h kernel/global.h
@@ -90,7 +90,7 @@ build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/hd.o: kernel/hd1.c kernel/hd.h include/string.h kernel/global.h include/unistd.h \
-			kernel/process.h include/math.h include/system/dev.h
+			kernel/process.h include/math.h include/system/dev.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h include/stdio.h
@@ -107,5 +107,5 @@ build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h \
 			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/dev.o: fs/dev.c include/system/dev.h
+build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<

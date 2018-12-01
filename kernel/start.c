@@ -176,8 +176,16 @@ void kernel_main()
         a.num = i + 1;
         a.dev_num = MKDEV(4, i);
         a.mode = FILE_MODE_CHR;
+        a.f_op = dev_table[4].f_op;
         inode_table[i] = a;
     }
+
+    struct inode a;
+    a.num = 3;
+    a.dev_num = MKDEV(3, 0);
+    a.mode = FILE_MODE_BLK;
+    a.f_op = dev_table[3].f_op;
+    inode_table[3] = a;
 
     restart();
 }
@@ -191,7 +199,15 @@ void TestA()
     int errout = open("/tty1", O_RDWR);
     char a[513];
     // hd_rw(0, 1, a, 0, sizeof(a));
-    memset(a, 3, 513);
+    memset(a, 4, 513);
+    int hd = open("/hd1", O_RDWR);
+    write(hd, a, sizeof(a));
+    memset(a, 5, 513);
+    write(hd, a, sizeof(a));
+    memset(a, 0, 513);
+    lseek(hd, 512, SEEK_SET);
+    read(hd, a, 3);
+    printf("%d %d %d\n", a[0], a[1], a[2]);
     // hd_open(0);
     // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)
@@ -324,10 +340,12 @@ void clock_handler(int irq)
     // char *buf;
     // int i=sprintf(buf, "#");
     // tty_write(0, a, 1);
-    if (++ticks>=MAX_TICKS) {
+    if (++ticks >= MAX_TICKS)
+    {
         ticks = 0;
     }
-    if (is_in_ring0!=0) {
+    if (is_in_ring0 != 0)
+    {
         // a[0]='1';
         // // i=sprintf(buf, "!");
         // tty_write(&tty, a, 1);

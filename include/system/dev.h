@@ -1,7 +1,7 @@
 #ifndef	_SYSTEM_DEV_H_
 #define	_SYSTEM_DEV_H_
 
-
+#include <system/fs.h>
 
 #define DEV_OPEN 0
 #define DEV_WRITE 1
@@ -41,6 +41,7 @@ struct dev_struct
     int type; //设备快类型
     int (*request_fn)(void);           // 请求操作的函数指针。
     void *current_request;	// 请求信息结构。
+    struct file_operation *f_op;
 };
 
 // typedef (*chr_do_request_ptr)(int cmd, unsigned mi_dev, char * buf, int len);
@@ -49,4 +50,6 @@ struct dev_struct
 void init_dev();
 
 extern struct dev_struct dev_table[];
+
+void install_dev(int dev_num, struct file_operation *f_op);
 #endif

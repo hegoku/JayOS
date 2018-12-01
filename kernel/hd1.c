@@ -7,6 +7,7 @@
 #include "kernel.h"
 #include "process.h"
 #include <system/dev.h>
+#include <system/fs.h>
 
 #define MAJOR_NR 3
 
@@ -27,12 +28,26 @@ static void print_hdinfo(struct hd_info *hdi);
 static void do_read();
 static void do_write();
 static int do_request(int mi_dev, int cmd, unsigned long sector, unsigned char* buf, unsigned long bytes);
+static int dev_do_write(struct inode *, struct file_descriptor *fd, char *buf, int nbyte);
+static int dev_do_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte);
+struct file_operation hd_f_op = {
+    0,
+    dev_do_read,
+    dev_do_write,
+    // 0,
+    // 0,
+    0,
+    // 0,
+    0,
+    0,
+    0};
 
 void init_hd()
 {
     dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
     // dev_table[MAJOR_NR].request_fn = do_request;
     dev_table[MAJOR_NR].current_request = NULL;
+    dev_table[MAJOR_NR].f_op = &hd_f_op;
     tail = NULL;
 }
 
@@ -153,17 +168,27 @@ static void do_read()
     struct blk_request *current = dev_table[MAJOR_NR].current_request;
     unsigned int bytes_left = (int)fmin(SECTOR_SIZE, current->bytes);
 
-    memset(hdbuf, 0, SECTOR_SIZE);
-    port_read(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。
-    memcpy(current->buffer, hdbuf, bytes_left);
-    current->buffer += bytes_left; // 调整缓冲区指针，指向新的空区。
-    current->sector++; // 起始扇区号加1
-    current->bytes -= bytes_left;
-    if (--current->nr_sectors)
-    {
-        hd_callback = do_read;
-        return;
+    while (current->nr_sectors--) {
+        memset(hdbuf, 0, SECTOR_SIZE);
+        port_read(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。
+        memcpy(current->buffer, hdbuf, bytes_left);
+        current->buffer += bytes_left; // 调整缓冲区指针，指向新的空区。
+        current->sector++; // 起始扇区号加1
+        current->bytes -= bytes_left;
     }
+
+    // memset(hdbuf, 0, SECTOR_SIZE);
+    // port_read(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。
+    // printk("%d", hdbuf[512]);
+    // memcpy(current->buffer, hdbuf, bytes_left);
+    // current->buffer += bytes_left; // 调整缓冲区指针，指向新的空区。
+    // current->sector++; // 起始扇区号加1
+    // current->bytes -= bytes_left;
+    // if (--current->nr_sectors)
+    // {
+    //     hd_callback = do_read;
+    //     return;
+    // }
 
     current->waiting->status = 0;
     // printk("end read\n");
@@ -311,4 +336,29 @@ static void print_hdinfo(struct hd_info * hdi)
                hdi->part[i].size,
                hdi->part[i].sys_id);
     }
+}
+
+int dev_do_write(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+{
+    unsigned long start_block = fd->pos / SECTOR_SIZE;
+    unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
+    int len = (end_block - start_block + 1) * SECTOR_SIZE;
+    char rbuf[len];
+    hd_rw(MINOR(inode->dev_num), 0, rbuf, start_block, len);
+    memcpy(&rbuf[fd->pos - start_block * SECTOR_SIZE], buf, nbyte);
+    hd_rw(MINOR(inode->dev_num), 1, rbuf, start_block, len);
+    fd->pos += nbyte;
+    return nbyte;
+}
+
+int dev_do_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+{
+    unsigned long start_block = fd->pos / SECTOR_SIZE;
+    unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
+    int len = (end_block - start_block + 1) * SECTOR_SIZE;
+    char rbuf[len];
+    hd_rw(MINOR(inode->dev_num), 0, rbuf, start_block, len);
+    memcpy(buf, &rbuf[fd->pos - start_block * SECTOR_SIZE], nbyte);
+    fd->pos += nbyte;
+    return nbyte;
 }

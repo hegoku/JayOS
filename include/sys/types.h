@@ -16,4 +16,9 @@ typedef unsigned int size_t;
 typedef unsigned int pid_t;
 #endif
 
+#ifndef _OFF_T
+#define _OFF_T
+typedef unsigned long off_t;
+#endif
+
 #endif

@@ -1,6 +1,8 @@
 #ifndef _SYSTEM_FS_H
 #define _SYSTEM_FS_H
 
+#include <sys/types.h>
+
 #define PROC_FILES_MAX_COUNT 1024 //进程表文件最大数
 #define FILE_DESC_TABLE_MAX_COUNT 2048 //f_desc_table最大数
 #define INODE_TABLE_MAX_COUNT 2048 //inode_table最大数
@@ -31,6 +33,7 @@ struct inode{
     int dev_num; //设备号
     unsigned int num; //节点号
     unsigned int used_count; //节点被使用次数
+    struct file_operation *f_op;
 };
 
 struct dir_entry{
@@ -69,13 +72,30 @@ struct file_descriptor{
     int mode;
     int pos;
     struct inode *inode;
+    struct file_operation *op;
 };
+
+struct file_operation{
+    int (*lseek) (struct inode *inode, struct file_descriptor *fd, off_t, int);
+	int (*read) (struct inode *inode, struct file_descriptor *fd, char *buf, int);
+	int (*write) (struct inode *inode, struct file_descriptor *fd, char *buf, int);
+	// int (*readdir) (struct inode *inode, struct file_descriptor *fd, struct dirent *, int);
+	// int (*select) (struct inode *inode, struct file *, int, select_table *);
+	int (*ioctl) (struct inode *inode, struct file_descriptor *fd, unsigned int, unsigned long);
+	// int (*mmap) (struct inode *inode, struct file_descriptor *fd, unsigned long, size_t, int, unsigned long);
+	int (*open) (struct inode *inode, struct file_descriptor *fd);
+	void (*release) (struct inode *inode, struct file_descriptor *fd);
+	int (*fsync) (struct inode *inode, struct file_descriptor *fd);
+};
+
 
 extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
 
 int sys_open(const char *path, int flags, ...);
 int sys_write(int fd, const void *buf, unsigned int nbyte);
+int sys_read(int fd, char *buf, unsigned int nbyte);
 int sys_close(int fd);
+off_t sys_lseek(int fd, off_t offset, int whence);
 int get_inode_by_filename(const char *filename, struct inode **res_inode);
 #endif

@@ -1,5 +1,6 @@
 #include "tty.h"
 #include <system/dev.h>
+#include <system/fs.h>
 #include "global.h"
 #include "keyboard.h"
 
@@ -9,6 +10,19 @@ TTY tty_table[TTY_NUM];
 TTY *current_tty;
 
 static int do_request();
+static int do_write(struct inode *, struct file_descriptor *fd, char *buf, int nbyte);
+struct file_operation tty_f_op = {
+    0,
+    0,
+    do_write,
+    // 0,
+    // 0,
+    0,
+    // 0,
+    0,
+    0,
+    0
+};
 
 void init_tty()
 {
@@ -18,6 +32,8 @@ void init_tty()
     current_tty = &tty_table[0];
     dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
     dev_table[MAJOR_NR].request_fn = do_request;
+    
+    dev_table[MAJOR_NR].f_op = &tty_f_op;
 }
 
 TTY tty_create(unsigned char id)
@@ -103,6 +119,13 @@ int do_request(unsigned mi_dev, int cmd, char * buf,int len)
     else if (cmd == DEV_READ)
     {
     }
+}
+
+int do_write(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+{
+    int a = tty_write(MINOR(inode->dev_num), (char *)buf, nbyte);
+    fd->pos = tty_table[MINOR(inode->dev_num)].console.cursor;
+    return a;
 }
 
 unsigned int tty_write(int mi_dev, char* buf, int len)

@@ -72,9 +72,14 @@ int sys_open(const char *path, int flags, ...)
     current_process->file_table[fd] = &f_desc_table[i];
     f_desc_table[i].pos = 0;
     f_desc_table[i].inode = p_inode;
+    f_desc_table[i].op = p_inode->f_op;
 
-    if (p_inode->mode==FILE_MODE_CHR) {
+    if (p_inode->f_op->open) {
+        p_inode->f_op->open(p_inode, &f_desc_table[i]);
     }
+
+    // if (p_inode->mode==FILE_MODE_CHR) {
+    // }
 
     return fd;
 }
@@ -84,6 +89,11 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
     if (strcmp(filename, "/tty1")==0)
     {
         *res_inode = &inode_table[0];
+        return 1;
+    }
+    if (strcmp(filename, "/hd1")==0)
+    {
+        *res_inode = &inode_table[3];
         return 1;
     }
     return 0;
@@ -115,17 +125,83 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
 	// 	printk("Trying to r/w from/to nonexistent character device\n");
     //     return -1;
     // }
-    if (file->inode->mode == FILE_MODE_CHR)
+
+    if (file->op->write) {
+        return file->op->write(file->inode, file, (char *)buf, nbyte);
+    }
+
+    // if (file->inode->mode == FILE_MODE_CHR)
+    // {
+    //     // chr_do_request_ptr call_addr = (chr_do_request_ptr)dev_table[MAJOR(file->inode->dev_num)].request_fn;
+    //     // return call_addr(MINOR(file->inode->dev_num), DEV_WRITE, (char *)buf, nbyte);
+    //     return tty_write(MINOR(file->inode->dev_num), (char *)buf, nbyte);
+    // } else if (file->inode->mode == FILE_MODE_BLK)
+    // {
+    //     // blk_do_request_ptr call_addr = (blk_do_request_ptr)dev_table[MAJOR(file->inode->dev_num)].request_fn;
+    //     // return call_addr(MINOR(file->inode->dev_num), DEV_WRITE, file->inode->start_sector, (char *)buf, nbyte);
+    // }
+
+    printk ("(Write)inode->i_mode=%d\n", file->inode->mode);
+	return -1;
+}
+
+int sys_read(int fd,char * buf, unsigned int nbyte)
+{
+    struct file_descriptor *file;
+
+    if (fd >= PROC_FILES_MAX_COUNT || nbyte < 0 || (file=current_process->file_table[fd]) == 0)
     {
-        // chr_do_request_ptr call_addr = (chr_do_request_ptr)dev_table[MAJOR(file->inode->dev_num)].request_fn;
-        // return call_addr(MINOR(file->inode->dev_num), DEV_WRITE, (char *)buf, nbyte);
-        return tty_write(MINOR(file->inode->dev_num), (char *)buf, nbyte);
-    } else if (file->inode->mode == FILE_MODE_BLK)
-    {
-        // blk_do_request_ptr call_addr = (blk_do_request_ptr)dev_table[MAJOR(file->inode->dev_num)].request_fn;
-        // return call_addr(MINOR(file->inode->dev_num), DEV_WRITE, file->inode->start_sector, (char *)buf, nbyte);
+        printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
+        return -1;
+    }
+    if (nbyte==0) {
+        return 0;
+    }
+
+    if (file->op->read) {
+        return file->op->read(file->inode, file, (char *)buf, nbyte);
     }
 
     printk ("(Write)inode->i_mode=%d\n", file->inode->mode);
 	return -1;
+}
+
+off_t sys_lseek(int fd, off_t offset, int whence)
+{
+    struct file_descriptor *file;
+    int tmp;
+
+    if (fd >= PROC_FILES_MAX_COUNT || (file=current_process->file_table[fd]) == 0)
+    {
+        printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
+        return -1;
+    }
+
+    if (file->op && file->op->lseek) {
+        return file->op->lseek(file->inode, file, offset, whence);
+    }
+
+    switch (whence) {
+    case 0: //SEEK_SET
+        if (offset<0) {
+            return -1;
+        }
+        file->pos = offset;
+        break;
+    case 1: //SEEK_CUR
+        if (file->pos+offset<0) {
+            return -1;
+        }
+        file->pos += offset;
+        break;
+    case 2:
+        if ((tmp = file->inode->size + offset) < 0){
+            return -1;
+        }
+        file->pos = tmp;
+        break;
+    default:
+        return -1;
+    }
+    return file->pos;
 }
