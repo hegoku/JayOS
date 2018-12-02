@@ -52,4 +52,5 @@ void init_dev();
 extern struct dev_struct dev_table[];
 
 void install_dev(int dev_num, struct file_operation *f_op);
+void mount_dev();
 #endif

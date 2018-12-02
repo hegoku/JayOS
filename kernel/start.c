@@ -12,6 +12,7 @@
 #include <system/system_call.h>
 #include <string.h>
 #include <fcntl.h>
+#include <system/rootfs.h>
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -169,38 +170,52 @@ void kernel_main()
     enable_irq(AT_WINI_IRQ);
 
     is_in_ring0 = 0;
-    current_process = process_table;
+    current_process = process_table+2;
 
-    for (int i = 0; i < TTY_NUM; i++) {
-        struct inode a;
-        a.num = i + 1;
-        a.dev_num = MKDEV(4, i);
-        a.mode = FILE_MODE_CHR;
-        a.f_op = dev_table[4].f_op;
-        inode_table[i] = a;
-    }
+    // for (int i = 0; i < TTY_NUM; i++) {
+    //     struct inode *a=get_inode();
+    //     a->dev_num = MKDEV(4, i);
+    //     a->mode = FILE_MODE_CHR;
+    //     a->f_op = dev_table[4].f_op;
+    // }
 
-    struct inode a;
-    a.num = 3;
-    a.dev_num = MKDEV(3, 0);
-    a.mode = FILE_MODE_BLK;
-    a.f_op = dev_table[3].f_op;
-    inode_table[3] = a;
+    // struct inode *a=get_inode();
+    // a->dev_num = MKDEV(3, 0);
+    // a->mode = FILE_MODE_BLK;
+    // a->f_op = dev_table[3].f_op;
+
+    init_rootfs();
+    mount_root();
+    sys_mkdir("/dev", 1);
 
     restart();
+}
+
+void init()
+{
+    int stdin = open("/dev/tty1", O_RDWR);
+    int stdout = open("/dev/tty1", O_RDWR);
+    int errout = open("/dev/tty1", O_RDWR);
+
+    // int pid = fork();
+    // if (pid!=0)
+    // {
+    // } else {
+
+    // }
 }
 
 void TestA()
 {
     unsigned int i = 0;
     hd_setup();
-    int stdin = open("/tty1", O_RDWR);
-    int stdout = open("/tty1", O_RDWR);
-    int errout = open("/tty1", O_RDWR);
+    int stdin = open("/dev/tty1", O_RDWR);
+    int stdout = open("/dev/tty1", O_RDWR);
+    int errout = open("/dev/tty1", O_RDWR);
     char a[513];
     // hd_rw(0, 1, a, 0, sizeof(a));
     memset(a, 4, 513);
-    int hd = open("/hd1", O_RDWR);
+    int hd = open("/dev/hd0", O_RDWR);
     write(hd, a, sizeof(a));
     memset(a, 5, 513);
     write(hd, a, sizeof(a));
@@ -253,9 +268,10 @@ void delay(int time)
 
 void calltest()
 {
-    int stdin = open("/tty1", O_RDWR);
-    int stdout = open("/tty1", O_RDWR);
-    int errout = open("/tty1", O_RDWR);
+    while(1){}
+    int stdin = open("/dev/tty1", O_RDWR);
+    int stdout = open("/dev/tty1", O_RDWR);
+    int errout = open("/dev/tty1", O_RDWR);
     // DispStr("i'm calltest\n");
     char *buf = "ABCD1234";
     unsigned int i = 0;

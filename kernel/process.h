@@ -33,6 +33,8 @@ typedef struct s_proc {
     char p_name[16];
     unsigned char status;
     struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];
+    struct dir_entry *root;
+    struct dir_entry *pwd;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);

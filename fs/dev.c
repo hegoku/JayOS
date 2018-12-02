@@ -18,3 +18,8 @@ void install_dev(int dev_num, struct file_operation *f_op)
 {
     dev_table[dev_num].f_op = f_op;
 }
+
+void mount_dev()
+{
+    
+}

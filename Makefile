@@ -10,7 +10,7 @@ TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
-				build/floppy.o build/hd.o build/dev.o
+				build/floppy.o build/hd.o build/dev.o build/rootfs.o
 
 all : clean everything image
 
@@ -41,7 +41,8 @@ build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 	$(ASM) -f elf -o $@ $<
 
 build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h \
-				kernel/process.h include/unistd.h include/stdio.h kernel/hd.h include/string.h include/fcntl.h
+				kernel/process.h include/unistd.h include/stdio.h kernel/hd.h include/string.h include/fcntl.h \
+				include/system/rootfs.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/interrupt.o : kernel/interrupt.c kernel/interrupt.h kernel/global.h include/system/desc.h
@@ -108,4 +109,7 @@ build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h \
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/rootfs.o: fs/rootfs/super.c include/system/fs.h include/system/rootfs.h
 	$(CC) $(CFLAGS) -o $@ $<
