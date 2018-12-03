@@ -10,7 +10,7 @@ TTY tty_table[TTY_NUM];
 TTY *current_tty;
 
 static int do_request();
-static int do_write(struct inode *, struct file_descriptor *fd, char *buf, int nbyte);
+static int do_write(struct file_descriptor *fd, char *buf, int nbyte);
 struct file_operation tty_f_op = {
     0,
     0,
@@ -31,7 +31,7 @@ void init_tty()
     }
     current_tty = &tty_table[0];
     dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
-    dev_table[MAJOR_NR].request_fn = do_request;
+    // dev_table[MAJOR_NR].request_fn = do_request;
     
     dev_table[MAJOR_NR].f_op = &tty_f_op;
 }
@@ -121,10 +121,10 @@ int do_request(unsigned mi_dev, int cmd, char * buf,int len)
     }
 }
 
-int do_write(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+int do_write(struct file_descriptor *fd, char *buf, int nbyte)
 {
-    int a = tty_write(MINOR(inode->dev_num), (char *)buf, nbyte);
-    fd->pos = tty_table[MINOR(inode->dev_num)].console.cursor;
+    int a = tty_write(MINOR(fd->inode->dev_num), (char *)buf, nbyte);
+    fd->pos = tty_table[MINOR(fd->inode->dev_num)].console.cursor;
     return a;
 }
 

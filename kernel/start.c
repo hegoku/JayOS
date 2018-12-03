@@ -13,6 +13,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <system/rootfs.h>
+#include "../fs/ext2/ext2.h"
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -209,20 +210,22 @@ void TestA()
 {
     unsigned int i = 0;
     hd_setup();
+    init_ext2();
+    mount(0,0,0);
     int stdin = open("/dev/tty1", O_RDWR);
     int stdout = open("/dev/tty1", O_RDWR);
     int errout = open("/dev/tty1", O_RDWR);
     char a[513];
     // hd_rw(0, 1, a, 0, sizeof(a));
     memset(a, 4, 513);
-    int hd = open("/dev/hd0", O_RDWR);
-    write(hd, a, sizeof(a));
-    memset(a, 5, 513);
-    write(hd, a, sizeof(a));
-    memset(a, 0, 513);
-    lseek(hd, 512, SEEK_SET);
-    read(hd, a, 3);
-    printf("%d %d %d\n", a[0], a[1], a[2]);
+    // int hd = open("/dev/hd0", O_RDWR);
+    // write(hd, a, sizeof(a));
+    // memset(a, 5, 513);
+    // write(hd, a, sizeof(a));
+    // memset(a, 0, 513);
+    // lseek(hd, 512, SEEK_SET);
+    // read(hd, a, 3);
+    // printf("%d %d %d\n", a[0], a[1], a[2]);
     // hd_open(0);
     // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)
@@ -236,7 +239,7 @@ void TestA()
     // tty_write(&tty, buf, j);
         // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_ring0, &is_in_ring0);
         // printf("%x", disp_pos);
-        printf("%s%x.", "A", get_ticks());
+        // printf("%s%x.", "A", get_ticks());
         // printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());

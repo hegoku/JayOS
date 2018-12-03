@@ -21,6 +21,11 @@ ssize_t read(int fd, const void *buf, unsigned int nbytes)
     return sys_call_3_param(SYS_CALL_READ, fd, buf, nbytes);
 }
 
+int mount(char *dev_name, char *dir_name, char *type)
+{
+    return sys_call_3_param(SYS_CALL_MOUNT, dev_name, dir_name, type);
+}
+
 off_t lseek(int fd, off_t offset, int whence)
 {
     return sys_call_3_param(SYS_CALL_LSEEK, fd, offset, whence);

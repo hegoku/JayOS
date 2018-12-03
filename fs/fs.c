@@ -1,5 +1,6 @@
 #include <system/fs.h>
 #include <string.h>
+#include <sys/types.h>
 #include <system/dev.h>
 #include "../kernel/hd.h"
 #include "../kernel/kernel.h"
@@ -16,6 +17,8 @@ static int inode_num = 0;
 static int sb_num=0;
 static int dir_num=0;
 static int list_num = 0;
+
+static int lookup_fs(const char *name, struct file_system_type **fs_type);
 
 void fat16_to_a(struct super_block *sb, struct fat16 *fat)
 {
@@ -85,6 +88,7 @@ int sys_open(const char *path, int flags, ...)
     if (p_inode->f_op->open) {
         p_inode->f_op->open(p_inode, &f_desc_table[i]);
     }
+    p_inode->used_count++;
 
     // if (p_inode->mode==FILE_MODE_CHR) {
     // }
@@ -159,6 +163,7 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
 
 int sys_close(int fd)
 {
+    current_process->file_table[fd]->inode->used_count--;
     current_process->file_table[fd]->inode = 0;
     current_process->file_table[fd] = 0;
 
@@ -185,7 +190,7 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
     // }
 
     if (file->op->write) {
-        return file->op->write(file->inode, file, (char *)buf, nbyte);
+        return file->op->write(file, (char *)buf, nbyte);
     }
 
     // if (file->inode->mode == FILE_MODE_CHR)
@@ -217,7 +222,7 @@ int sys_read(int fd,char * buf, unsigned int nbyte)
     }
 
     if (file->op->read) {
-        return file->op->read(file->inode, file, (char *)buf, nbyte);
+        return file->op->read(file, (char *)buf, nbyte);
     }
 
     printk ("(Write)inode->i_mode=%d\n", file->inode->mode);
@@ -236,7 +241,7 @@ off_t sys_lseek(int fd, off_t offset, int whence)
     }
 
     if (file->op && file->op->lseek) {
-        return file->op->lseek(file->inode, file, offset, whence);
+        return file->op->lseek(file, offset, whence);
     }
 
     switch (whence) {
@@ -277,27 +282,58 @@ void register_filesystem(struct file_system_type *fs_type)
     }
 }
 
-int do_mount(const char *dev_name, const char *dir, char *type )
+int do_mount(const char *dev_name, const char *dir, char *type)
 {
+    struct dir_entry *dev_dir;
+    struct dir_entry *dir_dir;
+    struct dir_entry *new_dir;
+    struct file_system_type * fs_type;
 
+    if (lookup_fs(type, &fs_type)) {
+        printk("fs %s not exist\n", type);
+        return -1;
+    }
+
+    // if (namei(dev_name, &dev_dir)) {
+    //     printk("device %s not found\n", dev_name);
+    //     return -1;
+    // }
+    
+    // if (namei(dir, &dir_dir)) {
+    //     printk("dir %s not found\n", dir);
+    //     return -1;
+    // }
+    // if (dir_dir->is_mounted) { //只能被挂载一次
+    //     printk("dir %s has been mounted\n", dir);
+    //     return -1;
+    // }
+
+    // new_dir = fs_type->mount(fs_type, dev_dir->dev_num);
+
+    // while (dir_dir->is_mounted) {
+    //     dir_dir = dir_dir->mounted_dir;
+    // }
+    // dir_dir->is_mounted = 1;
+    // dir_dir->mounted_dir = new_dir;
+    return 0;
 }
 
 void mount_root()
 {
     struct file_system_type * fs_type;
-	struct super_block * sb;
+	struct dir_entry * dir;
 	struct inode * inode;
 
     fs_type = *file_system_table;
 
-    do {
-        sb=fs_type->read_super(fs_type);
-        fs_type->sb=sb;
+    // do {
+        dir=fs_type->mount(fs_type, ROOT_DEV);
+        fs_type->sb=dir->sb;
         fs_type=fs_type->next;
 
-        current_process->root = sb->root_dir;
-        current_process->pwd = sb->root_dir;
-    } while (fs_type);
+        current_process->root = dir;
+        current_process->pwd = dir;
+    // } while (fs_type);
 }
 
 struct inode *get_inode()
@@ -440,5 +476,26 @@ int sys_mkdir(const char *dirname, int mode)
     //     printk("name:%s\n", tmp->name);
     // }
 
+    return 0;
+}
+
+static int lookup_fs(const char *name, struct file_system_type **fs_type)
+{
+    struct file_system_type *tmp=*file_system_table;
+    *fs_type = NULL;
+    while (tmp)
+    {
+        if (strcmp(tmp->name, name)==0) {
+            *fs_type = tmp;
+            return 0;
+        }
+        tmp=tmp->next;
+    }
+    return -1;
+}
+
+int sys_mount(char *dev_name, char *dir_name, char *type)
+{
+    (*file_system_table)->mount((*file_system_table), 3);
     return 0;
 }

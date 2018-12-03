@@ -14,7 +14,7 @@
 
 struct file_system_type{
     const char *name;
-    struct super_block *(*read_super)(struct file_system_type *fs_type);
+    struct dir_entry *(*mount)(struct file_system_type *fs_type, int dev_num);
     struct file_system_type *next;
     struct super_block *sb;
 };
@@ -28,6 +28,7 @@ struct super_block{
     int dev_num; //设备号
     struct dir_entry *root_dir;
     struct inode *root_inode;
+    struct file_system_type	*fs_type;
 };
 
 struct inode{
@@ -37,8 +38,7 @@ struct inode{
     unsigned long mtime;
     unsigned char gid;
     unsigned char nlinks;
-    unsigned long start_sector;
-    unsigned long sector_count;
+    unsigned long start_pos;
 
     int dev_num; //设备号
     unsigned int num;        //节点号
@@ -60,8 +60,8 @@ struct dir_entry{
     struct dir_entry *parent;
     struct list *children;
     int dev_num;
-    unsigned long start_sector;
-    unsigned long sector_count;
+    int is_mounted;
+    struct dir_entry *mounted_dir;
 };
 
 struct fat16{
@@ -97,9 +97,9 @@ struct file_descriptor{
 };
 
 struct file_operation{
-    int (*lseek) (struct inode *inode, struct file_descriptor *fd, off_t, int);
-	int (*read) (struct inode *inode, struct file_descriptor *fd, char *buf, int);
-	int (*write) (struct inode *inode, struct file_descriptor *fd, char *buf, int);
+    int (*lseek) (struct file_descriptor *fd, off_t, int);
+	int (*read) (struct file_descriptor *fd, char *buf, int);
+	int (*write) (struct file_descriptor *fd, char *buf, int);
 	// int (*readdir) (struct inode *inode, struct file_descriptor *fd, struct dirent *, int);
 	// int (*select) (struct inode *inode, struct file *, int, select_table *);
 	int (*ioctl) (struct inode *inode, struct file_descriptor *fd, unsigned int, unsigned long);
@@ -136,6 +136,7 @@ int sys_write(int fd, const void *buf, unsigned int nbyte);
 int sys_read(int fd, char *buf, unsigned int nbyte);
 int sys_close(int fd);
 int sys_mkdir(const char *dirname, int mode);
+int sys_mount(char *dev_name, char *dir_name, char *type);
 off_t sys_lseek(int fd, off_t offset, int whence);
 int get_inode_by_filename(const char *filename, struct inode **res_inode);
 

@@ -21,6 +21,8 @@
 
 #define MKDEV(ma,mi) (((ma) << MINORBITS) | (mi)) //通过主设备号和此设备号求出总设备号
 
+#define ROOT_DEV 0
+
 struct blk_request
 {
     int dev;			/* -1 if no request */// 使用的设备号。
@@ -39,7 +41,8 @@ struct blk_request
 struct dev_struct
 {
     int type; //设备快类型
-    int (*request_fn)(void);           // 请求操作的函数指针。
+    int block_size; //块大小，以字节为单位
+    int (*request_fn)(int drive, int cmd, unsigned char* buf, unsigned long start_pos, unsigned long bytes); // 请求操作的函数指针。
     void *current_request;	// 请求信息结构。
     struct file_operation *f_op;
 };

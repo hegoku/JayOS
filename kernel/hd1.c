@@ -28,8 +28,8 @@ static void print_hdinfo(struct hd_info *hdi);
 static void do_read();
 static void do_write();
 static int do_request(int mi_dev, int cmd, unsigned long sector, unsigned char* buf, unsigned long bytes);
-static int dev_do_write(struct inode *, struct file_descriptor *fd, char *buf, int nbyte);
-static int dev_do_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte);
+static int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte);
+static int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte);
 struct file_operation hd_f_op = {
     0,
     dev_do_read,
@@ -46,6 +46,7 @@ void init_hd()
 {
     dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
     // dev_table[MAJOR_NR].request_fn = do_request;
+    dev_table[MAJOR_NR].request_fn = hd_rw;
     dev_table[MAJOR_NR].current_request = NULL;
     dev_table[MAJOR_NR].f_op = &hd_f_op;
     tail = NULL;
@@ -338,26 +339,26 @@ static void print_hdinfo(struct hd_info * hdi)
     }
 }
 
-int dev_do_write(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte)
 {
     unsigned long start_block = fd->pos / SECTOR_SIZE;
     unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
     int len = (end_block - start_block + 1) * SECTOR_SIZE;
     char rbuf[len];
-    hd_rw(MINOR(inode->dev_num), 0, rbuf, start_block, len);
+    hd_rw(MINOR(fd->inode->dev_num), 0, rbuf, start_block, len);
     memcpy(&rbuf[fd->pos - start_block * SECTOR_SIZE], buf, nbyte);
-    hd_rw(MINOR(inode->dev_num), 1, rbuf, start_block, len);
+    hd_rw(MINOR(fd->inode->dev_num), 1, rbuf, start_block, len);
     fd->pos += nbyte;
     return nbyte;
 }
 
-int dev_do_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
     unsigned long start_block = fd->pos / SECTOR_SIZE;
     unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
     int len = (end_block - start_block + 1) * SECTOR_SIZE;
     char rbuf[len];
-    hd_rw(MINOR(inode->dev_num), 0, rbuf, start_block, len);
+    hd_rw(MINOR(fd->inode->dev_num), 0, rbuf, start_block, len);
     memcpy(buf, &rbuf[fd->pos - start_block * SECTOR_SIZE], nbyte);
     fd->pos += nbyte;
     return nbyte;
