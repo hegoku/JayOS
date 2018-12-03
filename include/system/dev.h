@@ -39,7 +39,8 @@ struct blk_request
 struct dev_struct
 {
     int type; //设备快类型
-    int (*request_fn)(void);           // 请求操作的函数指针。
+    char *name;
+    int (*request_fn)(void); // 请求操作的函数指针。
     void *current_request;	// 请求信息结构。
     struct file_operation *f_op;
 };
@@ -51,6 +52,6 @@ void init_dev();
 
 extern struct dev_struct dev_table[];
 
-void install_dev(int dev_num, struct file_operation *f_op);
+void install_dev(int dev_num, char *name, int type, struct file_operation *f_op);
 void mount_dev();
 #endif

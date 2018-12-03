@@ -44,11 +44,13 @@ struct file_operation hd_f_op = {
 
 void init_hd()
 {
-    dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
-    // dev_table[MAJOR_NR].request_fn = do_request;
-    dev_table[MAJOR_NR].current_request = NULL;
-    dev_table[MAJOR_NR].f_op = &hd_f_op;
+    // dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
+    // dev_table[MAJOR_NR].name = "hd";
+    // // dev_table[MAJOR_NR].request_fn = do_request;
+    // dev_table[MAJOR_NR].current_request = NULL;
+    // dev_table[MAJOR_NR].f_op = &hd_f_op;
     tail = NULL;
+    install_dev(MAJOR_NR, "hd", DEV_TYPE_CHR, &hd_f_op);
 }
 
 void hd_setup()

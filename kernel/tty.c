@@ -30,6 +30,7 @@ void init_tty()
         tty_table[i]=tty_create(i);
     }
     current_tty = &tty_table[0];
+    dev_table[MAJOR_NR].name = "tty";
     dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
     dev_table[MAJOR_NR].request_fn = do_request;
     

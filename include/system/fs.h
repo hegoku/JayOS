@@ -16,7 +16,8 @@ struct file_system_type{
     const char *name;
     struct super_block *(*read_super)(struct file_system_type *fs_type);
     struct file_system_type *next;
-    struct super_block *sb;
+    struct super_block *sb_table[10];
+    int sb_num;
 };
 
 struct super_block{
@@ -64,31 +65,6 @@ struct dir_entry{
     unsigned long sector_count;
 };
 
-struct fat16{
-    unsigned char BS_jmpBoot : 3;
-    unsigned char BS_OEMName;
-    unsigned char BPB_BytsPerSec : 2;
-    unsigned char BPB_SecPerClus : 1;
-    unsigned char BPB_RsvdSecCnt : 2;
-    unsigned char BPB_NumFATs : 1; //FAT表数量
-    unsigned char BPB_RootEntCnt : 2; //更目录文件最大数
-    unsigned char BPB_TotSec16 : 2; //扇区总数
-    unsigned char BPB_Media : 1;
-    unsigned char BPB_FATz16 : 2; //每个fat占用多少扇区
-    unsigned char BPB_SecPerTrk : 2;
-    unsigned char BPB_NumHeads : 4;
-    unsigned char BPB_HiddSec : 4;
-    unsigned char BPB_TotSec32 : 4; //如果BPB_TotSec16为0，由这个表述扇区总数
-    unsigned char BS_DrvNum : 1;
-    unsigned char BS_Reserved1 : 1;
-    unsigned char BS_BootSig : 1;
-    unsigned char BD_VolId : 4;
-    unsigned short BS_VolLab : 11;
-    unsigned char BS_FileSysType;
-    unsigned char boot_code[56];
-    unsigned char end_flag : 2;
-};
-
 struct file_descriptor{
     int mode;
     int pos;
@@ -126,6 +102,12 @@ struct inode_operation {
 	int (*permission) (struct inode *, int);
 };
 
+struct nameidata {
+    struct dir_entry *dir;
+    char *last_name;
+    int last_len;
+};
+
 extern struct file_system_type **file_system_table;
 extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
@@ -144,5 +126,8 @@ struct inode *get_inode();
 struct dir_entry *get_dir();
 struct super_block *get_block(int dev_num);
 
+int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir);
+int namei(const char *pathname, struct dir_entry **res_dir);
+struct list *create_list();
 void mount_root();
 #endif

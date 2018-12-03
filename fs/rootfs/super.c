@@ -43,7 +43,8 @@ struct inode_operation rootfs_inode_op = {
 static struct super_block *ramfs_read_super(struct file_system_type *fs_type)
 {
     struct super_block *sb=get_block(0);
-    
+    fs_type->sb_table[fs_type->sb_num++] = sb;
+
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;
     new_inode->dev_num=sb->dev_num;

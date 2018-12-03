@@ -108,7 +108,7 @@ build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h \
 			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h
+build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h include/string.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/rootfs.o: fs/rootfs/super.c include/system/fs.h include/system/rootfs.h

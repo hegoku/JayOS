@@ -17,11 +17,8 @@ static int sb_num=0;
 static int dir_num=0;
 static int list_num = 0;
 
-void fat16_to_a(struct super_block *sb, struct fat16 *fat)
-{
-    sb->sector_count = fat->BPB_TotSec16;
-    sb->dir_entry_count = fat->BPB_NumFATs;
-}
+static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, struct nameidata *nd);
+static int _namei(const char *pathname, struct dir_entry *base, struct dir_entry **dir);
 
 void mkfs()
 {
@@ -97,7 +94,6 @@ struct dir_entry* find_children_by_name(struct dir_entry *dir, const char *filen
     for (struct list *i = dir->children; i; i = i->next)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
-    printk("%s %s\n", filename, tmp->name);
         if (strcmp(filename, tmp->name) == 0)
         {
             return tmp;
@@ -292,7 +288,6 @@ void mount_root()
 
     do {
         sb=fs_type->read_super(fs_type);
-        fs_type->sb=sb;
         fs_type=fs_type->next;
 
         current_process->root = sb->root_dir;
@@ -337,40 +332,52 @@ struct list *create_list()
 int sys_mkdir(const char *dirname, int mode)
 {
     struct dir_entry *dir;
-    const char *tmp_path;
-    int n_len;
-    char c;
+    char last_name[12];
+    memset(last_name, 0, sizeof(last_name));
+    // const char *tmp_path;
+    // int n_len;
+    // char c;
 
-    if (dirname[0] == '/')
-    {
-        dir = current_process->root;
-    } else {
-        dir = current_process->pwd;
+    // if (dirname[0] == '/')
+    // {
+    //     dir = current_process->root;
+    // } else {
+    //     dir = current_process->pwd;
+    // }
+    // dirname++;
+
+    // while (1) {
+    //     tmp_path = dirname;
+    //     for (n_len = 0; (c = *(dirname++)) && (c != '/'); n_len++)
+    //     {
+    //     }
+
+    //     if (!c) {
+    //         break;
+    //     }
+
+    //     char str1[n_len+1];
+    //     str1[n_len] = '\0';
+    //     memcpy(str1, tmp_path, n_len);
+    //     dir = find_children_by_name(dir, str1);
+    //     if (dir==0) {
+    //         return 0;
+    //     }
+    // }
+
+    struct nameidata ns = {
+        last_name: last_name
+    };
+
+    if (get_parent_dir_entry(dirname, current_process->root, &ns)) {
+        printk("fdsa\n");
+        return -1;
     }
-    dirname++;
-
-    while (1) {
-        tmp_path = dirname;
-        for (n_len = 0; (c = *(dirname++)) && (c != '/'); n_len++)
-        {
-        }
-
-        if (!c) {
-            break;
-        }
-
-        char str1[n_len+1];
-        str1[n_len] = '\0';
-        memcpy(str1, tmp_path, n_len);
-        dir = find_children_by_name(dir, str1);
-        if (dir==0) {
-            return 0;
-        }
-    }
+    dir = ns.dir;
 
     if (dir->inode->mode!=FILE_MODE_DIR) {
         printk("%s is not a dir\n", dir->name);
-        return 0;
+        return -1;
     }
 
     struct inode *new_inode=get_inode();
@@ -379,7 +386,7 @@ int sys_mkdir(const char *dirname, int mode)
     new_inode->mode = FILE_MODE_DIR;
 
     struct dir_entry *dev_dir=get_dir();
-    memcpy(dev_dir->name, tmp_path, n_len);
+    memcpy(dev_dir->name, ns.last_name, ns.last_len);
     dev_dir->dev_num=dir->dev_num;
     dev_dir->inode=new_inode;
     dev_dir->parent=dir;
@@ -410,23 +417,23 @@ int sys_mkdir(const char *dirname, int mode)
     dev_dir->children = tmp;
 
     //
-    new_inode=get_inode();
-    new_inode->sb=dev_dir->sb;
-    new_inode->dev_num=MKDEV(3, 0);
-    new_inode->mode = FILE_MODE_BLK;
-    new_inode->f_op = dev_table[3].f_op;
+    // new_inode=get_inode();
+    // new_inode->sb=dev_dir->sb;
+    // new_inode->dev_num=MKDEV(3, 0);
+    // new_inode->mode = FILE_MODE_BLK;
+    // new_inode->f_op = dev_table[3].f_op;
 
-    new_dir=get_dir();
-    memcpy(new_dir->name, "hd0", 3);
-    new_dir->dev_num=MKDEV(3, 0);
-    new_dir->inode=new_inode;
-    new_dir->parent=dev_dir;
-    new_dir->sb=dev_dir->sb;
+    // new_dir=get_dir();
+    // memcpy(new_dir->name, "hd0", 3);
+    // new_dir->dev_num=MKDEV(3, 0);
+    // new_dir->inode=new_inode;
+    // new_dir->parent=dev_dir;
+    // new_dir->sb=dev_dir->sb;
 
-    tmp = create_list();
-    tmp->value = new_dir;
-    tmp->next = dev_dir->children;
-    dev_dir->children = tmp;
+    // tmp = create_list();
+    // tmp->value = new_dir;
+    // tmp->next = dev_dir->children;
+    // dev_dir->children = tmp;
 
     // for (struct list *i = current_process->root->children; i; i = i->next)
     // {
@@ -441,4 +448,121 @@ int sys_mkdir(const char *dirname, int mode)
     // }
 
     return 0;
+}
+
+int sys_mount(char *dev_name, char *dir_name, char *type)
+{
+    struct dir_entry *dir;
+    namei(dev_name, &dir);
+    if (dir->inode->mode!=FILE_MODE_BLK) {
+        printk("%s is not a blk dev\n", dev_name);
+        return -1;
+    }
+    int dev_num = MAJOR(dir->dev_num);
+
+    // do_mount(dev_num, dir_name, type);
+    namei(dir_name, &dir);
+    if (dir->inode->mode!=FILE_MODE_DIR) {
+        printk("%s is not a dir\n", dir_name);
+        return -1;
+    }
+    return 0;
+}
+
+static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, struct nameidata *nd)
+{
+    struct dir_entry *dir;
+    const char *thisname;
+    int len, error;
+    char c;
+    nd->dir = 0;
+
+    if (!base) {
+        base = current_process->pwd;
+    }
+    if (pathname[0] == '/')
+    {
+        base = current_process->root;
+    }
+    pathname++;
+    dir = base;
+
+    while (1)
+    {
+        thisname = pathname;
+        for (len = 0; (c = *(pathname++)) && (c != '/'); len++)
+        {
+        }
+
+        if (!c) {
+            break;
+        }
+
+        error = lookup(dir, thisname, len, &dir);
+        if (error) {
+            printk("get_parent_dir_entry error\n");
+            return error;
+        }        
+    }
+
+    nd->last_len = len;
+    nd->last_name = (char *)thisname;
+    nd->dir = dir;
+    return 0;
+}
+
+int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir)
+{
+    if (len == 2 && name[0] == '.' && name[1] == '.')
+    {
+        if (dir==current_process->root) {
+            *res_dir = dir;
+            return 0;
+        }
+    }
+
+    if (!len) {
+        *res_dir = dir;
+        return 0;
+    }
+
+    for (struct list *i = dir->children; i; i = i->next)
+    {
+        struct dir_entry *tmp = (struct dir_entry *)i->value;
+        if (strcmp(name, tmp->name) == 0)
+        {
+            *res_dir = tmp;
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+static int _namei(const char * pathname, struct dir_entry * base, struct dir_entry **dir)
+{
+	int error;
+	// struct dir_entry tmp;
+
+    char n[12];
+    memset(n, 0, sizeof(n));
+    struct nameidata nd={
+        last_name: n
+    };
+    *dir = 0;
+
+    error = get_parent_dir_entry(pathname, base, &nd);
+	if (error)
+		return error;
+	error = lookup(nd.dir , nd.last_name, nd.last_len , dir);
+	if (error) {
+		return error;
+    }
+
+    return 0;
+}
+
+int namei(const char *pathname, struct dir_entry **res_dir)
+{
+    return _namei(pathname, 0, res_dir);
 }
