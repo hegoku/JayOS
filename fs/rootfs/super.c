@@ -1,49 +1,52 @@
 #include <system/fs.h>
 #include <system/rootfs.h>
 #include <string.h>
+#include <sys/types.h>
 
-static struct super_block *ramfs_read_super(struct file_system_type *fs_type);
-static int f_op_write(struct inode *, struct file_descriptor *fd, char *buf, int nbyte);
-static int f_op_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte);
+static struct dir_entry *rootfs_mount(struct file_system_type *fs_type, int dev_num);
+static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
+static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
 
 static int i_op_lookup(struct inode *base, const char *path, int len, struct inode **res_inode);
 
 struct file_system_type rootfs_fs_type = {
     name: "rootfs",
-    read_super: ramfs_read_super,
-    next: 0
+    mount: rootfs_mount,
+    next: NULL
 };
 struct file_operation rootfs_f_op={
-    0,
+    NULL,
     f_op_read,
     f_op_write,
     // 0,
     // 0,
-    0,
+    NULL,
     // 0,
-    0,
-    0,
-    0
+    NULL,
+    NULL,
+    NULL
 };
 struct inode_operation rootfs_inode_op = {
-    0,
+    NULL,
     i_op_lookup,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
 };
 
-static struct super_block *ramfs_read_super(struct file_system_type *fs_type)
+static struct dir_entry *rootfs_mount(struct file_system_type *fs_type, int dev_num)
 {
     struct super_block *sb=get_block(0);
     fs_type->sb_table[fs_type->sb_num++] = sb;
+
+    sb->fs_type = fs_type;
 
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;
@@ -62,7 +65,7 @@ static struct super_block *ramfs_read_super(struct file_system_type *fs_type)
     sb->root_dir=new_dir;
     sb->root_inode=new_inode;
 
-    return sb;
+    return new_dir;
 }
 
 void init_rootfs()
@@ -70,12 +73,12 @@ void init_rootfs()
     register_filesystem(&rootfs_fs_type);
 }
 
-static int f_op_write(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte)
 {
     return nbyte;
 }
 
-static int f_op_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
     return nbyte;
 }

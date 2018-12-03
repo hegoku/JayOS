@@ -228,12 +228,6 @@ struct part_ent {
 #define	NR_SUB_PER_DRIVE	(NR_SUB_PER_PART * NR_PART_PER_DRIVE)
 #define	NR_PRIM_PER_DRIVE	(NR_PART_PER_DRIVE + 1)
 
-/* device numbers of hard disk */
-#define	MINOR_hd1a		0x10
-#define	MINOR_hd2a		(MINOR_hd1a+NR_SUB_PER_PART)
-
-#define	ROOT_DEV		MAKE_DEV(DEV_HD, MINOR_BOOT)
-
 #define	P_PRIMARY	0
 #define	P_EXTENDED	1
 #define P_LOGICAL 2
@@ -500,6 +494,7 @@ struct hd_info
     // struct part_info	logical[NR_SUB_PER_DRIVE];
     // struct part_ent	primary[NR_PRIM_PER_DRIVE];
     // struct part_ent	logical[NR_SUB_PER_DRIVE];
+    int part_num;
     struct part_info part[NR_SUB_PER_PART];
 };
 
@@ -525,9 +520,7 @@ int hd_rw(int drive, int cmd, unsigned char *buf, unsigned long sector, unsigned
 void hd_setup();
 void hd_w(int drive, unsigned char *buf, unsigned long sector, unsigned long bytes);
 
-#define	DRV_OF_DEV(dev) (dev <= MAX_PRIM ? \
-			 dev / NR_PRIM_PER_DRIVE : \
-			 (dev - MINOR_hd1a) / NR_SUB_PER_DRIVE)
+#define	GET_PART_INDEX(mi) ((unsigned int) mi-GET_DRIVER_INDEX_BYMINOR(mi)*NR_SUB_PER_PART) //通过次设备号取得对应硬盘的第几个分区
 
 #define GET_DRIVER_INDEX_BYMINOR(mi) ((unsigned int) (mi/NR_SUB_PER_PART)) //通过次设备号算出属于第几块硬盘的下标
 

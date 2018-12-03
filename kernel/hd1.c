@@ -27,9 +27,9 @@ static void add_request(struct blk_request *r);
 static void print_hdinfo(struct hd_info *hdi);
 static void do_read();
 static void do_write();
-static int do_request(int mi_dev, int cmd, unsigned long sector, unsigned char* buf, unsigned long bytes);
-static int dev_do_write(struct inode *, struct file_descriptor *fd, char *buf, int nbyte);
-static int dev_do_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte);
+static int do_request(int mi_dev, int cmd, unsigned char* buf, unsigned long sector, unsigned long bytes);
+static int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte);
+static int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte);
 struct file_operation hd_f_op = {
     0,
     dev_do_read,
@@ -44,13 +44,13 @@ struct file_operation hd_f_op = {
 
 void init_hd()
 {
-    // dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
-    // dev_table[MAJOR_NR].name = "hd";
-    // // dev_table[MAJOR_NR].request_fn = do_request;
-    // dev_table[MAJOR_NR].current_request = NULL;
-    // dev_table[MAJOR_NR].f_op = &hd_f_op;
+    dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
+    // dev_table[MAJOR_NR].request_fn = do_request;
+    dev_table[MAJOR_NR].request_fn = do_request;
+    dev_table[MAJOR_NR].current_request = NULL;
+    dev_table[MAJOR_NR].f_op = &hd_f_op;
     tail = NULL;
-    install_dev(MAJOR_NR, "hd", DEV_TYPE_CHR, &hd_f_op);
+    install_dev(MAJOR_NR, "hd", DEV_TYPE_BLK, &hd_f_op);
 }
 
 void hd_setup()
@@ -73,6 +73,7 @@ void hd_setup()
     {
         hd_info[i].channel = 0;
         hd_info[i].is_master = 1;
+        hd_info[i].part_num = 1;
         partition(i);
         print_hdinfo(&hd_info[i]);
     }
@@ -267,9 +268,11 @@ int hd_rw(int drive, int cmd, unsigned char* buf, unsigned long sector, unsigned
     return bytes;
 }
 
-int do_request(int mi_dev, int cmd, unsigned long sector, unsigned char* buf, unsigned long bytes)
+int do_request(int dev_num, int cmd, unsigned char* buf, unsigned long sector, unsigned long bytes)
 {
+    int mi_dev = MINOR(dev_num);
     int drive = GET_DRIVER_INDEX_BYMINOR(mi_dev);
+    sector += hd_info[drive].part[GET_PART_INDEX(mi_dev)].base;
     return hd_rw(drive, cmd, buf, sector, bytes);
 }
 
@@ -293,6 +296,7 @@ static void partition(int drive)
         hdi->part[dev_nr].style = P_PRIMARY;
         hdi->part[dev_nr].base = part_tbl[i].start_sect;
         hdi->part[dev_nr].size = part_tbl[i].nr_sects;
+        hdi->part_num++;
 
         if (part_tbl[i].sys_id == EXT_PART) { /* extended */
             int base_dev=drive *NR_SUB_PER_PART; //该硬盘的第0个设备的设备号
@@ -301,24 +305,25 @@ static void partition(int drive)
             int ext_start_sect = hdi->part[dev_nr].base;
             int s = ext_start_sect;
 
-            for (int j = 0; j < NR_SUB_PER_PART-NR_PART_PER_DRIVE; j++) {
-                struct part_ent part_tbl_logic; //逻辑扇区最多12个
+            for (int j = 0; j < NR_SUB_PER_PART-NR_PART_PER_DRIVE-1; j++) {
+                struct part_ent part_tbl_logic; //逻辑扇区最多11个
                 int dev_nr_logic = NR_PART_PER_DRIVE+ 1 + j;
 
                 get_part_table(drive, s, &part_tbl_logic, 1);
-
-                hdi->part[dev_nr_logic].sys_id = part_tbl_logic.sys_id;
-                hdi->part[dev_nr_logic].boot_ind = part_tbl_logic.boot_ind;
-                hdi->part[dev_nr_logic].style = P_LOGICAL;
-                hdi->part[dev_nr_logic].base = part_tbl_logic.start_sect;
-                hdi->part[dev_nr_logic].size = part_tbl_logic.nr_sects;
-
-                s = ext_start_sect + part_tbl_logic.start_sect;
 
                 /* no more logical partitions
                 in this extended partition */
                 if (part_tbl_logic.sys_id == NO_PART)
                     break;
+
+                hdi->part[dev_nr_logic].sys_id = part_tbl_logic.sys_id;
+                hdi->part[dev_nr_logic].boot_ind = part_tbl_logic.boot_ind;
+                hdi->part[dev_nr_logic].style = P_LOGICAL;
+                hdi->part[dev_nr_logic].base = s+part_tbl_logic.start_sect;
+                hdi->part[dev_nr_logic].size = part_tbl_logic.nr_sects;
+
+                s = ext_start_sect + part_tbl_logic.start_sect;
+                hdi->part_num++;
             }
         }
     }
@@ -327,9 +332,9 @@ static void partition(int drive)
 static void print_hdinfo(struct hd_info * hdi)
 {
 	int i;
-	for (i = 0; i < NR_PART_PER_DRIVE + 1; i++) {
+	for (i = 0; i < hdi->part_num; i++) {
         printk("%sPART_%d: BI 0x%x, base %d(0x%x), size %d(0x%x), sid 0x%x\n",
-               i == 0 ? " " : (i<=4 ? "     " : "         "),
+               i == 0 ? " " : (i <= 4 ? "     " : "         "),
                i,
                hdi->part[i].boot_ind,
                hdi->part[i].base,
@@ -340,26 +345,26 @@ static void print_hdinfo(struct hd_info * hdi)
     }
 }
 
-int dev_do_write(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte)
 {
     unsigned long start_block = fd->pos / SECTOR_SIZE;
     unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
     int len = (end_block - start_block + 1) * SECTOR_SIZE;
     char rbuf[len];
-    hd_rw(MINOR(inode->dev_num), 0, rbuf, start_block, len);
+    do_request(fd->inode->dev_num, 0, rbuf, start_block, len);
     memcpy(&rbuf[fd->pos - start_block * SECTOR_SIZE], buf, nbyte);
-    hd_rw(MINOR(inode->dev_num), 1, rbuf, start_block, len);
+    do_request(fd->inode->dev_num, 1, rbuf, start_block, len);
     fd->pos += nbyte;
     return nbyte;
 }
 
-int dev_do_read(struct inode *inode, struct file_descriptor *fd, char *buf, int nbyte)
+int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
     unsigned long start_block = fd->pos / SECTOR_SIZE;
     unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
     int len = (end_block - start_block + 1) * SECTOR_SIZE;
     char rbuf[len];
-    hd_rw(MINOR(inode->dev_num), 0, rbuf, start_block, len);
+    do_request(fd->inode->dev_num, 0, rbuf, start_block, len);
     memcpy(buf, &rbuf[fd->pos - start_block * SECTOR_SIZE], nbyte);
     fd->pos += nbyte;
     return nbyte;

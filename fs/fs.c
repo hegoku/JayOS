@@ -1,5 +1,6 @@
 #include <system/fs.h>
 #include <string.h>
+#include <sys/types.h>
 #include <system/dev.h>
 #include "../kernel/hd.h"
 #include "../kernel/kernel.h"
@@ -19,6 +20,7 @@ static int list_num = 0;
 
 static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, struct nameidata *nd);
 static int _namei(const char *pathname, struct dir_entry *base, struct dir_entry **dir);
+static int lookup_fs(const char *name, struct file_system_type **fs_type);
 
 void mkfs()
 {
@@ -58,7 +60,7 @@ int sys_open(const char *path, int flags, ...)
     }
 
     for (i = 0; i < FILE_DESC_TABLE_MAX_COUNT; i++) {
-        if (f_desc_table[i].inode==0) {
+        if (f_desc_table[i].inode==NULL) {
             break;
         }
     }
@@ -68,9 +70,9 @@ int sys_open(const char *path, int flags, ...)
         return -1;
     }
 
-    struct inode *p_inode = 0;
+    struct inode *p_inode = NULL;
 
-    if (get_inode_by_filename(path, &p_inode)==0) {
+    if (get_inode_by_filename(path, &p_inode)) {
         return -1;
     }
 
@@ -82,6 +84,7 @@ int sys_open(const char *path, int flags, ...)
     if (p_inode->f_op->open) {
         p_inode->f_op->open(p_inode, &f_desc_table[i]);
     }
+    p_inode->used_count++;
 
     // if (p_inode->mode==FILE_MODE_CHR) {
     // }
@@ -108,7 +111,7 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
     const char *tmp_path;
     int n_len;
     char c;
-    *res_inode = 0;
+    *res_inode = NULL;
 
     if (filename[0] == '/')
     {
@@ -130,7 +133,7 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
         memcpy(str1, tmp_path, n_len);
         dir = find_children_by_name(dir, str1);
         if (dir==0) {
-            return 0;
+            return -1;
         }
 
         if (!c) {
@@ -138,7 +141,7 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
         }
     }
     *res_inode = dir->inode;
-    return 1;
+    return 0;
 
     // if (strcmp(filename, "/tty1") == 0)
     // {
@@ -150,11 +153,12 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
     //     *res_inode = &inode_table[3];
     //     return 1;
     // }
-    return 0;
+    // return 0;
 }
 
 int sys_close(int fd)
 {
+    current_process->file_table[fd]->inode->used_count--;
     current_process->file_table[fd]->inode = 0;
     current_process->file_table[fd] = 0;
 
@@ -181,7 +185,7 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
     // }
 
     if (file->op->write) {
-        return file->op->write(file->inode, file, (char *)buf, nbyte);
+        return file->op->write(file, (char *)buf, nbyte);
     }
 
     // if (file->inode->mode == FILE_MODE_CHR)
@@ -213,7 +217,7 @@ int sys_read(int fd,char * buf, unsigned int nbyte)
     }
 
     if (file->op->read) {
-        return file->op->read(file->inode, file, (char *)buf, nbyte);
+        return file->op->read(file, (char *)buf, nbyte);
     }
 
     printk ("(Write)inode->i_mode=%d\n", file->inode->mode);
@@ -232,7 +236,7 @@ off_t sys_lseek(int fd, off_t offset, int whence)
     }
 
     if (file->op && file->op->lseek) {
-        return file->op->lseek(file->inode, file, offset, whence);
+        return file->op->lseek(file, offset, whence);
     }
 
     switch (whence) {
@@ -273,26 +277,59 @@ void register_filesystem(struct file_system_type *fs_type)
     }
 }
 
-int do_mount(const char *dev_name, const char *dir, char *type )
+int do_mount(const char *dev_name, const char *dir, char *type)
 {
+    struct dir_entry *dev_dir;
+    struct dir_entry *dir_dir;
+    struct dir_entry *new_dir;
+    struct file_system_type * fs_type;
 
+    if (lookup_fs(type, &fs_type)) {
+        printk("fs %s not exist\n", type);
+        return -1;
+    }
+
+    // if (namei(dev_name, &dev_dir)) {
+    //     printk("device %s not found\n", dev_name);
+    //     return -1;
+    // }
+    
+    // if (namei(dir, &dir_dir)) {
+    //     printk("dir %s not found\n", dir);
+    //     return -1;
+    // }
+    // if (dir_dir->is_mounted) { //只能被挂载一次
+    //     printk("dir %s has been mounted\n", dir);
+    //     return -1;
+    // }
+
+    // new_dir = fs_type->mount(fs_type, dev_dir->dev_num);
+
+    // while (dir_dir->is_mounted) {
+    //     dir_dir = dir_dir->mounted_dir;
+    // }
+    // dir_dir->is_mounted = 1;
+    // dir_dir->mounted_dir = new_dir;
+    return 0;
 }
 
 void mount_root()
 {
     struct file_system_type * fs_type;
-	struct super_block * sb;
+	struct dir_entry * dir;
 	struct inode * inode;
 
     fs_type = *file_system_table;
 
-    do {
-        sb=fs_type->read_super(fs_type);
+    // do {
+        dir=fs_type->mount(fs_type, ROOT_DEV);
         fs_type=fs_type->next;
 
-        current_process->root = sb->root_dir;
-        current_process->pwd = sb->root_dir;
-    } while (fs_type);
+        current_process->root = dir;
+        current_process->pwd = dir;
+    // } while (fs_type);
+    sys_mkdir("/dev", 1);
+    sys_mkdir("/root", 1);
 }
 
 struct inode *get_inode()
@@ -391,6 +428,8 @@ int sys_mkdir(const char *dirname, int mode)
     dev_dir->inode=new_inode;
     dev_dir->parent=dir;
     dev_dir->sb=dir->sb;
+    dev_dir->is_mounted = 0;
+    dev_dir->mounted_dir = NULL;
 
     struct list *tmp = create_list();
     tmp->value = dev_dir;
@@ -398,23 +437,23 @@ int sys_mkdir(const char *dirname, int mode)
     dir->children = tmp;
 
     //
-    new_inode=get_inode();
-    new_inode->sb=dev_dir->sb;
-    new_inode->dev_num=MKDEV(4, 0);
-    new_inode->mode = FILE_MODE_CHR;
-    new_inode->f_op = dev_table[4].f_op;
+    // new_inode=get_inode();
+    // new_inode->sb=dev_dir->sb;
+    // new_inode->dev_num=MKDEV(4, 0);
+    // new_inode->mode = FILE_MODE_CHR;
+    // new_inode->f_op = dev_table[4].f_op;
 
-    struct dir_entry *new_dir=get_dir();
-    memcpy(new_dir->name, "tty1", 4);
-    new_dir->dev_num=MKDEV(4, 0);
-    new_dir->inode=new_inode;
-    new_dir->parent=dev_dir;
-    new_dir->sb=dev_dir->sb;
+    // struct dir_entry *new_dir=get_dir();
+    // memcpy(new_dir->name, "tty1", 4);
+    // new_dir->dev_num=MKDEV(4, 0);
+    // new_dir->inode=new_inode;
+    // new_dir->parent=dev_dir;
+    // new_dir->sb=dev_dir->sb;
 
-    tmp = create_list();
-    tmp->value = new_dir;
-    tmp->next = dev_dir->children;
-    dev_dir->children = tmp;
+    // tmp = create_list();
+    // tmp->value = new_dir;
+    // tmp->next = dev_dir->children;
+    // dev_dir->children = tmp;
 
     //
     // new_inode=get_inode();
@@ -452,20 +491,45 @@ int sys_mkdir(const char *dirname, int mode)
 
 int sys_mount(char *dev_name, char *dir_name, char *type)
 {
-    struct dir_entry *dir;
-    namei(dev_name, &dir);
-    if (dir->inode->mode!=FILE_MODE_BLK) {
+    struct dir_entry *dev_dir;
+    struct dir_entry *dir_dir;
+    struct dir_entry *new_dir;
+    struct file_system_type * fs_type;
+
+    if (lookup_fs(type, &fs_type)) {
+        printk("fs %s not exist\n", type);
+        return -1;
+    }
+
+    if (namei(dev_name, &dev_dir)) {
+        printk("device %s not found\n", dev_name);
+        return -1;
+    }
+    if (dev_dir->inode->mode!=FILE_MODE_BLK) {
         printk("%s is not a blk dev\n", dev_name);
         return -1;
     }
-    int dev_num = MAJOR(dir->dev_num);
-
-    // do_mount(dev_num, dir_name, type);
-    namei(dir_name, &dir);
-    if (dir->inode->mode!=FILE_MODE_DIR) {
+    
+    if (namei(dir_name, &dir_dir)) {
+        printk("dir %s not found\n", dir_name);
+        return -1;
+    }
+    if (dir_dir->inode->mode!=FILE_MODE_DIR) {
         printk("%s is not a dir\n", dir_name);
         return -1;
     }
+    if (dir_dir->is_mounted) { //只能被挂载一次
+        printk("dir %s has been mounted\n", dir_name);
+        return -1;
+    }
+
+    new_dir = fs_type->mount(fs_type, dev_dir->dev_num);
+
+    while (dir_dir->is_mounted) {
+        dir_dir = dir_dir->mounted_dir;
+    }
+    dir_dir->is_mounted = 1;
+    dir_dir->mounted_dir = new_dir;
     return 0;
 }
 
@@ -475,7 +539,7 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
     const char *thisname;
     int len, error;
     char c;
-    nd->dir = 0;
+    nd->dir = NULL;
 
     if (!base) {
         base = current_process->pwd;
@@ -500,7 +564,7 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
 
         error = lookup(dir, thisname, len, &dir);
         if (error) {
-            printk("get_parent_dir_entry error\n");
+            printk("get_parent_dir_entry lookup error\n");
             return error;
         }        
     }
@@ -529,7 +593,10 @@ int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **
     for (struct list *i = dir->children; i; i = i->next)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
-        if (strcmp(name, tmp->name) == 0)
+        char tmp_name[len];
+        memset(tmp_name, 0, len);
+        memcpy(tmp_name, name, len);
+        if (strcmp(tmp_name, tmp->name) == 0)
         {
             *res_dir = tmp;
             return 0;
@@ -549,7 +616,7 @@ static int _namei(const char * pathname, struct dir_entry * base, struct dir_ent
     struct nameidata nd={
         last_name: n
     };
-    *dir = 0;
+    *dir = NULL;
 
     error = get_parent_dir_entry(pathname, base, &nd);
 	if (error)
@@ -564,5 +631,26 @@ static int _namei(const char * pathname, struct dir_entry * base, struct dir_ent
 
 int namei(const char *pathname, struct dir_entry **res_dir)
 {
-    return _namei(pathname, 0, res_dir);
+    return _namei(pathname, NULL, res_dir);
 }
+
+static int lookup_fs(const char *name, struct file_system_type **fs_type)
+{
+    struct file_system_type *tmp=*file_system_table;
+    *fs_type = NULL;
+    while (tmp)
+    {
+        if (strcmp(tmp->name, name)==0) {
+            *fs_type = tmp;
+            return 0;
+        }
+        tmp=tmp->next;
+    }
+    return -1;
+}
+
+// int sys_mount(char *dev_name, char *dir_name, char *type)
+// {
+//     (*file_system_table)->mount((*file_system_table), 3);
+//     return 0;
+// }

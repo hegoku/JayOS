@@ -13,6 +13,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <system/rootfs.h>
+#include "../fs/ext2/ext2.h"
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -152,9 +153,11 @@ void kernel_main()
     ticks = 0;
     init_system_call(sys_call_table);
 
+    is_in_ring0 = 0;
+    current_process = process_table+2;
+
     init_rootfs();
     mount_root();
-    sys_mkdir("/dev", 1);
 
     init_tty();
 
@@ -171,10 +174,7 @@ void kernel_main()
 
     init_hd();
     irq_table[AT_WINI_IRQ] = hd_handler;
-    enable_irq(AT_WINI_IRQ);
-
-    is_in_ring0 = 0;
-    current_process = process_table+2;
+    enable_irq(AT_WINI_IRQ);    
 
     // for (int i = 0; i < TTY_NUM; i++) {
     //     struct inode *a=get_inode();
@@ -187,7 +187,6 @@ void kernel_main()
     // a->dev_num = MKDEV(3, 0);
     // a->mode = FILE_MODE_BLK;
     // a->f_op = dev_table[3].f_op;
-    while(1){}
     restart();
 }
 
@@ -209,20 +208,22 @@ void TestA()
 {
     unsigned int i = 0;
     hd_setup();
-    int stdin = open("/dev/tty1", O_RDWR);
-    int stdout = open("/dev/tty1", O_RDWR);
-    int errout = open("/dev/tty1", O_RDWR);
+    init_ext2();
+    mount("/dev/hd1", "/root", "ext2");
+    int stdin = open("/dev/tty0", O_RDWR);
+    int stdout = open("/dev/tty0", O_RDWR);
+    int errout = open("/dev/tty0", O_RDWR);
     char a[513];
     // hd_rw(0, 1, a, 0, sizeof(a));
-    // memset(a, 4, 513);
-    // int hd = open("/dev/hd", O_RDWR);
+    memset(a, 4, 513);
+    int hd = open("/dev/hd0", O_RDWR);
     // write(hd, a, sizeof(a));
     // memset(a, 5, 513);
     // write(hd, a, sizeof(a));
     // memset(a, 0, 513);
-    // lseek(hd, 512, SEEK_SET);
-    // read(hd, a, 3);
-    // printf("%d %d %d\n", a[0], a[1], a[2]);
+    lseek(hd, 512, SEEK_SET);
+    read(hd, a, 3);
+    printf("%d %d %d\n", a[0], a[1], a[2]);
     // hd_open(0);
     // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)
