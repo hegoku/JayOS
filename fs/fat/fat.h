@@ -2,7 +2,7 @@
 #ifndef __FAT_H
 #define __FAT_H
 
-struct fat16{
+struct fat16_super_block{
     unsigned char BS_jmpBoot : 3;
     unsigned char BS_OEMName;
     unsigned char BPB_BytsPerSec : 2;
