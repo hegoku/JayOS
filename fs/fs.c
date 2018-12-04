@@ -73,6 +73,7 @@ int sys_open(const char *path, int flags, ...)
     struct inode *p_inode = NULL;
 
     if (get_inode_by_filename(path, &p_inode)) {
+        printk("file: %s not found\n", path);
         return -1;
     }
 
@@ -324,7 +325,6 @@ void mount_root()
     // do {
         dir=fs_type->mount(fs_type, ROOT_DEV);
         fs_type=fs_type->next;
-
         current_process->root = dir;
         current_process->pwd = dir;
     // } while (fs_type);
@@ -509,8 +509,9 @@ int sys_mount(char *dev_name, char *dir_name, char *type)
         printk("%s is not a blk dev\n", dev_name);
         return -1;
     }
-    
-    if (namei(dir_name, &dir_dir)) {
+
+    if (namei(dir_name, &dir_dir))
+    {
         printk("dir %s not found\n", dir_name);
         return -1;
     }
@@ -563,7 +564,8 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
         }
 
         error = lookup(dir, thisname, len, &dir);
-        if (error) {
+        if (error)
+        {
             printk("get_parent_dir_entry lookup error\n");
             return error;
         }        
@@ -593,8 +595,8 @@ int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **
     for (struct list *i = dir->children; i; i = i->next)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
-        char tmp_name[len];
-        memset(tmp_name, 0, len);
+        char tmp_name[len+1];
+        memset(tmp_name, 0, len+1);
         memcpy(tmp_name, name, len);
         if (strcmp(tmp_name, tmp->name) == 0)
         {
@@ -622,8 +624,9 @@ static int _namei(const char * pathname, struct dir_entry * base, struct dir_ent
 	if (error)
 		return error;
 	error = lookup(nd.dir , nd.last_name, nd.last_len , dir);
-	if (error) {
-		return error;
+    if (error)
+    {
+        return error;
     }
 
     return 0;
@@ -649,8 +652,19 @@ static int lookup_fs(const char *name, struct file_system_type **fs_type)
     return -1;
 }
 
-// int sys_mount(char *dev_name, char *dir_name, char *type)
-// {
-//     (*file_system_table)->mount((*file_system_table), 3);
-//     return 0;
-// }
+int sys_stat(char *filename, struct stat *statbuf)
+{
+    struct dir_entry *dir;
+    if (namei(filename, &dir)) {
+        printk("%s not exist\n", filename);
+        return -1;
+    }
+
+    printk("name: %s :\n", dir->name);
+    for (struct list *i = dir->children; i; i = i->next)
+    {
+        struct dir_entry *tmp = (struct dir_entry *)i->value;
+        printk("    name: %s\n", tmp->name);
+    }
+    return 0;
+}

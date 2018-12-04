@@ -108,6 +108,12 @@ struct nameidata {
     int last_len;
 };
 
+struct stat{
+    int dev_num;     /* ID of device containing file */
+    unsigned long inode_num;     /* inode number */
+    int st_mode;    /* protection */
+};
+
 extern struct file_system_type **file_system_table;
 extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
@@ -120,6 +126,7 @@ int sys_close(int fd);
 int sys_mkdir(const char *dirname, int mode);
 int sys_mount(char *dev_name, char *dir_name, char *type);
 off_t sys_lseek(int fd, off_t offset, int whence);
+int sys_stat(char *filename, struct stat *statbuf);
 int get_inode_by_filename(const char *filename, struct inode **res_inode);
 
 void register_filesystem(struct file_system_type *fs_type);

@@ -305,25 +305,25 @@ static void partition(int drive)
             int ext_start_sect = hdi->part[dev_nr].base;
             int s = ext_start_sect;
 
-            for (int j = 0; j < NR_SUB_PER_PART-NR_PART_PER_DRIVE-1; j++) {
-                struct part_ent part_tbl_logic; //逻辑扇区最多11个
+            for (int j = 0; j < NR_SUB_PER_PART-NR_PART_PER_DRIVE-1; j++) { //逻辑扇区最多11个
+                struct part_ent part_tbl_logic[2]; //一个扩展分区有2个分区表,一个指向自己扇区，第二个指向下一个扩展分区
                 int dev_nr_logic = NR_PART_PER_DRIVE+ 1 + j;
 
-                get_part_table(drive, s, &part_tbl_logic, 1);
+                get_part_table(drive, s, part_tbl_logic, 2);
+
+                hdi->part[dev_nr_logic].sys_id = part_tbl_logic[0].sys_id;
+                hdi->part[dev_nr_logic].boot_ind = part_tbl_logic[0].boot_ind;
+                hdi->part[dev_nr_logic].style = P_LOGICAL;
+                hdi->part[dev_nr_logic].base = s+part_tbl_logic[0].start_sect;
+                hdi->part[dev_nr_logic].size = part_tbl_logic[0].nr_sects;
+
+                s = ext_start_sect + part_tbl_logic[1].start_sect;
+                hdi->part_num++;
 
                 /* no more logical partitions
                 in this extended partition */
-                if (part_tbl_logic.sys_id == NO_PART)
+                if (part_tbl_logic[1].sys_id == NO_PART)
                     break;
-
-                hdi->part[dev_nr_logic].sys_id = part_tbl_logic.sys_id;
-                hdi->part[dev_nr_logic].boot_ind = part_tbl_logic.boot_ind;
-                hdi->part[dev_nr_logic].style = P_LOGICAL;
-                hdi->part[dev_nr_logic].base = s+part_tbl_logic.start_sect;
-                hdi->part[dev_nr_logic].size = part_tbl_logic.nr_sects;
-
-                s = ext_start_sect + part_tbl_logic.start_sect;
-                hdi->part_num++;
             }
         }
     }

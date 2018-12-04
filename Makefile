@@ -100,10 +100,10 @@ k1 : build/k1.o
 	$(LD) -s -Ttext $(ENTERPOINT) -m elf_i386 -o build/k1 build/k1.o
 
 build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tty.h \
-					include/sys/types.h include/system/fs.h kernel/kernel.h
+					include/sys/types.h include/system/fs.h kernel/kernel.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h\
+build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h \
 			kernel/process.h include/system/desc.h kernel/kernel.h \
 			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<

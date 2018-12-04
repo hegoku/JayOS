@@ -174,7 +174,14 @@ void kernel_main()
 
     init_hd();
     irq_table[AT_WINI_IRQ] = hd_handler;
-    enable_irq(AT_WINI_IRQ);    
+    enable_irq(AT_WINI_IRQ);
+
+    struct dir_entry *tmp = current_process->root;
+    for (int i = 0; i < PROC_NUMBER; i++)
+    {
+        process_table[i].pwd = tmp;
+        process_table[i].root = tmp;
+    }
 
     // for (int i = 0; i < TTY_NUM; i++) {
     //     struct inode *a=get_inode();
@@ -214,13 +221,13 @@ void TestA()
     int stdout = open("/dev/tty0", O_RDWR);
     int errout = open("/dev/tty0", O_RDWR);
     char a[513];
-    // hd_rw(0, 1, a, 0, sizeof(a));
-    memset(a, 4, 513);
+    // // hd_rw(0, 1, a, 0, sizeof(a));
+    // memset(a, 4, 513);
     int hd = open("/dev/hd0", O_RDWR);
-    // write(hd, a, sizeof(a));
-    // memset(a, 5, 513);
-    // write(hd, a, sizeof(a));
-    // memset(a, 0, 513);
+    // // write(hd, a, sizeof(a));
+    // // memset(a, 5, 513);
+    // // write(hd, a, sizeof(a));
+    // // memset(a, 0, 513);
     lseek(hd, 512, SEEK_SET);
     read(hd, a, 3);
     printf("%d %d %d\n", a[0], a[1], a[2]);
@@ -237,7 +244,7 @@ void TestA()
     // tty_write(&tty, buf, j);
         // printf("%s%x.%d)%x:", "A", get_ticks(), is_in_ring0, &is_in_ring0);
         // printf("%x", disp_pos);
-        printf("%s%x.", "A", get_ticks());
+        // printf("%s%x.", "A", get_ticks());
         // printf("%s%x.", "A", i++);
         // DispStr("A");
         // disp_int(get_tcks());
@@ -269,10 +276,9 @@ void delay(int time)
 
 void calltest()
 {
-    while(1){}
-    int stdin = open("/dev/tty1", O_RDWR);
-    int stdout = open("/dev/tty1", O_RDWR);
-    int errout = open("/dev/tty1", O_RDWR);
+    int stdin = open("/dev/tty0", O_RDWR);
+    int stdout = open("/dev/tty0", O_RDWR);
+    int errout = open("/dev/tty0", O_RDWR);
     // DispStr("i'm calltest\n");
     char *buf = "ABCD1234";
     unsigned int i = 0;
@@ -290,7 +296,7 @@ void calltest()
         // DispStr("B");
         // disp_int(i++);
         // DispStr(".");
-        printf("%c%x.", 'B', i++);
+        // printf("%c%x.", 'B', i++);
 
     // //     char *buf;
     // int j=sprintf(buf, "%c%x.", 'B', i++);
