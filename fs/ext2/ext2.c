@@ -47,9 +47,14 @@ void init_ext2()
 static struct dir_entry *ext2_mount(struct file_system_type *fs_type, int dev_num)
 {
     struct super_block *sb=get_block(0);
+    sb->fs_type = fs_type;
 
     struct ext2_super_block ext2_sb;
     dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&ext2_sb, 2, sizeof(ext2_sb)); //读super_block
+    if (ext2_sb.s_magic!=0xEF53) {
+        printk("Unknow system type\n");
+        return NULL;
+    }
     printk("%x\n", ext2_sb.s_magic);
 
     int block_size = 1 << (ext2_sb.s_log_block_size + 10); //1个block大小
@@ -61,8 +66,6 @@ static struct dir_entry *ext2_mount(struct file_system_type *fs_type, int dev_nu
     {
     }
     // move_ext2_sb_to_sb(&sb, ext2_sb);
-
-    sb->fs_type = fs_type;
 
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;

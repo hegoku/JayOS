@@ -2,7 +2,9 @@
 #ifndef __FAT_H
 #define __FAT_H
 
-struct fat16_super_block{
+#define ROOT_DIR_ENTRY_SIZE 32 //根目录一条大小(字节)
+
+struct fat12_super_block{
     unsigned char BS_jmpBoot : 3;
     unsigned char BS_OEMName;
     unsigned char BPB_BytsPerSec : 2;
@@ -25,6 +27,21 @@ struct fat16_super_block{
     unsigned char BS_FileSysType;
     unsigned char boot_code[56];
     unsigned char end_flag : 2;
+};
+
+struct fat12_root_dir_entry{
+    unsigned char dir_name;
+    unsigned char ext_name : 3;
+    unsigned char dir_attr : 1;
+    unsigned short reserved1 : 10;
+    unsigned char write_time : 2;
+    unsigned char write_date : 2;
+    unsigned char fst_clus : 2;
+    unsigned char file_size : 4;
+};
+
+struct fat12_fat_entry{
+    unsigned short entry : 12;
 };
 
 void init_fat16();
