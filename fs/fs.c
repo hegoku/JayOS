@@ -669,9 +669,9 @@ int sys_stat(char *filename, struct stat *statbuf)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
         if (tmp->inode->mode==FILE_MODE_REG) {
-            printk("    - %dB name: %s\n", tmp->inode->size, tmp->name);
+            printk("    - %dB name:%s\n", tmp->inode->size, tmp->name);
         } else if (tmp->inode->mode==FILE_MODE_DIR) {
-            printk("    D %dB name: %s\n", tmp->inode->size, tmp->name);
+            printk("    D %dB name:%s\n", tmp->inode->size, tmp->name);
         }
     }
     return 0;

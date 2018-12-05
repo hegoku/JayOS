@@ -3,8 +3,21 @@
 #define __FAT_H
 
 #define ROOT_DIR_ENTRY_SIZE 32 //根目录一条大小(字节)
+
+//一下为文件名的第一个字节的特殊值
+#define FILE_NAME_0 0x00 //这个条目有用并且后面没有被占用条目
+#define FILE_NAME_5 0x5 //最初字符确实是0xE5
+#define FILE_NAME_DOT 0x2E //'点'条目；'.'或者'..'
+#define FILE_NAME_DEL 0xE5 //这个条目曾经被删除不再有用。取消删除文件工具作为取消删除的一步必须使用一个正常的字符取代它
+
+#define FILE_ATTR_READONLY_MASK 0x1 //只读
+#define FILE_ATTR_HIDDEN_MASK 0x2 //隐藏
+#define FILE_ATTR_SYS_MASK 0x4 //系统
+#define FILE_ATTR_VOL_MASK 0x8 //卷标
 #define FILE_ATTR_DIR_MASK 0x10 //目录
 #define FILE_ATTR_FILE_MASK 0x20 //文件
+#define FILE_ATTR_DEV_MASK 0x40 //设备（内部使用，磁盘上看不到）
+#define FILE_ATTR_UNUSED 0x80 // 没有使用
 #define FILE_ATTR_LONG_NAME_MASK 0x0F //长文件名
 
 struct fat12_super_block{
@@ -45,7 +58,27 @@ struct fat12_root_dir_entry{
 
 struct fat12_fat_entry{
     unsigned short entry : 12;
-};
+} __attribute__ ((packed));
+
+struct fat12_long_name{
+    unsigned char count;
+    unsigned short c1;
+    unsigned short c2;
+    unsigned short c3;
+    unsigned short c4;
+    unsigned short c5;
+    unsigned char dir_attr;
+    unsigned short reserved1;
+    unsigned short c6; //16
+    unsigned short c7;
+    unsigned short c8;
+    unsigned short c9;
+    unsigned short c10;
+    unsigned short c11;
+    unsigned short reserved2;
+    unsigned short c12;
+    unsigned short c13;
+} __attribute__((packed));
 
 void init_fat12();
 

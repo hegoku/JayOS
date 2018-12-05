@@ -55,7 +55,7 @@ struct list{
 };
 
 struct dir_entry{
-    char name[12];
+    char name[256];
     struct inode *inode;
     struct super_block *sb;
     struct dir_entry *parent;

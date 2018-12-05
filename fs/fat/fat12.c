@@ -11,6 +11,7 @@ static struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_n
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
 static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
 static int getStringFromDate(char *dest, char *src, int len);
+static int setLongNameToArray(struct fat12_long_name long_name_buf, struct fat12_root_dir_entry root_dir_entry, char *res);
 
 struct file_system_type fat12_fs_type = {
     name: "fat12",
@@ -100,10 +101,17 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     sb->root_dir=new_dir;
     sb->root_inode=new_inode;
 
-    // for (int i = 0; i < fat12_sb.BPB_RootEntCnt; i++)
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < fat12_sb.BPB_RootEntCnt; i++)
     {
-        if (root_dir_entry[i].dir_attr & FILE_ATTR_LONG_NAME_MASK == FILE_ATTR_LONG_NAME_MASK) {
+        char filename[256];
+        memset(filename, 0, sizeof(filename));
+
+        if (root_dir_entry[i].dir_attr==0 || root_dir_entry[i].dir_attr==0x80 || root_dir_entry[i].dir_name[0]==FILE_NAME_DOT || root_dir_entry[i].dir_name[0]==FILE_NAME_DEL) {
+            continue;
+        }
+
+        if ((root_dir_entry[i].dir_attr & FILE_ATTR_LONG_NAME_MASK) == FILE_ATTR_LONG_NAME_MASK)
+        {
             /*若长文件名长度小于等于13个字，则长文件名仅占用一个长文件名目录项，并且第一个字节为“A”（第6位是“1”），表明该目录项既是第一个又是最后一个
             例如，文件名为“Forest.bmp”的长文件名目录项和对应的短文件名目录项为：
             （长文件名目录项）：
@@ -114,11 +122,56 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
             00 00 CA 20 00 00 40 4E-88 1F 10 24 62 02 01 00 ... ..@N...$b...
             用DIR命令列表显示为：
             FOREST BMP 66,146 12-08-95 9:50 Forest.bmp
+            若长文件名长度大于13个字符，则长文件名占用多个长文件名目录项。第一个目录项的序号为ASCII码01，第二项的序号为ASCII码02，......，最后一项的序号采用公式CHR(X-1+字母“A”的ASCII码）确定（一定是个英文字母）。
+            其中X表示长文件名占用的目录项数，其计算方法如下：
+            L=长文件名/13
+            若L是整数，则X=L;若L不是整数，则X=（取L的整数部分+1）
+            例如，文件名为“123456789abcdefghijk.txt”的长文件名目录项和对应的短文件名目录项为：
+            （长文件名目录项2）：
+            42 65 00 66 00 67 00 68-00 69 00 0F 00 2A 6A 00 Be.f.g.h.i...*j.
+            6B 00 2E 00 74 00 78 00-74 00 00 00 00 00 FF FF k...t.x.t.....
+            （长文件名目录项1）：
+            01 31 00 32 00 33 00 34-00 35 00 0F 00 2A 36 00 .1.2.3.4.5...*6.
+            37 00 38 00 39 00 61 00-62 00 00 00 63 00 64 00 7.8.9.a.b...c.d.
+            （短文件名目录项）：
+            31 32 33 34 35 36 7E 31-54 58 54 20 00 6C 69 60 123456～1TXT.li`
+            A6 2A A6 2A 00 00 50 60-A6 2A 02 00 9C 00 00 00 .*.*..P`.*....
+            用DIR命令列表显示为：
+            123456～1 TXT 156 05-06-01 12:02 123456789abcdefghijk.txt
+            在查看长文件名的目录项的时候，应按照图6-11所示的说明，注意观察长文件名每个目录项中的第一个字节。例如，上述“（长文件名目录项2）”中的“42”，表示该项为第2项，且为最后一个目录项。
             */
-            if (root_dir_entry[i].dir_name[0]=='A') {
-                i++; //所以直接取下一个dir_entry, 因为真实的文件信息存在下一个里面
-            } else {
-
+            int x = root_dir_entry[i].dir_name[0] - 'A' + 1;
+            int y = x;
+            char name_tmp[x][14];
+            struct fat12_long_name long_name_buf;
+           
+            while (y)
+            {
+                setLongNameToArray(long_name_buf, root_dir_entry[i], name_tmp[y-1]);
+                i++;
+                y--;
+            }
+            char *name_p;
+            name_p = filename;
+           
+            for (int j =0; j <x; j++)
+            {
+                sprintf(name_p, "%s", name_tmp[j]);
+                name_p += 13;
+            }
+        } else {
+            char tmp1[9];
+            memset(tmp1, 0, 9);
+            getStringFromDate(tmp1, root_dir_entry[i].dir_name, 8);
+            // memcpy(tmp1, &root_dir_entry[i].dir_name, 8);
+            char tmp2[4];
+            memset(tmp2, 0, 4);
+            getStringFromDate(tmp2, root_dir_entry[i].ext_name, 3);
+            if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+            {
+                sprintf(filename, "%s.%s", tmp1, tmp2);
+            } else if ((root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+                sprintf(filename, "%s", tmp1, tmp2);
             }
         }
 
@@ -127,7 +180,6 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         new_inode->dev_num=sb->dev_num;
         new_inode->f_op=&fat12_f_op;
         new_inode->inode_op = &fat12_inode_op;
-        printk("%x %x\n", root_dir_entry[i].dir_attr, root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK);
         if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
         {
             new_inode->mode = FILE_MODE_REG;
@@ -138,19 +190,8 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         new_inode->start_pos = root_dir_entry[i].fst_clus;
 
         struct dir_entry *c_new_dir=get_dir();
-        char tmp1[9];
-        memset(tmp1, 0, 9);
-        getStringFromDate(tmp1, root_dir_entry[i].dir_name, 8);
-        // memcpy(tmp1, &root_dir_entry[i].dir_name, 8);
-        char tmp2[4];
-        memset(tmp2, 0, 4);
-        getStringFromDate(tmp2, root_dir_entry[i].ext_name, 3);
-        // memcpy(tmp2, &root_dir_entry[i].ext_name, 3);
-        if (new_inode->mode == FILE_MODE_REG) {
-            sprintf(c_new_dir->name, "%s.%s", tmp1, tmp2);
-        } else {
-            sprintf(c_new_dir->name, "%s", tmp1, tmp2);
-        }
+        
+        sprintf(c_new_dir->name, "%s", filename);
         c_new_dir->dev_num = sb->dev_num;
         c_new_dir->inode=new_inode;
         c_new_dir->parent=new_dir;
@@ -183,4 +224,14 @@ int getStringFromDate(char *dest, char *src, int len)
     act_len = len - i;
     memcpy(dest, src, act_len);
     return 0;
+}
+
+//将root_dir_entry长文件名的一段取出给res
+int setLongNameToArray(struct fat12_long_name long_name_buf, struct fat12_root_dir_entry root_dir_entry, char *res)
+{
+    memset(&long_name_buf, 0, sizeof(long_name_buf));
+    memcpy(&long_name_buf, &root_dir_entry, sizeof(long_name_buf));
+    sprintf(res, "%c%c%c%c%c%c%c%c%c%c%c%c%c", long_name_buf.c1, long_name_buf.c2, long_name_buf.c3, long_name_buf.c4, 
+    long_name_buf.c5, long_name_buf.c6, long_name_buf.c7, long_name_buf.c8, long_name_buf.c9, long_name_buf.c10, long_name_buf.c11,
+    long_name_buf.c12, long_name_buf.c13);
 }
