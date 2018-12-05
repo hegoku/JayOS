@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <system/rootfs.h>
 #include "../fs/ext2/ext2.h"
+#include "../fs/fat/fat.h"
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -215,8 +216,8 @@ void TestA()
 {
     unsigned int i = 0;
     hd_setup();
-    init_ext2();
-    mount("/dev/hd1", "/root", "ext2");
+    init_fat12();
+    mount("/dev/hd1", "/root", "fat12");
     int stdin = open("/dev/tty0", O_RDWR);
     int stdout = open("/dev/tty0", O_RDWR);
     int errout = open("/dev/tty0", O_RDWR);

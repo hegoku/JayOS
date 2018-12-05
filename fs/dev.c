@@ -55,7 +55,7 @@ void install_dev(int major, char *name, int type, struct file_operation *f_op)
     //
     new_inode = get_inode();
     new_inode->sb=dev_dir->sb;
-    new_inode->dev_num=MKDEV(major, 1);
+    new_inode->dev_num=MKDEV(major, 2);
     if (type==DEV_TYPE_CHR) {
         new_inode->mode = FILE_MODE_CHR;
     } else if (type==DEV_TYPE_BLK) {
@@ -66,7 +66,7 @@ void install_dev(int major, char *name, int type, struct file_operation *f_op)
     new_dir=get_dir();
     sprintf(new_dir->name, "%s1", name);
     // memcpy(new_dir->name, name, strlen(name));
-    new_dir->dev_num=MKDEV(major, 1);
+    new_dir->dev_num=MKDEV(major, 2);
     new_dir->inode=new_inode;
     new_dir->parent=dev_dir;
     new_dir->sb=dev_dir->sb;

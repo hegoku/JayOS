@@ -531,6 +531,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type)
     }
     dir_dir->is_mounted = 1;
     dir_dir->mounted_dir = new_dir;
+    sys_stat("/root", NULL);while(1){}
     return 0;
 }
 
@@ -600,6 +601,9 @@ int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **
         memcpy(tmp_name, name, len);
         if (strcmp(tmp_name, tmp->name) == 0)
         {
+            while (tmp->is_mounted) {
+                tmp = tmp->mounted_dir;
+            }
             *res_dir = tmp;
             return 0;
         }
@@ -664,7 +668,11 @@ int sys_stat(char *filename, struct stat *statbuf)
     for (struct list *i = dir->children; i; i = i->next)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
-        printk("    name: %s\n", tmp->name);
+        if (tmp->inode->mode==FILE_MODE_REG) {
+            printk("    - %dB name: %s\n", tmp->inode->size, tmp->name);
+        } else if (tmp->inode->mode==FILE_MODE_DIR) {
+            printk("    D %dB name: %s\n", tmp->inode->size, tmp->name);
+        }
     }
     return 0;
 }

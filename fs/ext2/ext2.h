@@ -77,7 +77,7 @@ struct ext2_super_block {
 	unsigned int	s_default_mount_opts;
  	unsigned int	s_first_meta_bg; 	/* First metablock block group */
 	unsigned int	s_reserved[190];	/* Padding to the end of the block */
-};
+} __attribute__ ((packed));
 
 struct ext2_group_desc
 {
@@ -89,7 +89,7 @@ struct ext2_group_desc
 	unsigned short	bg_used_dirs_count;	/* Directories count */
 	unsigned short	bg_pad;
 	unsigned int	bg_reserved[3];
-};
+} __attribute__ ((packed));
 
 struct ext2_inode {
 	unsigned short	i_mode;		/* File mode */
@@ -143,7 +143,7 @@ struct ext2_inode {
 			unsigned int	m_i_reserved2[2];
 		} masix2;
 	} osd2;				/* OS dependent 2 */
-};
+} __attribute__ ((packed));
 
 struct ext2_dir_entry {
 	unsigned int	inode;			/* Inode number */
@@ -151,7 +151,7 @@ struct ext2_dir_entry {
 	unsigned short	name_len;		/* Name length */
 	unsigned char	file_type;
 	char	name[];			/* File name, up to EXT2_NAME_LEN */
-};
+} __attribute__ ((packed));
 
 void init_ext2();
 #endif

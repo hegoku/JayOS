@@ -52,7 +52,7 @@ static struct dir_entry *ext2_mount(struct file_system_type *fs_type, int dev_nu
     struct ext2_super_block ext2_sb;
     dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&ext2_sb, 2, sizeof(ext2_sb)); //读super_block
     if (ext2_sb.s_magic!=0xEF53) {
-        printk("Unknow system type\n");
+        printk("Not Ext2 File System Type\n");
         return NULL;
     }
     printk("%x\n", ext2_sb.s_magic);
