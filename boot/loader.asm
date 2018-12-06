@@ -29,6 +29,7 @@ start:
     mov sp, TOP_OF_STACK
     call ClearScreen
     ; call ReadBIOS
+    call ReadMemorySize
     call FindKernel
     jmp $
 
@@ -115,6 +116,42 @@ ReadBIOS:
 
 .hd_count_finish:
     pop ds
+    ret
+
+ReadMemorySize:
+    pushad
+    push ds
+    push es
+    xor eax, eax
+    mov ds, ax
+    mov es, ax
+    mov ebx, 0
+    ; mov ax, _MemChkBuf
+    ; mov [ds:0x500], ax ;内核会从这个地址取_MemChkbuf的地址
+    ; mov ax, _dwMCRNumber
+    ; mov [ds:0x502], ax ;内核会从这个地址取_dwMCRNumber的地址
+    ; mov di, _MemChkBuf
+    mov word[ds:BIOS_ADDR], bx
+    mov di, BIOS_ADDR+2
+.ReadMemorySizeLoop:
+    mov eax, 0E820h
+    mov ecx, 20
+    mov edx, 0534D4150h
+    int 15h
+    jc .LABEL_MEM_CHK_FAIL
+    add di, 20
+    ; inc dword[_dwMCRNumber]
+    inc dword[ds:BIOS_ADDR]
+    cmp ebx, 0
+    jne .ReadMemorySizeLoop
+    jmp .LABEL_MEM_CHK_OK
+.LABEL_MEM_CHK_FAIL:
+    ; mov dword [_dwMCRNumber], 0
+    mov dword [ds:BIOS_ADDR], 0
+.LABEL_MEM_CHK_OK:
+    pop es
+    pop ds
+    popad
     ret
 
 FindKernel:
@@ -449,3 +486,5 @@ GDT_SEL_VIDEO equ gdt_video-gdt_0
 ; GDT_SEL_USER_CODE equ gdt_user_code-gdt_0
 ; GDT_SEL_USER_DATA equ gdt_user_data-gdt_0
 
+_dwMCRNumber dd 0
+_MemChkBuf:times 256 db 0

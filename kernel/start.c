@@ -15,6 +15,7 @@
 #include <system/rootfs.h>
 #include "../fs/ext2/ext2.h"
 #include "../fs/fat/fat.h"
+#include "system/mm.h"
 
 TSS tss;
 irq_handler irq_table[IRQ_NUMBER];
@@ -44,6 +45,7 @@ extern void restart();
 
 void cstart()
 {
+    load_memory_size();
     init_gdt();
     init_idt();
     // hd_open(0);
@@ -184,6 +186,31 @@ void kernel_main()
         process_table[i].root = tmp;
     }
 
+    printk("MemSize:%d\n", MemSize);
+    char *a = kmalloc(1);
+    *a = 'B';
+    printk("%x %c\n", a, *a);
+    kfree(a, 1);
+
+    char *b = kmalloc(7);
+    memcpy(b, "ABCDEF", 7);
+    printk("%x %s\n", b, b);
+
+    char *d = kmalloc(3);
+    memset(d, 0, 3);
+    memcpy(d, "BB", 3);
+    printk("%x %s\n", d, d);
+
+    char *c = kmalloc(10);
+    memcpy(c, " 1234789.", 10);
+    printk("%x %s\n", c, c);
+    kfree(d, 3);
+
+    a = kmalloc(1);
+    *a = 'Z';
+    printk("%x %c\n", a, *a);
+    printk("%x %s\n", b, b);
+
     // for (int i = 0; i < TTY_NUM; i++) {
     //     struct inode *a=get_inode();
     //     a->dev_num = MKDEV(4, i);
@@ -218,6 +245,8 @@ void TestA()
     hd_setup();
     init_fat12();
     mount("/dev/hd1", "/root", "fat12");
+    // init_ext2();
+    // mount("/dev/hd1", "/root", "ext2");
     int stdin = open("/dev/tty0", O_RDWR);
     int stdout = open("/dev/tty0", O_RDWR);
     int errout = open("/dev/tty0", O_RDWR);
@@ -232,6 +261,11 @@ void TestA()
     lseek(hd, 512, SEEK_SET);
     read(hd, a, 3);
     printf("%d %d %d\n", a[0], a[1], a[2]);
+
+    int ff = open("/root/a.txt", O_RDWR);
+    memset(a, 0, 513);
+    read(ff, a, 4);
+    printf("%s\n", a);
     // hd_open(0);
     // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)

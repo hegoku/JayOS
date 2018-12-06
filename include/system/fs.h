@@ -30,6 +30,7 @@ struct super_block{
     struct dir_entry *root_dir;
     struct inode *root_inode;
     struct file_system_type	*fs_type;
+    void *s_fs_info;
 };
 
 struct inode{

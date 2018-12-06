@@ -213,7 +213,7 @@ int sys_read(int fd,char * buf, unsigned int nbyte)
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
         return -1;
     }
-    if (nbyte==0) {
+    if (nbyte==0 || nbyte>file->inode->size) {
         return 0;
     }
 

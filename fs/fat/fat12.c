@@ -20,7 +20,7 @@ struct file_system_type fat12_fs_type = {
 };
 struct file_operation fat12_f_op={
     NULL,
-    NULL,
+    f_op_read,
     NULL,
     // 0,
     // 0,
@@ -67,6 +67,8 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         return NULL;
     }
 
+    sb->s_fs_info = &fat12_sb;
+
     int fat_start = fat12_sb.BPB_BytsPerSec * fat12_sb.BPB_RsvdSecCnt; //FAT表开始字节
     int fat_start_sector = (fat_start + fat12_sb.BPB_BytsPerSec - 1) / fat12_sb.BPB_BytsPerSec; //FAT起始扇区
     int fat_size = fat12_sb.BPB_BytsPerSec * fat12_sb.BPB_FATz16;                                          //一个FAT表的大小(字节)
@@ -80,9 +82,9 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     // memset(fat_table, 0, sizeof(fat_table));
     // dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&fat_table, fat_start_sector, sizeof(fat_table)); //读根FAT表
 
-    struct fat12_root_dir_entry root_dir_entry[fat12_sb.BPB_RootEntCnt];
-    memset(root_dir_entry, 0, sizeof(root_dir_entry));
-    dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&root_dir_entry, root_dir_start_sector, sizeof(root_dir_entry)); //读根目录
+    // struct fat12_root_dir_entry root_dir_entry[fat12_sb.BPB_RootEntCnt];
+    // memset(root_dir_entry, 0, sizeof(root_dir_entry));
+    // dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&root_dir_entry, root_dir_start_sector, sizeof(root_dir_entry)); //读根目录
 
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;
@@ -103,14 +105,19 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
 
     for (int i = 0; i < fat12_sb.BPB_RootEntCnt; i++)
     {
+        struct fat12_root_dir_entry root_dir_entry;
+        memset(&root_dir_entry, 0, sizeof(root_dir_entry));
+        dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&root_dir_entry, root_dir_start_sector, sizeof(root_dir_entry)); //读根目录
+        root_dir_start_sector +=  sizeof(root_dir_entry);
+
         char filename[256];
         memset(filename, 0, sizeof(filename));
 
-        if (root_dir_entry[i].dir_attr==0 || root_dir_entry[i].dir_attr==0x80 || root_dir_entry[i].dir_name[0]==FILE_NAME_DOT || root_dir_entry[i].dir_name[0]==FILE_NAME_DEL) {
+        if (root_dir_entry.dir_attr==0 || root_dir_entry.dir_attr==0x80 || root_dir_entry.dir_name[0]==FILE_NAME_DOT || root_dir_entry.dir_name[0]==FILE_NAME_DEL) {
             continue;
         }
 
-        if ((root_dir_entry[i].dir_attr & FILE_ATTR_LONG_NAME_MASK) == FILE_ATTR_LONG_NAME_MASK)
+        if ((root_dir_entry.dir_attr & FILE_ATTR_LONG_NAME_MASK) == FILE_ATTR_LONG_NAME_MASK)
         {
             /*若长文件名长度小于等于13个字，则长文件名仅占用一个长文件名目录项，并且第一个字节为“A”（第6位是“1”），表明该目录项既是第一个又是最后一个
             例如，文件名为“Forest.bmp”的长文件名目录项和对应的短文件名目录项为：
@@ -140,14 +147,14 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
             123456～1 TXT 156 05-06-01 12:02 123456789abcdefghijk.txt
             在查看长文件名的目录项的时候，应按照图6-11所示的说明，注意观察长文件名每个目录项中的第一个字节。例如，上述“（长文件名目录项2）”中的“42”，表示该项为第2项，且为最后一个目录项。
             */
-            int x = root_dir_entry[i].dir_name[0] - 'A' + 1;
+            int x = root_dir_entry.dir_name[0] - 'A' + 1;
             int y = x;
             char name_tmp[x][14];
             struct fat12_long_name long_name_buf;
            
             while (y)
             {
-                setLongNameToArray(long_name_buf, root_dir_entry[i], name_tmp[y-1]);
+                setLongNameToArray(long_name_buf, root_dir_entry, name_tmp[y-1]);
                 i++;
                 y--;
             }
@@ -162,15 +169,15 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         } else {
             char tmp1[9];
             memset(tmp1, 0, 9);
-            getStringFromDate(tmp1, root_dir_entry[i].dir_name, 8);
+            getStringFromDate(tmp1, root_dir_entry.dir_name, 8);
             // memcpy(tmp1, &root_dir_entry[i].dir_name, 8);
             char tmp2[4];
             memset(tmp2, 0, 4);
-            getStringFromDate(tmp2, root_dir_entry[i].ext_name, 3);
-            if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+            getStringFromDate(tmp2, root_dir_entry.ext_name, 3);
+            if ((root_dir_entry.dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
             {
                 sprintf(filename, "%s.%s", tmp1, tmp2);
-            } else if ((root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+            } else if ((root_dir_entry.dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
                 sprintf(filename, "%s", tmp1, tmp2);
             }
         }
@@ -180,14 +187,14 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         new_inode->dev_num=sb->dev_num;
         new_inode->f_op=&fat12_f_op;
         new_inode->inode_op = &fat12_inode_op;
-        if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+        if ((root_dir_entry.dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
         {
             new_inode->mode = FILE_MODE_REG;
-        } else if ((root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+        } else if ((root_dir_entry.dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
             new_inode->mode = FILE_MODE_DIR;
         }
-        new_inode->size = root_dir_entry[i].file_size;
-        new_inode->start_pos = root_dir_entry[i].fst_clus;
+        new_inode->size = root_dir_entry.file_size;
+        new_inode->start_pos = root_dir_entry.fst_clus;
 
         struct dir_entry *c_new_dir=get_dir();
         
@@ -234,4 +241,23 @@ int setLongNameToArray(struct fat12_long_name long_name_buf, struct fat12_root_d
     sprintf(res, "%c%c%c%c%c%c%c%c%c%c%c%c%c", long_name_buf.c1, long_name_buf.c2, long_name_buf.c3, long_name_buf.c4, 
     long_name_buf.c5, long_name_buf.c6, long_name_buf.c7, long_name_buf.c8, long_name_buf.c9, long_name_buf.c10, long_name_buf.c11,
     long_name_buf.c12, long_name_buf.c13);
+}
+
+int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
+{
+    struct fat12_super_block *fat12_sb = (struct fat12_super_block*)fd->inode->sb->s_fs_info;
+
+    int fat_start = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_RsvdSecCnt; //FAT表开始字节
+    int fat_size = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_FATz16; //一个FAT表的大小(字节)
+    int root_dir_start = fat12_sb->BPB_BytsPerSec*fat12_sb->BPB_RsvdSecCnt + fat_size *fat12_sb->BPB_NumFATs; //根目录开始字节
+    int root_dir_size = fat12_sb->BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
+    int data_start = root_dir_start + root_dir_size; //数据区起始字节
+
+    // unsigned long start_block = ((fd->inode->start_pos - 2) * fat12_sb->BPB_SecPerClus+data_start_sector);
+    // unsigned long end_block = (fd->pos + nbyte) / dev_table[MAJOR(fd->inode->dev_num)].block_size;
+    // int len = (end_block - start_block + 1) * dev_table[MAJOR(fd->inode->dev_num)].block_size;
+    // dev_table[MAJOR(fd->inode->dev_num)].f_op->read(fd->inode->dev_num, 0, buf, start_block, len);
+    // dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, buf, start_block, len);
+    fd->pos += nbyte;
+    return nbyte;
 }

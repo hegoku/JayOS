@@ -131,9 +131,9 @@ void hd_handler(int irq)
         printk("no hd request\n");
         return;
     }
-    printk("hd iqr %x\n", hd_callback);
+    // printk("hd iqr %x\n", hd_callback);
     hd_callback();
-    printk("hd iqr end\n");
+    // printk("hd iqr end\n");
 }
 
 void do_hd_request()
@@ -360,12 +360,13 @@ int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte)
 
 int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
-    unsigned long start_block = fd->pos / SECTOR_SIZE;
-    unsigned long end_block = (fd->pos + nbyte) / SECTOR_SIZE;
-    int len = (end_block - start_block + 1) * SECTOR_SIZE;
-    char rbuf[len];
-    do_request(fd->inode->dev_num, 0, rbuf, start_block, len);
-    memcpy(buf, &rbuf[fd->pos - start_block * SECTOR_SIZE], nbyte);
-    fd->pos += nbyte;
+    // unsigned long start_pos = fd->pos + fd->inode->start_pos;
+    // unsigned long start_block = start_pos / SECTOR_SIZE;
+    // unsigned long end_block = (start_pos + nbyte) / SECTOR_SIZE;
+    // int len = (end_block - start_block + 1) * SECTOR_SIZE;
+    // char rbuf[len];
+    // do_request(fd->inode->dev_num, 0, rbuf, start_block, len);
+    // memcpy(buf, &rbuf[start_pos - start_block * SECTOR_SIZE], nbyte);
+    // fd->pos += nbyte;
     return nbyte;
 }
