@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <system/dev.h>
 #include <system/fs.h>
+#include <system/mm.h>
 
 static struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num);
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
@@ -53,6 +54,7 @@ void init_fat12()
 struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
 {
     struct super_block *sb=get_block(0);
+    fs_type->sb_table=sb;
     sb->fs_type = fs_type;
 
     struct fat12_super_block fat12_sb;

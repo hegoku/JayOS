@@ -103,7 +103,7 @@ build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tt
 					include/sys/types.h include/system/fs.h kernel/kernel.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h \
+build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h include/system/mm.h \
 			kernel/process.h include/system/desc.h kernel/kernel.h \
 			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
@@ -111,13 +111,14 @@ build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h \
 build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h include/string.h kernel/global.h include/sys/types.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/rootfs.o: fs/rootfs/super.c include/system/fs.h include/system/rootfs.h
+build/rootfs.o: fs/rootfs/super.c include/system/fs.h include/system/rootfs.h include/system/mm.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/ext2.o: fs/ext2/ext2.c include/system/fs.h include/sys/types.h include/system/dev.h fs/ext2/ext2.h kernel/global.h include/string.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/fat12.o: fs/fat/fat12.c include/system/fs.h include/sys/types.h include/system/dev.h fs/fat/fat.h kernel/global.h include/string.h include/stdio.h
+build/fat12.o: fs/fat/fat12.c include/system/fs.h include/sys/types.h include/system/dev.h fs/fat/fat.h kernel/global.h include/string.h include/stdio.h \
+				include/system/mm.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/mm.o: mm/mm.c include/system/mm.h include/string.h include/sys/types.h kernel/global.h

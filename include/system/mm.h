@@ -19,5 +19,6 @@ extern unsigned long MemSize;
 void load_memory_size();
 void *kmalloc(int size);
 void kfree(void *ptr, int size);
+void *kzmalloc(int size);
 
 #endif

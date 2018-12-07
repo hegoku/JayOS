@@ -16,8 +16,7 @@ struct file_system_type{
     const char *name;
     struct dir_entry *(*mount)(struct file_system_type *fs_type, int dev_num);
     struct file_system_type *next;
-    struct super_block *sb_table[10];
-    int sb_num;
+    struct super_block *sb_table;
 };
 
 struct super_block{
@@ -115,7 +114,7 @@ struct stat{
     int st_mode;    /* protection */
 };
 
-extern struct file_system_type **file_system_table;
+extern struct file_system_type *file_system_table;
 extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
 extern struct super_block super_block_table[];

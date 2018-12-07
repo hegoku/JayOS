@@ -6,8 +6,9 @@
 #include "../kernel/kernel.h"
 #include "../kernel/global.h"
 #include "../kernel/tty.h"
+#include <system/mm.h>
 
-struct file_system_type **file_system_table;
+struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];
 struct inode inode_table[INODE_TABLE_MAX_COUNT];
 struct super_block super_block_table[4];
@@ -268,9 +269,9 @@ off_t sys_lseek(int fd, off_t offset, int whence)
 void register_filesystem(struct file_system_type *fs_type)
 {
     if (file_system_table==0) {
-        *file_system_table=fs_type;
+        file_system_table=fs_type;
     } else {
-        struct file_system_type *tmp=*file_system_table;
+        struct file_system_type *tmp=file_system_table;
         while(tmp->next) {
             tmp=tmp->next;
         }
@@ -320,7 +321,7 @@ void mount_root()
 	struct dir_entry * dir;
 	struct inode * inode;
 
-    fs_type = *file_system_table;
+    fs_type = file_system_table;
 
     // do {
         dir=fs_type->mount(fs_type, ROOT_DEV);
@@ -343,11 +344,19 @@ struct inode *get_inode()
 
 struct super_block *get_block(int dev_num)
 {
-    struct super_block a={
-        dev_num: dev_num
-    };
-    super_block_table[sb_num]=a;
-    return &super_block_table[sb_num++];
+    struct super_block *a = kzmalloc(sizeof(struct super_block));
+    if (a == NULL)
+    {
+        printk("Can't malloc sb\n");
+        return NULL;
+    }
+    a->dev_num = dev_num;
+    return a;
+    // struct super_block a = {
+    //     dev_num : dev_num
+    // };
+    // super_block_table[sb_num]=a;
+    // return &super_block_table[sb_num++];
 }
 
 struct dir_entry *get_dir()
@@ -643,7 +652,7 @@ int namei(const char *pathname, struct dir_entry **res_dir)
 
 static int lookup_fs(const char *name, struct file_system_type **fs_type)
 {
-    struct file_system_type *tmp=*file_system_table;
+    struct file_system_type *tmp=file_system_table;
     *fs_type = NULL;
     while (tmp)
     {
