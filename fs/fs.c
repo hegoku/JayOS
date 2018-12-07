@@ -97,54 +97,70 @@ int sys_open(const char *path, int flags, ...)
 
 struct dir_entry* find_children_by_name(struct dir_entry *dir, const char *filename)
 {
-    for (struct list *i = &dir->children; i; i = i->next)
-    {
+    struct list *i;
+    list_for_each(i, &dir->children){
         struct dir_entry *tmp = (struct dir_entry *)i->value;
         if (strcmp(filename, tmp->name) == 0)
         {
             return tmp;
         }
     }
+    // for (struct list *i = &dir->children; i; i = i->next)
+    // {
+    //     struct dir_entry *tmp = (struct dir_entry *)i->value;
+    //     if (strcmp(filename, tmp->name) == 0)
+    //     {
+    //         return tmp;
+    //     }
+    // }
     return 0;
 }
 
 int get_inode_by_filename(const char *filename, struct inode **res_inode)
 {
-    struct dir_entry *dir;
-    const char *tmp_path;
-    int n_len;
-    char c;
-    *res_inode = NULL;
-
-    if (filename[0] == '/')
-    {
-        dir = current_process->root;
-    } else {
-        dir = current_process->pwd;
+    struct dir_entry *file_dentry;
+    if (namei(filename, &file_dentry)) {
+        return -1;
     }
-    filename++;
 
-    while (1)
-    {
-        tmp_path = filename;
-        for (n_len = 0; (c = *(filename++)) && (c != '/'); n_len++)
-        {
-        }
-
-        char str1[n_len+1];
-        str1[n_len] = '\0';
-        memcpy(str1, tmp_path, n_len);
-        dir = find_children_by_name(dir, str1);
-        if (dir==0) {
-            return -1;
-        }
-
-        if (!c) {
-            break;
-        }
-    }
-    *res_inode = dir->inode;
+    *res_inode = file_dentry->inode;
     return 0;
+
+    // struct dir_entry *dir;
+    // const char *tmp_path;
+    // int n_len;
+    // char c;
+    // *res_inode = NULL;
+
+    // if (filename[0] == '/')
+    // {
+    //     dir = current_process->root;
+    // } else {
+    //     dir = current_process->pwd;
+    // }
+    // filename++;
+
+    // while (1)
+    // {
+    //     tmp_path = filename;
+    //     for (n_len = 0; (c = *(filename++)) && (c != '/'); n_len++)
+    //     {
+    //     }
+
+    //     char str1[n_len+1];
+    //     str1[n_len] = '\0';
+    //     memcpy(str1, tmp_path, n_len);
+    //     dir = find_children_by_name(dir, str1);
+    //     if (dir==0) {
+    //         return -1;
+    //     }
+
+    //     if (!c) {
+    //         break;
+    //     }
+    // }
+    // *res_inode = dir->inode;
+    // return 0;
 
     // if (strcmp(filename, "/tty1") == 0)
     // {

@@ -110,11 +110,9 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     sb->root_inode=new_inode;
 
     char *filename=kzmalloc(256);
-    // struct fat12_root_dir_entry *root_dir_entry=kzmalloc(sizeof(struct fat12_root_dir_entry));
     char *tmp1=kzmalloc(9);
     char *tmp2 = kzmalloc(4);
     struct fat12_long_name *long_name_buf=kzmalloc(sizeof(struct fat12_long_name));
-    printk("%x %x\n", &root_dir_entry[0], &root_dir_entry[1]);
     struct list *tmp;
     struct dir_entry *c_new_dir;
     for (int i = 0; i < fat12_sb->BPB_RootEntCnt; i++)
@@ -207,7 +205,7 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
             }
         }
 
-        new_inode=get_inode();
+        new_inode = get_inode();
         new_inode->sb=sb;
         new_inode->dev_num=sb->dev_num;
         new_inode->f_op=&fat12_f_op;
@@ -231,6 +229,8 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
 
         tmp = create_list((void*)c_new_dir);
         list_add(tmp, &new_dir->children);
+        // printk("%d\n", i);
+
         // printk("%s %d\n", c_new_dir->name, i);
         // if (i>100)while(1){}
         // struct list *tmp = create_list();
@@ -241,7 +241,6 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     kfree(long_name_buf, sizeof(struct fat12_long_name));
     kfree(tmp2, 4);
     kfree(tmp1, 9);
-    // kfree(root_dir_entry, sizeof(struct fat12_root_dir_entry));
     kfree(filename, 256);
     kfree(root_dir_entry, rde_size);
 

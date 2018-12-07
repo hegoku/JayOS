@@ -245,7 +245,6 @@ void TestA()
     hd_setup();
     init_fat12();
     mount("/dev/hd1", "/root", "fat12");
-    while(1){}
     // init_ext2();
     // mount("/dev/hd1", "/root", "ext2");
     int stdin = open("/dev/tty0", O_RDWR);
