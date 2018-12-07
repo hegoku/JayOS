@@ -18,6 +18,7 @@ void init_system_call(sys_call_handler sys_call_table[])
     sys_call_table[SYS_CALL_MOUNT] = sys_mount;
     sys_call_table[SYS_CALL_STAT] = sys_stat;
     sys_call_table[SYS_CALL_LSEEK] = sys_lseek;
+    sys_call_table[SYS_CALL_DUP] = sys_dup;
 }
 
 static int sys_get_ticks()

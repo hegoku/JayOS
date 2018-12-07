@@ -293,11 +293,7 @@ static char * number(char * str, int num, int base, int size, int precision
 	return str;
 }
 
-#define __va_rounded_size(TYPE) \
-(((sizeof (TYPE) + sizeof (int) - 1) / sizeof (int)) * sizeof (int))
-#define va_arg(AP, TYPE) \
-(AP += __va_rounded_size (TYPE), \
-*((TYPE *) (AP - __va_rounded_size (TYPE))))
+
 int vsprintf(char *buf, const char *fmt, va_list args)
 {
 	int len;

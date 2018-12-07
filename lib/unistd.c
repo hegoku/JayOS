@@ -47,6 +47,11 @@ pid_t fork(void)
     return 0;
 }
 
+int dup(unsigned int oldfd)
+{
+    return sys_call_2_param(SYS_CALL_DUP, oldfd);
+}
+
 //临时
 int get_ticks()
 {

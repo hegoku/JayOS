@@ -16,5 +16,6 @@ int mount(char *dev_name, char *dir_name, char *type);
 off_t lseek(int fd, off_t offset, int whence);
 pid_t fork(void);
 int close(int fd);
+int dup(unsigned int oldfd);
 
 #endif

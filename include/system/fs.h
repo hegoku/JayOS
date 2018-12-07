@@ -113,7 +113,6 @@ struct stat{
 extern struct file_system_type *file_system_table;
 extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
-extern struct super_block super_block_table[];
 
 int sys_open(const char *path, int flags, ...);
 int sys_write(int fd, const void *buf, unsigned int nbyte);
@@ -123,6 +122,8 @@ int sys_mkdir(const char *dirname, int mode);
 int sys_mount(char *dev_name, char *dir_name, char *type);
 off_t sys_lseek(int fd, off_t offset, int whence);
 int sys_stat(char *filename, struct stat *statbuf);
+int sys_dup(unsigned int oldfd);
+
 int get_inode_by_filename(const char *filename, struct inode **res_inode);
 
 void register_filesystem(struct file_system_type *fs_type);

@@ -12,11 +12,8 @@
 struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];
 struct inode inode_table[INODE_TABLE_MAX_COUNT];
-struct super_block super_block_table[4];
 struct dir_entry dir_table[INODE_TABLE_MAX_COUNT];
-struct list list_table[1000];
 static int inode_num = 0;
-static int sb_num=0;
 static int dir_num=0;
 static int list_num = 0;
 
@@ -722,4 +719,26 @@ int sys_stat(char *filename, struct stat *statbuf)
     //     }
     // }
     return 0;
+}
+
+int sys_dup(unsigned int oldfd)
+{
+    int fd = -1;
+    int i;
+    for (i = 0; i < PROC_FILES_MAX_COUNT; i++) {
+        if (current_process->file_table[i]==0) {
+            fd = i;
+            break;
+        }
+    }
+
+    if (fd<0 || fd>=PROC_FILES_MAX_COUNT) {
+        printk("file_table is full (PID:%d)\n", current_process->pid);
+        return -1;
+    }
+
+    current_process->file_table[fd] = current_process->file_table[oldfd];
+    current_process->file_table[oldfd]->inode->used_count++;
+
+    return fd;
 }

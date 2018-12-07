@@ -228,8 +228,8 @@ void kernel_main()
 void init()
 {
     int stdin = open("/dev/tty1", O_RDWR);
-    int stdout = open("/dev/tty1", O_RDWR);
-    int errout = open("/dev/tty1", O_RDWR);
+    dup(0);
+    dup(0);
 
     // int pid = fork();
     // if (pid!=0)
@@ -248,8 +248,10 @@ void TestA()
     // init_ext2();
     // mount("/dev/hd1", "/root", "ext2");
     int stdin = open("/dev/tty0", O_RDWR);
-    int stdout = open("/dev/tty0", O_RDWR);
-    int errout = open("/dev/tty0", O_RDWR);
+    int stdout=dup(0);
+    int errout=dup(0);
+    // int stdout = open("/dev/tty0", O_RDWR);
+    // int errout = open("/dev/tty0", O_RDWR);
     char a[513];
     // // hd_rw(0, 1, a, 0, sizeof(a));
     // memset(a, 4, 513);
