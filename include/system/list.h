@@ -71,5 +71,6 @@ static inline void list_add(struct list *new_list, struct list *head)
 }
 
 struct list *create_list(void *value);
+void del_list(struct list *l);
 
 #endif

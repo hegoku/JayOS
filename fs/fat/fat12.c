@@ -13,7 +13,7 @@ static struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_n
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
 static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
 static int getStringFromDate(char *dest, char *src, int len);
-static int setLongNameToArray(struct fat12_long_name long_name_buf, struct fat12_root_dir_entry root_dir_entry, char *res);
+static int setLongNameToArray(struct fat12_long_name *long_name_buf, struct fat12_root_dir_entry *root_dir_entry, char *res);
 
 struct file_system_type fat12_fs_type = {
     name: "fat12",
@@ -58,36 +58,39 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     fs_type->sb_table=sb;
     sb->fs_type = fs_type;
 
-    struct fat12_super_block fat12_sb;
-    memset(&fat12_sb, 0, sizeof(fat12_sb));
-    dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&fat12_sb, 0, sizeof(fat12_sb)); //读引导扇区
-    char fs_type_tmp[9];
+    struct fat12_super_block *fat12_sb=kzmalloc(sizeof(struct fat12_super_block));
+    memset(fat12_sb, 0, sizeof(struct fat12_super_block));
+    dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)fat12_sb, 0, sizeof(struct fat12_super_block)); //读引导扇区
+    char *fs_type_tmp=kzmalloc(9);
     memset(fs_type_tmp, 0, 9);
-    getStringFromDate(fs_type_tmp, fat12_sb.BS_FileSysType, 8);
+    getStringFromDate(fs_type_tmp, fat12_sb->BS_FileSysType, 8);
     if (strcmp(fs_type_tmp, "FAT12"))
     {
         printk("Not FAT12 File System Type\n");
         return NULL;
     }
+    kfree(fs_type_tmp, 9);
 
     sb->s_fs_info = &fat12_sb;
 
-    int fat_start = fat12_sb.BPB_BytsPerSec * fat12_sb.BPB_RsvdSecCnt; //FAT表开始字节
-    int fat_start_sector = (fat_start + fat12_sb.BPB_BytsPerSec - 1) / fat12_sb.BPB_BytsPerSec; //FAT起始扇区
-    int fat_size = fat12_sb.BPB_BytsPerSec * fat12_sb.BPB_FATz16;                                          //一个FAT表的大小(字节)
-    int root_dir_start = fat12_sb.BPB_BytsPerSec*fat12_sb.BPB_RsvdSecCnt + fat_size *fat12_sb.BPB_NumFATs; //根目录开始字节
-    int root_dir_start_sector = (root_dir_start + fat12_sb.BPB_BytsPerSec -1) / fat12_sb.BPB_BytsPerSec; //根目录起始扇区
-    int root_dir_size = fat12_sb.BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
-    int root_dir_block_size = (root_dir_size + fat12_sb.BPB_BytsPerSec - 1) / fat12_sb.BPB_BytsPerSec; //根目录占用扇区数
+    int fat_start = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_RsvdSecCnt; //FAT表开始字节
+    int fat_start_sector = (fat_start + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //FAT起始扇区
+    int fat_size = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_FATz16;                                          //一个FAT表的大小(字节)
+    int root_dir_start = fat12_sb->BPB_BytsPerSec*fat12_sb->BPB_RsvdSecCnt + fat_size *fat12_sb->BPB_NumFATs; //根目录开始字节
+    int root_dir_start_sector = (root_dir_start + fat12_sb->BPB_BytsPerSec -1) / fat12_sb->BPB_BytsPerSec; //根目录起始扇区
+    int root_dir_size = fat12_sb->BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
+    int root_dir_block_size = (root_dir_size + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //根目录占用扇区数
     int data_start_sector = root_dir_block_size + root_dir_start_sector; //数据区起始扇区
 
     // struct fat12_fat_entry fat_table[fat_size];
     // memset(fat_table, 0, sizeof(fat_table));
     // dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&fat_table, fat_start_sector, sizeof(fat_table)); //读根FAT表
 
-    // struct fat12_root_dir_entry root_dir_entry[fat12_sb.BPB_RootEntCnt];
+    // struct fat12_root_dir_entry root_dir_entry[fat12_sb->BPB_RootEntCnt];
+    int rde_size = sizeof(struct fat12_root_dir_entry) * fat12_sb->BPB_RootEntCnt;
+    struct fat12_root_dir_entry *root_dir_entry = kzmalloc(rde_size);
     // memset(root_dir_entry, 0, sizeof(root_dir_entry));
-    // dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&root_dir_entry, root_dir_start_sector, sizeof(root_dir_entry)); //读根目录
+    dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)root_dir_entry, root_dir_start_sector, rde_size); //读根目录
 
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;
@@ -106,21 +109,33 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     sb->root_dir=new_dir;
     sb->root_inode=new_inode;
 
-    for (int i = 0; i < fat12_sb.BPB_RootEntCnt; i++)
+    char *filename=kzmalloc(256);
+    // struct fat12_root_dir_entry *root_dir_entry=kzmalloc(sizeof(struct fat12_root_dir_entry));
+    char *tmp1=kzmalloc(9);
+    char *tmp2 = kzmalloc(4);
+    struct fat12_long_name *long_name_buf=kzmalloc(sizeof(struct fat12_long_name));
+    printk("%x %x\n", &root_dir_entry[0], &root_dir_entry[1]);
+    struct list *tmp;
+    struct dir_entry *c_new_dir;
+    for (int i = 0; i < fat12_sb->BPB_RootEntCnt; i++)
     {
-        struct fat12_root_dir_entry root_dir_entry;
-        memset(&root_dir_entry, 0, sizeof(root_dir_entry));
-        dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)&root_dir_entry, root_dir_start_sector, sizeof(root_dir_entry)); //读根目录
-        root_dir_start_sector +=  sizeof(root_dir_entry);
+        // memset(root_dir_entry, 0, sizeof(struct fat12_root_dir_entry));
+        memset(filename, 0, sizeof(256));
 
-        char filename[256];
-        memset(filename, 0, sizeof(filename));
+        // dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)root_dir_entry, root_dir_start_sector, sizeof(struct fat12_root_dir_entry)); //读根目录
+        // // printk("%d\n", root_dir_start_sector);
+        // root_dir_start = sizeof(struct fat12_root_dir_entry);
+        // root_dir_start_sector = (root_dir_start + fat12_sb->BPB_BytsPerSec -1) / fat12_sb->BPB_BytsPerSec;
+        // if (i==2) {
+        //     printk("%x\n", &root_dir_entry[i]);
+        //     while(1){}
+        // }
 
-        if (root_dir_entry.dir_attr==0 || root_dir_entry.dir_attr==0x80 || root_dir_entry.dir_name[0]==FILE_NAME_DOT || root_dir_entry.dir_name[0]==FILE_NAME_DEL) {
+        if (root_dir_entry[i].dir_attr==0 || root_dir_entry[i].dir_attr==0x80 || root_dir_entry[i].dir_name[0]==FILE_NAME_DOT || root_dir_entry[i].dir_name[0]==FILE_NAME_DEL) {
             continue;
         }
 
-        if ((root_dir_entry.dir_attr & FILE_ATTR_LONG_NAME_MASK) == FILE_ATTR_LONG_NAME_MASK)
+        if ((root_dir_entry[i].dir_attr & FILE_ATTR_LONG_NAME_MASK) == FILE_ATTR_LONG_NAME_MASK)
         {
             /*若长文件名长度小于等于13个字，则长文件名仅占用一个长文件名目录项，并且第一个字节为“A”（第6位是“1”），表明该目录项既是第一个又是最后一个
             例如，文件名为“Forest.bmp”的长文件名目录项和对应的短文件名目录项为：
@@ -150,16 +165,21 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
             123456～1 TXT 156 05-06-01 12:02 123456789abcdefghijk.txt
             在查看长文件名的目录项的时候，应按照图6-11所示的说明，注意观察长文件名每个目录项中的第一个字节。例如，上述“（长文件名目录项2）”中的“42”，表示该项为第2项，且为最后一个目录项。
             */
-            int x = root_dir_entry.dir_name[0] - 'A' + 1;
+            int x = root_dir_entry[i].dir_name[0] - 'A' + 1;
             int y = x;
             char name_tmp[x][14];
-            struct fat12_long_name long_name_buf;
-           
+
             while (y)
             {
-                setLongNameToArray(long_name_buf, root_dir_entry, name_tmp[y-1]);
+                setLongNameToArray(long_name_buf, &root_dir_entry[i], name_tmp[y - 1]);
                 i++;
                 y--;
+
+                // memset(root_dir_entry, 0, sizeof(struct fat12_root_dir_entry));
+                // dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)root_dir_entry, root_dir_start_sector, sizeof(struct fat12_root_dir_entry)); //读根目录
+                // root_dir_start = sizeof(struct fat12_root_dir_entry);
+                // root_dir_start_sector = (root_dir_start + fat12_sb->BPB_BytsPerSec -1) / fat12_sb->BPB_BytsPerSec;
+                // printk("%x\n", root_dir_entry);while(1){}
             }
             char *name_p;
             name_p = filename;
@@ -169,18 +189,20 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
                 sprintf(name_p, "%s", name_tmp[j]);
                 name_p += 13;
             }
-        } else {
-            char tmp1[9];
+        }
+        else
+        {
+            // char tmp1[9];
             memset(tmp1, 0, 9);
-            getStringFromDate(tmp1, root_dir_entry.dir_name, 8);
+            getStringFromDate(tmp1, root_dir_entry[i].dir_name, 8);
             // memcpy(tmp1, &root_dir_entry[i].dir_name, 8);
-            char tmp2[4];
+            // char tmp2[4];
             memset(tmp2, 0, 4);
-            getStringFromDate(tmp2, root_dir_entry.ext_name, 3);
-            if ((root_dir_entry.dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+            getStringFromDate(tmp2, root_dir_entry[i].ext_name, 3);
+            if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
             {
                 sprintf(filename, "%s.%s", tmp1, tmp2);
-            } else if ((root_dir_entry.dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+            } else if ((root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
                 sprintf(filename, "%s", tmp1, tmp2);
             }
         }
@@ -190,16 +212,16 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         new_inode->dev_num=sb->dev_num;
         new_inode->f_op=&fat12_f_op;
         new_inode->inode_op = &fat12_inode_op;
-        if ((root_dir_entry.dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+        if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
         {
             new_inode->mode = FILE_MODE_REG;
-        } else if ((root_dir_entry.dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+        } else if ((root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
             new_inode->mode = FILE_MODE_DIR;
         }
-        new_inode->size = root_dir_entry.file_size;
-        new_inode->start_pos = root_dir_entry.fst_clus;
+        new_inode->size = root_dir_entry[i].file_size;
+        new_inode->start_pos = root_dir_entry[i].fst_clus;
 
-        struct dir_entry *c_new_dir=get_dir();
+        c_new_dir=get_dir();
         
         sprintf(c_new_dir->name, "%s", filename);
         c_new_dir->dev_num = sb->dev_num;
@@ -207,15 +229,21 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         c_new_dir->parent=new_dir;
         c_new_dir->sb=sb;
 
-        struct list *tmp = create_list((void*)c_new_dir);
+        tmp = create_list((void*)c_new_dir);
         list_add(tmp, &new_dir->children);
-        printk("1111%s %s\n", ((struct dir_entry*)(new_dir->children.value))->name, c_new_dir->name);
-        while(1){}
+        // printk("%s %d\n", c_new_dir->name, i);
+        // if (i>100)while(1){}
         // struct list *tmp = create_list();
         // tmp->value = c_new_dir;
         // tmp->next = new_dir->children;
         // new_dir->children = tmp;
     }
+    kfree(long_name_buf, sizeof(struct fat12_long_name));
+    kfree(tmp2, 4);
+    kfree(tmp1, 9);
+    // kfree(root_dir_entry, sizeof(struct fat12_root_dir_entry));
+    kfree(filename, 256);
+    kfree(root_dir_entry, rde_size);
 
     return new_dir;
 }
@@ -241,13 +269,13 @@ int getStringFromDate(char *dest, char *src, int len)
 }
 
 //将root_dir_entry长文件名的一段取出给res
-int setLongNameToArray(struct fat12_long_name long_name_buf, struct fat12_root_dir_entry root_dir_entry, char *res)
+int setLongNameToArray(struct fat12_long_name *long_name_buf, struct fat12_root_dir_entry *root_dir_entry, char *res)
 {
-    memset(&long_name_buf, 0, sizeof(long_name_buf));
-    memcpy(&long_name_buf, &root_dir_entry, sizeof(long_name_buf));
-    sprintf(res, "%c%c%c%c%c%c%c%c%c%c%c%c%c", long_name_buf.c1, long_name_buf.c2, long_name_buf.c3, long_name_buf.c4, 
-    long_name_buf.c5, long_name_buf.c6, long_name_buf.c7, long_name_buf.c8, long_name_buf.c9, long_name_buf.c10, long_name_buf.c11,
-    long_name_buf.c12, long_name_buf.c13);
+    memset(long_name_buf, 0, sizeof(struct fat12_long_name));
+    memcpy(long_name_buf, root_dir_entry, sizeof(struct fat12_long_name));
+    sprintf(res, "%c%c%c%c%c%c%c%c%c%c%c%c%c", long_name_buf->c1, long_name_buf->c2, long_name_buf->c3, long_name_buf->c4,
+            long_name_buf->c5, long_name_buf->c6, long_name_buf->c7, long_name_buf->c8, long_name_buf->c9, long_name_buf->c10, long_name_buf->c11,
+            long_name_buf->c12, long_name_buf->c13);
 }
 
 int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)

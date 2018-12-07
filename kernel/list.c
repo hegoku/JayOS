@@ -13,3 +13,8 @@ struct list *create_list(void *value)
     a->value = value;
     return a;
 }
+
+void del_list(struct list *l)
+{
+    kfree(l, sizeof(struct list));
+}

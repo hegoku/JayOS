@@ -535,6 +535,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type)
     }
     dir_dir->is_mounted = 1;
     dir_dir->mounted_dir = new_dir;
+    sys_stat("/root", NULL);
     return 0;
 }
 

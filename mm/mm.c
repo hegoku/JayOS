@@ -35,6 +35,7 @@ void load_memory_size()
 void *kmalloc(int size)
 {
     if (size>MAX_SIZE) {
+        printk("kmalloc size not greater than 128KB\n");
         return NULL;
     }
     int start_p = 0; //开始块的下标
@@ -59,11 +60,14 @@ void *kmalloc(int size)
         }
     }
     for (int i = start_p; i < (start_p+size);i++) {
-        
         int j = i / 8;
         unsigned char s1 = mmap[j]>>(8 - (i-j*8) - 1);
         s1 = (s1 | 1)<<(8 - (i-j*8) - 1);
         mmap[j]=s1|mmap[j];
+    }
+    if (base_heap_addr + start_p>max_heap_addr) {
+        printk("kmalloc full\n");
+        return NULL;
     }
     return (void *)(base_heap_addr + start_p);
 }
