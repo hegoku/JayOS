@@ -62,8 +62,14 @@ struct list{
 
 static inline void list_add(struct list *new_list, struct list *head)
 {
-	new_list->next = head;
-	head = new_list;
+	if (head->next==NULL) {
+		head->next = new_list;
+	} else {
+		new_list->next = head->next;
+		head->next = new_list;
+	}
 }
+
+struct list *create_list(void *value);
 
 #endif

@@ -1,13 +1,15 @@
 #include <system/list.h>
+#include <system/mm.h>
+#include <sys/types.h>
+#include "global.h"
 
-inline int list_empty(const struct list_head *head)
+struct list *create_list(void *value)
 {
-    return head->next == head;
-}
-
-inline void list_add(struct list_head *new, struct list_head *head)
-{
-    head->prev = new;
-    new->next = head;
-    head = new;
+    struct list *a = kzmalloc(sizeof(struct list));
+    if (a==NULL) {
+        printk("Can't malloc list\n");
+        return NULL;
+    }
+    a->value = value;
+    return a;
 }

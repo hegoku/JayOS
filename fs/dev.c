@@ -4,6 +4,7 @@
 #include "../kernel/global.h"
 #include <sys/types.h>
 #include <stdio.h>
+#include <system/list.h>
 
 /* blk_dev_struct 块设备结构是：(kernel/blk_drv/blk.h,23)
 * do_request-address //对应主设备号的请求处理程序指针。
@@ -47,10 +48,11 @@ void install_dev(int major, char *name, int type, struct file_operation *f_op)
     new_dir->parent=dev_dir;
     new_dir->sb=dev_dir->sb;
 
-    struct list *tmp = create_list();
-    tmp->value = new_dir;
-    tmp->next = dev_dir->children;
-    dev_dir->children = tmp;
+    struct list *tmp = create_list((void*)new_dir);
+    list_add(tmp, &dev_dir->children);
+    // tmp->value = new_dir;
+    // tmp->next = dev_dir->children;
+    // dev_dir->children = tmp;
 
     //
     new_inode = get_inode();
@@ -71,10 +73,12 @@ void install_dev(int major, char *name, int type, struct file_operation *f_op)
     new_dir->parent=dev_dir;
     new_dir->sb=dev_dir->sb;
 
-    tmp = create_list();
-    tmp->value = new_dir;
-    tmp->next = dev_dir->children;
-    dev_dir->children = tmp;
+    tmp = create_list((void*)new_dir);
+    list_add(tmp, &dev_dir->children);
+    // tmp = create_list();
+    // tmp->value = new_dir;
+    // tmp->next = dev_dir->children;
+    // dev_dir->children = tmp;
 }
 
 void mount_dev()

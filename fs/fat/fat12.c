@@ -7,6 +7,7 @@
 #include <system/dev.h>
 #include <system/fs.h>
 #include <system/mm.h>
+#include <system/list.h>
 
 static struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num);
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
@@ -206,10 +207,14 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         c_new_dir->parent=new_dir;
         c_new_dir->sb=sb;
 
-        struct list *tmp = create_list();
-        tmp->value = c_new_dir;
-        tmp->next = new_dir->children;
-        new_dir->children = tmp;
+        struct list *tmp = create_list((void*)c_new_dir);
+        list_add(tmp, &new_dir->children);
+        printk("1111%s %s\n", ((struct dir_entry*)(new_dir->children.value))->name, c_new_dir->name);
+        while(1){}
+        // struct list *tmp = create_list();
+        // tmp->value = c_new_dir;
+        // tmp->next = new_dir->children;
+        // new_dir->children = tmp;
     }
 
     return new_dir;

@@ -7,6 +7,7 @@
 #include "../kernel/global.h"
 #include "../kernel/tty.h"
 #include <system/mm.h>
+#include <system/list.h>
 
 struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];
@@ -96,7 +97,7 @@ int sys_open(const char *path, int flags, ...)
 
 struct dir_entry* find_children_by_name(struct dir_entry *dir, const char *filename)
 {
-    for (struct list *i = dir->children; i; i = i->next)
+    for (struct list *i = &dir->children; i; i = i->next)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
         if (strcmp(filename, tmp->name) == 0)
@@ -331,6 +332,7 @@ void mount_root()
     // } while (fs_type);
     sys_mkdir("/dev", 1);
     sys_mkdir("/root", 1);
+    sys_stat("/", NULL);
 }
 
 struct inode *get_inode()
@@ -364,15 +366,6 @@ struct dir_entry *get_dir()
     struct dir_entry a;
     dir_table[dir_num]=a;
     return &dir_table[dir_num++];
-}
-
-struct list *create_list()
-{
-    struct list a={
-
-    };
-    list_table[list_num]=a;
-    return &list_table[list_num++];
 }
 
 int sys_mkdir(const char *dirname, int mode)
@@ -440,10 +433,12 @@ int sys_mkdir(const char *dirname, int mode)
     dev_dir->is_mounted = 0;
     dev_dir->mounted_dir = NULL;
 
-    struct list *tmp = create_list();
-    tmp->value = dev_dir;
-    tmp->next = dir->children;
-    dir->children = tmp;
+    struct list *tmp = create_list((void*)dev_dir);
+    list_add(tmp, &dir->children);
+    // struct list *tmp = create_list();
+    // tmp->value = dev_dir;
+    // tmp->next = dir->children;
+    // dir->children = tmp;
 
     //
     // new_inode=get_inode();
@@ -540,7 +535,6 @@ int sys_mount(char *dev_name, char *dir_name, char *type)
     }
     dir_dir->is_mounted = 1;
     dir_dir->mounted_dir = new_dir;
-    sys_stat("/root", NULL);while(1){}
     return 0;
 }
 
@@ -602,21 +596,39 @@ int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **
         return 0;
     }
 
-    for (struct list *i = dir->children; i; i = i->next)
+    struct list *i;
+    list_for_each(i, &dir->children)
     {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
-        char tmp_name[len+1];
-        memset(tmp_name, 0, len+1);
+        char tmp_name[len + 1];
+        memset(tmp_name, 0, len + 1);
         memcpy(tmp_name, name, len);
         if (strcmp(tmp_name, tmp->name) == 0)
         {
-            while (tmp->is_mounted) {
+            while (tmp->is_mounted)
+            {
                 tmp = tmp->mounted_dir;
             }
             *res_dir = tmp;
             return 0;
         }
     }
+    // for (struct list *i = &dir->children; i; i = i->next)
+    // {
+    //     struct dir_entry *tmp = (struct dir_entry *)i->value;
+    //     char tmp_name[len + 1];
+    //     memset(tmp_name, 0, len + 1);
+    //     memcpy(tmp_name, name, len);
+    //     if (strcmp(tmp_name, tmp->name) == 0)
+    //     {
+    //         while (tmp->is_mounted)
+    //         {
+    //             tmp = tmp->mounted_dir;
+    //         }
+    //         *res_dir = tmp;
+    //         return 0;
+    //     }
+    // }
 
     return -1;
 }
@@ -674,8 +686,8 @@ int sys_stat(char *filename, struct stat *statbuf)
     }
 
     printk("name: %s :\n", dir->name);
-    for (struct list *i = dir->children; i; i = i->next)
-    {
+    struct list *i;
+    list_for_each(i, &dir->children) {
         struct dir_entry *tmp = (struct dir_entry *)i->value;
         if (tmp->inode->mode==FILE_MODE_REG) {
             printk("    - %dB name:%s\n", tmp->inode->size, tmp->name);
@@ -683,5 +695,14 @@ int sys_stat(char *filename, struct stat *statbuf)
             printk("    D %dB name:%s\n", tmp->inode->size, tmp->name);
         }
     }
+    // for (struct list *i = &dir->children; i; i = i->next)
+    // {
+    //     struct dir_entry *tmp = (struct dir_entry *)i->value;
+    //     if (tmp->inode->mode==FILE_MODE_REG) {
+    //         printk("    - %dB name:%s\n", tmp->inode->size, tmp->name);
+    //     } else if (tmp->inode->mode==FILE_MODE_DIR) {
+    //         printk("    D %dB name:%s\n", tmp->inode->size, tmp->name);
+    //     }
+    // }
     return 0;
 }

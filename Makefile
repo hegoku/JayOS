@@ -10,7 +10,7 @@ TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
-				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o
+				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/list.o
 
 all : clean everything image
 
@@ -105,10 +105,10 @@ build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tt
 
 build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h include/system/mm.h \
 			kernel/process.h include/system/desc.h kernel/kernel.h \
-			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h
+			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h include/system/list.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h include/string.h kernel/global.h include/sys/types.h
+build/dev.o: fs/dev.c include/system/dev.h include/system/fs.h include/string.h kernel/global.h include/sys/types.h include/system/list.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/rootfs.o: fs/rootfs/super.c include/system/fs.h include/system/rootfs.h include/system/mm.h
@@ -118,8 +118,11 @@ build/ext2.o: fs/ext2/ext2.c include/system/fs.h include/sys/types.h include/sys
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/fat12.o: fs/fat/fat12.c include/system/fs.h include/sys/types.h include/system/dev.h fs/fat/fat.h kernel/global.h include/string.h include/stdio.h \
-				include/system/mm.h
+				include/system/mm.h include/system/list.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/mm.o: mm/mm.c include/system/mm.h include/string.h include/sys/types.h kernel/global.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/list.o: kernel/list.c include/system/list.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<

@@ -2,6 +2,7 @@
 #define _SYSTEM_FS_H
 
 #include <sys/types.h>
+#include <system/list.h>
 
 #define PROC_FILES_MAX_COUNT 1024 //进程表文件最大数
 #define FILE_DESC_TABLE_MAX_COUNT 2048 //f_desc_table最大数
@@ -49,17 +50,12 @@ struct inode{
     struct inode_operation *inode_op;
 };
 
-struct list{
-    void *value;
-    struct list *next;
-};
-
 struct dir_entry{
     char name[256];
     struct inode *inode;
     struct super_block *sb;
     struct dir_entry *parent;
-    struct list *children;
+    struct list children;
     int dev_num;
     int is_mounted;
     struct dir_entry *mounted_dir;
@@ -136,6 +132,5 @@ struct super_block *get_block(int dev_num);
 
 int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir);
 int namei(const char *pathname, struct dir_entry **res_dir);
-struct list *create_list();
 void mount_root();
 #endif
