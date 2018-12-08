@@ -28,6 +28,7 @@ static void print_hdinfo(struct hd_info *hdi);
 static void do_read();
 static void do_write();
 static int do_request(int mi_dev, int cmd, unsigned char* buf, unsigned long sector, unsigned long bytes);
+static int do_request1(int mi_dev, int cmd, unsigned char* buf, unsigned long pos, unsigned long bytes);
 static int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte);
 static int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte);
 struct file_operation hd_f_op = {
@@ -46,7 +47,7 @@ void init_hd()
 {
     dev_table[MAJOR_NR].type = DEV_TYPE_CHR;
     // dev_table[MAJOR_NR].request_fn = do_request;
-    dev_table[MAJOR_NR].request_fn = do_request;
+    dev_table[MAJOR_NR].request_fn = do_request1;
     dev_table[MAJOR_NR].current_request = NULL;
     dev_table[MAJOR_NR].f_op = &hd_f_op;
     tail = NULL;
@@ -166,6 +167,7 @@ void do_hd_request()
     }
 }
 
+//读取nbyte长度的数据，结尾数据如果填不满一个扇区，多余的数据会被截断
 static void do_read()
 {
     struct blk_request *current = dev_table[MAJOR_NR].current_request;
@@ -173,8 +175,8 @@ static void do_read()
 
     while (current->nr_sectors--) {
         memset(hdbuf, 0, SECTOR_SIZE);
-        port_read(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。
-        memcpy(current->buffer, hdbuf, bytes_left);
+        port_read(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。每次读512字节
+        memcpy(current->buffer, hdbuf, bytes_left); //多余的数据会被截断
         current->buffer += bytes_left; // 调整缓冲区指针，指向新的空区。
         current->sector++; // 起始扇区号加1
         current->bytes -= bytes_left;
@@ -199,6 +201,7 @@ static void do_read()
     // do_hd_request ();
 }
 
+//写入nbyte长度的数据，填不满一个扇区的数据用0补充
 static void do_write()
 {
     struct blk_request *current = dev_table[MAJOR_NR].current_request;
@@ -211,13 +214,13 @@ static void do_write()
             printk("hd writing error\n");
             return;
         }
-        memset(hdbuf, 0, SECTOR_SIZE);
+        memset(hdbuf, 0, SECTOR_SIZE); //不足一个扇区的数据用0填满
         memcpy(hdbuf, current->buffer, bytes_left);
         current->buffer += bytes_left;	// 调整缓冲区指针，指向新的空区。
         current->sector++; // 起始扇区号加1
         current->bytes -= bytes_left;
         hd_callback = do_write;
-        port_write(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。
+        port_write(REG_DATA, hdbuf, SECTOR_SIZE); // 将数据从数据寄存器口读到请求结构缓冲区。每次写512字节
         return;
     }
 
@@ -265,7 +268,7 @@ int hd_rw(int drive, int cmd, unsigned char* buf, unsigned long sector, unsigned
     add_request(&r);
     do_hd_request();
     interrupt_wait(r.waiting);
-    return bytes;
+    return bytes-r.bytes;
 }
 
 int do_request(int dev_num, int cmd, unsigned char* buf, unsigned long sector, unsigned long bytes)
@@ -274,6 +277,18 @@ int do_request(int dev_num, int cmd, unsigned char* buf, unsigned long sector, u
     int drive = GET_DRIVER_INDEX_BYMINOR(mi_dev);
     sector += hd_info[drive].part[GET_PART_INDEX(mi_dev)].base;
     return hd_rw(drive, cmd, buf, sector, bytes);
+}
+
+/*  cmd 0.读 1.写
+    pos 磁盘第几个字节开始
+*/
+int do_request1(int dev_num, int cmd, unsigned char* buf, unsigned long pos, unsigned long bytes)
+{
+    int mi_dev = MINOR(dev_num);
+    int drive = GET_DRIVER_INDEX_BYMINOR(mi_dev);
+    unsigned long start_sector = pos / SECTOR_SIZE; //从开始字节数转成开始扇区数
+    start_sector += hd_info[drive].part[GET_PART_INDEX(mi_dev)].base;
+    return hd_rw(drive, cmd, buf, start_sector, bytes);
 }
 
 static void partition(int drive)

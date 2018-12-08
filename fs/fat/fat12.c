@@ -14,6 +14,7 @@ static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
 static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
 static int getStringFromDate(char *dest, char *src, int len);
 static int setLongNameToArray(struct fat12_long_name *long_name_buf, struct fat12_root_dir_entry *root_dir_entry, char *res);
+static int get_sector_list(struct inode *node, unsigned int *sector_list);
 
 struct file_system_type fat12_fs_type = {
     name: "fat12",
@@ -57,6 +58,7 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     struct super_block *sb=get_block(0);
     fs_type->sb_table=sb;
     sb->fs_type = fs_type;
+    sb->dev_num=dev_num;
 
     struct fat12_super_block *fat12_sb=kzmalloc(sizeof(struct fat12_super_block));
     memset(fat12_sb, 0, sizeof(struct fat12_super_block));
@@ -71,16 +73,20 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     }
     kfree(fs_type_tmp, 9);
 
-    sb->s_fs_info = &fat12_sb;
+    struct fat12_s_fs_info *s_fs_info = kzmalloc(sizeof(struct fat12_s_fs_info));
+    sb->s_fs_info = s_fs_info;
 
-    int fat_start = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_RsvdSecCnt; //FAT表开始字节
-    int fat_start_sector = (fat_start + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //FAT起始扇区
-    int fat_size = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_FATz16;                                          //一个FAT表的大小(字节)
-    int root_dir_start = fat12_sb->BPB_BytsPerSec*fat12_sb->BPB_RsvdSecCnt + fat_size *fat12_sb->BPB_NumFATs; //根目录开始字节
-    int root_dir_start_sector = (root_dir_start + fat12_sb->BPB_BytsPerSec -1) / fat12_sb->BPB_BytsPerSec; //根目录起始扇区
-    int root_dir_size = fat12_sb->BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
-    int root_dir_block_size = (root_dir_size + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //根目录占用扇区数
-    int data_start_sector = root_dir_block_size + root_dir_start_sector; //数据区起始扇区
+    s_fs_info->BPB_SecPerClus = fat12_sb->BPB_SecPerClus;
+    s_fs_info->BPB_RsvdSecCnt = fat12_sb->BPB_RsvdSecCnt; //FAT起始扇区
+    s_fs_info->BPB_BytsPerSec = fat12_sb->BPB_BytsPerSec;
+    s_fs_info->fat_start = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_RsvdSecCnt;                                     //FAT表开始字节
+    // s_fs_info->fat_start_sector = (s_fs_info->fat_start + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //FAT起始扇区
+    s_fs_info->fat_size = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_FATz16;                                          //一个FAT表的大小(字节)
+    s_fs_info->root_dir_start = fat12_sb->BPB_BytsPerSec*fat12_sb->BPB_RsvdSecCnt + s_fs_info->fat_size *fat12_sb->BPB_NumFATs; //根目录开始字节
+    s_fs_info->root_dir_start_sector = (s_fs_info->root_dir_start + fat12_sb->BPB_BytsPerSec -1) / fat12_sb->BPB_BytsPerSec; //根目录起始扇区
+    s_fs_info->root_dir_size = fat12_sb->BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
+    s_fs_info->root_dir_block_size = (s_fs_info->root_dir_size + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //根目录占用扇区数
+    s_fs_info->data_start_sector = s_fs_info->root_dir_block_size + s_fs_info->root_dir_start_sector; //数据区起始扇区
 
     // struct fat12_fat_entry fat_table[fat_size];
     // memset(fat_table, 0, sizeof(fat_table));
@@ -90,7 +96,7 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     int rde_size = sizeof(struct fat12_root_dir_entry) * fat12_sb->BPB_RootEntCnt;
     struct fat12_root_dir_entry *root_dir_entry = kzmalloc(rde_size);
     // memset(root_dir_entry, 0, sizeof(root_dir_entry));
-    dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)root_dir_entry, root_dir_start_sector, rde_size); //读根目录
+    dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)root_dir_entry, s_fs_info->root_dir_start, rde_size); //读根目录
 
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;
@@ -218,9 +224,11 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
         }
         new_inode->size = root_dir_entry[i].file_size;
         new_inode->start_pos = root_dir_entry[i].fst_clus;
+        struct fat12_i_fs *dfs = kzmalloc(sizeof(struct fat12_i_fs));
+        dfs->fst_clus = root_dir_entry[i].fst_clus;
+        new_inode->i_private = dfs;
 
         c_new_dir=get_dir();
-        
         sprintf(c_new_dir->name, "%s", filename);
         c_new_dir->dev_num = sb->dev_num;
         c_new_dir->inode=new_inode;
@@ -279,19 +287,75 @@ int setLongNameToArray(struct fat12_long_name *long_name_buf, struct fat12_root_
 
 int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
-    struct fat12_super_block *fat12_sb = (struct fat12_super_block*)fd->inode->sb->s_fs_info;
-
-    int fat_start = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_RsvdSecCnt; //FAT表开始字节
-    int fat_size = fat12_sb->BPB_BytsPerSec * fat12_sb->BPB_FATz16; //一个FAT表的大小(字节)
-    int root_dir_start = fat12_sb->BPB_BytsPerSec*fat12_sb->BPB_RsvdSecCnt + fat_size *fat12_sb->BPB_NumFATs; //根目录开始字节
-    int root_dir_size = fat12_sb->BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
-    int data_start = root_dir_start + root_dir_size; //数据区起始字节
+    struct fat12_s_fs_info *sb = (struct fat12_s_fs_info *)fd->inode->sb->s_fs_info;
+    unsigned int sector_list[100];
+    memset(sector_list, 0, sizeof(sector_list));
+    get_sector_list(fd->inode, sector_list);
+    char *file_buf=kzmalloc(fd->inode->size);
+    char *file_buf_pos=file_buf;
+    for (int i=0;i<100;i++) {
+        if (sector_list[i]==0) {
+            break;
+        }
+        dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, file_buf_pos, sector_list[i]*sb->BPB_BytsPerSec, sb->BPB_BytsPerSec);
+        file_buf_pos+=sb->BPB_BytsPerSec;
+    }
+    if (fd->pos+nbyte>fd->inode->size) {
+        nbyte=fd->inode->size-fd->pos;
+    }
+    file_buf_pos=file_buf+fd->pos;
+    memcpy(buf, file_buf_pos, nbyte);
+    fd->pos+=nbyte;
+    kfree(file_buf, fd->inode->size);
+    // fd->pos += dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, buf, , nbyte);
 
     // unsigned long start_block = ((fd->inode->start_pos - 2) * fat12_sb->BPB_SecPerClus+data_start_sector);
     // unsigned long end_block = (fd->pos + nbyte) / dev_table[MAJOR(fd->inode->dev_num)].block_size;
     // int len = (end_block - start_block + 1) * dev_table[MAJOR(fd->inode->dev_num)].block_size;
     // dev_table[MAJOR(fd->inode->dev_num)].f_op->read(fd->inode->dev_num, 0, buf, start_block, len);
     // dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, buf, start_block, len);
-    fd->pos += nbyte;
     return nbyte;
+}
+
+//获取文件的所在扇区链
+int get_sector_list(struct inode *node, unsigned int *sector_list)
+{
+    struct fat12_i_fs *dfs = (struct fat12_i_fs *)node->i_private;
+    struct fat12_s_fs_info *sb = (struct fat12_s_fs_info *)node->sb->s_fs_info;
+    unsigned short clus_no = dfs->fst_clus;
+    int i = 0;
+
+    int fatentry_offset;
+    int fat_entry_sec_num;
+    int fat_entry_start;
+    unsigned char *buf = kzmalloc(sb->BPB_BytsPerSec*2);
+    char is_odd;
+
+    while(clus_no<0xFF7) { //是否最后一个簇或坏簇
+        sector_list[i] = (clus_no - 2) * sb->BPB_SecPerClus + sb->data_start_sector; //某簇对应的数据在哪个扇区
+
+        fatentry_offset = ((clus_no * 12) % (sb->BPB_BytsPerSec*8))/8; //某簇在fat entry一个扇区里的偏移位置(即第几个字节) ，因为一个簇占用12位，即1.5个字节
+
+        fat_entry_sec_num = sb->BPB_RsvdSecCnt + ((clus_no * 12) / (sb->BPB_BytsPerSec*8)); //某簇在fat表中的扇区位置,就是在硬盘的第几个扇区
+        fat_entry_start = fat_entry_sec_num*sb->BPB_BytsPerSec; //某簇在fat表中的扇区的起始位置, 就是在硬盘的第几个字节
+
+        printk("%d %d, %d %d %d\n", clus_no, sector_list[i], fatentry_offset, fat_entry_sec_num, fat_entry_start);
+
+        memset(buf, 0, sb->BPB_BytsPerSec*2);
+        dev_table[MAJOR(node->dev_num)].request_fn(node->dev_num, 0, buf, fat_entry_start, sb->BPB_BytsPerSec * 2); //读取簇所在fat表的扇区, 一次读取2个，因为可能一个fat项存在2个相邻的扇区里
+
+        is_odd = clus_no & 0x1; //是否为奇数 0为偶数, 1为奇数
+        clus_no = 0;
+        if (is_odd)
+        {        //簇号是奇数，则前4位在第一个字节的前半段
+            clus_no = buf[fatentry_offset+1]<<4;
+            clus_no += buf[fatentry_offset]>>4;
+        } else { //簇号是奇数，则后4位在第二个字节的后半段
+            clus_no = buf[fatentry_offset];
+            clus_no += (buf[fatentry_offset + 1] & 0b00001111)<<8;
+        }
+        printk("%x %x\n", clus_no, buf);
+        i++;
+    }
+    kfree(buf, sb->BPB_BytsPerSec);
 }

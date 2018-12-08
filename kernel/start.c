@@ -266,8 +266,8 @@ void TestA()
 
     int ff = open("/root/a.txt", O_RDWR);
     memset(a, 0, 513);
-    read(ff, a, 4);
-    printf("%s\n", a);
+    int aaa=read(ff, a, 14);
+    printf("%d %s\n", aaa, a);
     // hd_open(0);
     // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)

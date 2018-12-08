@@ -80,6 +80,24 @@ struct fat12_long_name{
     unsigned short c13;
 } __attribute__((packed));
 
+struct fat12_s_fs_info{
+    int BPB_SecPerClus;
+    int BPB_RsvdSecCnt;
+    int BPB_BytsPerSec;
+    int fat_start;        //FAT表开始字节
+    int fat_size;                                          //一个FAT表的大小(字节)
+    int root_dir_start; //根目录开始字节
+    int root_dir_start_sector; //根目录起始扇区
+    int root_dir_size; //根目录总大小(字节)
+    int root_dir_block_size; //根目录占用扇区数
+    int data_start_sector; //数据区起始扇区
+};
+
+struct fat12_i_fs
+{
+    unsigned short fst_clus;
+};
+
 void init_fat12();
 
 #endif

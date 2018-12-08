@@ -30,7 +30,7 @@ struct super_block{
     struct dir_entry *root_dir;
     struct inode *root_inode;
     struct file_system_type	*fs_type;
-    void *s_fs_info;
+    void *s_fs_info; //各自超级快额外信息
 };
 
 struct inode{
@@ -48,6 +48,7 @@ struct inode{
     struct file_operation *f_op;
     struct super_block *sb;
     struct inode_operation *inode_op;
+    void *i_private; //额外信息
 };
 
 struct dir_entry{
@@ -59,6 +60,7 @@ struct dir_entry{
     int dev_num;
     int is_mounted;
     struct dir_entry *mounted_dir;
+    void *d_fsdata; //各自dentry的额外信息
 };
 
 struct file_descriptor{
