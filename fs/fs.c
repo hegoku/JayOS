@@ -80,6 +80,7 @@ int sys_open(const char *path, int flags, ...)
     f_desc_table[i].pos = 0;
     f_desc_table[i].inode = p_inode;
     f_desc_table[i].op = p_inode->f_op;
+    f_desc_table[i].used_count = 1;
 
     if (p_inode->f_op->open) {
         p_inode->f_op->open(p_inode, &f_desc_table[i]);
@@ -174,6 +175,7 @@ int get_inode_by_filename(const char *filename, struct inode **res_inode)
 
 int sys_close(int fd)
 {
+    current_process->file_table[fd]->used_count--;
     current_process->file_table[fd]->inode->used_count--;
     current_process->file_table[fd]->inode = 0;
     current_process->file_table[fd] = 0;
@@ -560,7 +562,6 @@ int sys_mount(char *dev_name, char *dir_name, char *type)
     }
     dir_dir->is_mounted = 1;
     dir_dir->mounted_dir = new_dir;
-    sys_stat("/root", NULL);
     return 0;
 }
 
@@ -755,6 +756,7 @@ int sys_dup(unsigned int oldfd)
 
     current_process->file_table[fd] = current_process->file_table[oldfd];
     current_process->file_table[oldfd]->inode->used_count++;
+    current_process->file_table[oldfd]->used_count++;
 
     return fd;
 }

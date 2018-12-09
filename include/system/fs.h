@@ -66,6 +66,7 @@ struct dir_entry{
 struct file_descriptor{
     int mode;
     int pos;
+    int used_count;
     struct inode *inode;
     struct file_operation *op;
 };

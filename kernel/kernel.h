@@ -13,7 +13,7 @@
 #define TOP_OF_KERNEL_STACK 0x7C00
 #define BIOS_ADDR 0x7E00 //bios参数地址
 
-#define PROC_NUMBER 3
+#define PROC_NUMBER 23
 
 extern char gdt_ptr[6];
 extern DESCRIPTOR gdt[GDT_SIZE];

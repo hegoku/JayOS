@@ -13,7 +13,9 @@
 #define SYS_CALL_MOUNT 15
 #define SYS_CALL_STAT 18
 #define SYS_CALL_LSEEK 19
+#define SYS_CALL_GETPID 20
 #define SYS_CALL_DUP 41
+#define SYS_CALL_GETPPID 64
 
 typedef void *sys_call_handler;
 

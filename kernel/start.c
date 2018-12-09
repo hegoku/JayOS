@@ -35,6 +35,8 @@ void kernel_main();
 
 void clock_handler(int irq);
 
+int child_eip[2];
+void init();
 void calltest();
 void TestA();
 void delay();
@@ -49,24 +51,6 @@ void cstart()
     init_gdt();
     init_idt();
     // hd_open(0);
-
-    process_table[0].pid = 0;
-    process_table[0].p_name[0] = 't';
-    process_table[0].p_name[1]='\0';
-    create_process(gdt, &process_table[0], (unsigned int)task_tty);
-    process_table[0].regs.esp = TOP_OF_USER_STACK;
-
-    process_table[1].pid = 1;
-    process_table[1].p_name[0]='B';
-    process_table[1].p_name[1]='\0';
-    create_process(gdt, &process_table[1], (unsigned int)calltest);
-    process_table[1].regs.esp = TOP_OF_USER_STACK-0x400;
-
-    process_table[2].pid = 2;
-    process_table[2].p_name[0] = 'A';
-    process_table[2].p_name[1] = '\0';
-    create_process(gdt, &process_table[2], (unsigned int)TestA);
-    process_table[2].regs.esp = TOP_OF_USER_STACK-0x400*2;
 }
 
 void init_idt()
@@ -125,9 +109,9 @@ static void init_gdt()
 	insert_descriptor(gdt, 0, gdt_0, PRIVILEGE_KRNL);
 
 	DESCRIPTOR kernel_cs = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL0);
-	SelectorKernelCs=insert_descriptor(gdt, 1, kernel_cs, PRIVILEGE_KRNL);
+    SelectorKernelCs = insert_descriptor(gdt, 1, kernel_cs, PRIVILEGE_KRNL);
 
-	DESCRIPTOR kernel_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL0);
+    DESCRIPTOR kernel_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL0);
 	SelectorKernelDs=insert_descriptor(gdt, 2, kernel_ds, PRIVILEGE_KRNL);
 
 	DESCRIPTOR video = create_descriptor(0xB8000, 0xBFFFF, DA_DRW | DA_32 | DA_DPL3);
@@ -156,10 +140,38 @@ void kernel_main()
     ticks = 0;
     init_system_call(sys_call_table);
 
+    for (int i = 0; i < PROC_NUMBER;i++) {
+        process_table[i].pid = i;
+        create_process(gdt, &process_table[i], 0);
+    }
+
+    sprintf(process_table[0].name, "init");
+    process_table[0].is_free = 1;
+    process_table[0].regs.eip = (unsigned int)init;
+
+    // sprintf(process_table[1].name, "tty");
+    // process_table[1].is_free = 1;
+    // process_table[1].regs.eip = (unsigned int)task_tty;
+
+    int child_eip[2] = {(unsigned int)calltest, (unsigned int)TestA};
+
+    // process_table[1].pid = 1;
+    // process_table[1].name[0]='B';
+    // process_table[1].name[1]='\0';
+    // process_table[1].regs.eip = (unsigned int)calltest;
+    // // create_process(gdt, &process_table[1], (unsigned int)calltest);
+
+    // process_table[2].pid = 2;
+    // process_table[2].name[0] = 'A';
+    // process_table[2].name[1] = '\0';
+    // process_table[2].regs.eip = (unsigned int)TestA;
+    // create_process(gdt, &process_table[2], (unsigned int)TestA);
+
     is_in_ring0 = 0;
-    current_process = process_table+2;
+    current_process = process_table;
 
     init_rootfs();
+    init_fat12();
     mount_root();
 
     init_tty();
@@ -178,13 +190,14 @@ void kernel_main()
     init_hd();
     irq_table[AT_WINI_IRQ] = hd_handler;
     enable_irq(AT_WINI_IRQ);
+    hd_setup();
 
-    struct dir_entry *tmp = current_process->root;
-    for (int i = 0; i < PROC_NUMBER; i++)
-    {
-        process_table[i].pwd = tmp;
-        process_table[i].root = tmp;
-    }
+    // struct dir_entry *tmp = current_process->root;
+    // for (int i = 0; i < PROC_NUMBER; i++)
+    // {
+    //     process_table[i].pwd = tmp;
+    //     process_table[i].root = tmp;
+    // }
 
     printk("MemSize:%d\n", MemSize);
     char *a = kmalloc(1);
@@ -227,16 +240,36 @@ void kernel_main()
 
 void init()
 {
-    int stdin = open("/dev/tty1", O_RDWR);
-    dup(0);
-    dup(0);
+    // mount("/dev/hd1", "/root", "fat12");
 
-    // int pid = fork();
-    // if (pid!=0)
-    // {
-    // } else {
+    (void) open("/dev/tty0", O_RDWR);
+    (void) dup(0);
+    (void) dup(0);
+    printf("parent is running, %d\n", getpid());
 
-    // }
+    int i, pid;
+    pid = fork();
+    if (pid!=0)
+    {
+        printf("parent is running, child pid: %d\n", pid);
+    } else {
+        printf("child is running, pid: 1\n");
+        while(1){
+            // int ff = open("/root/d.txt", O_RDWR);
+            // char *a[512];
+            // memset(a, 0, 513);
+            // int aaa=read(ff, a, 2);
+            // printf("%d\n%s\n", aaa, a);
+            // close(ff);
+        }
+    }
+
+    while(1) {
+        int i;
+        pid_t child;
+        child=wait(&i);
+        // printf("Child (%d) exited with status: %d\n", child, i);
+    }
 }
 
 void TestA()
@@ -419,15 +452,17 @@ void clock_handler(int irq)
     }
     
     // disp_int((int)current_process);
-    current_process++;
-    // disp_int(current_process);
+    do {
+        current_process++;
+    
     // if (disp_pos>80*25) {
     //     disp_pos = 0;
     // }
-    if (current_process >= process_table + PROC_NUMBER)
-    {
-        current_process = process_table;
-    }
+        if (current_process >= process_table + PROC_NUMBER)
+        {
+            current_process = process_table;
+        }
+    } while (current_process->is_free != 1);
     // do {
     //     current_process++;
     //     if (current_process >= process_table + PROC_NUMBER)

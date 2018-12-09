@@ -29,15 +29,22 @@ typedef struct s_proc {
     STACK_FRAME regs;
     unsigned short ldt_sel;
     DESCRIPTOR ldts[2];
+
     unsigned int pid;
-    char p_name[16];
+    unsigned int parent_pid;
+    char name[16];
     unsigned char status;
+    unsigned char is_free;
     struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];
     struct dir_entry *root;
     struct dir_entry *pwd;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);
-int sys_fork();
+void sys_exit(int status);
+pid_t sys_fork();
+pid_t sys_wait(int *status);
+pid_t sys_getpid();
+pid_t sys_getppid();
 
 #endif
