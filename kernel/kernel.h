@@ -33,5 +33,6 @@ extern unsigned short SelectorTss;
 int ticks;
 
 extern PROCESS *current_process;
+extern PROCESS process_table[];
 
 #endif

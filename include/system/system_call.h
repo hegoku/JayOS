@@ -3,10 +3,13 @@
 
 #define SYS_CALL_NUMBER 190
 
+#define SYS_CALL_EXIT 1
+#define SYS_CALL_FORK 2
 #define SYS_CALL_READ 3
 #define SYS_CALL_WRITE 4
 #define SYS_CALL_OPEN 5
 #define SYS_CALL_CLOSE 6
+#define SYS_CALL_WAITPID 7
 #define SYS_CALL_MOUNT 15
 #define SYS_CALL_STAT 18
 #define SYS_CALL_LSEEK 19

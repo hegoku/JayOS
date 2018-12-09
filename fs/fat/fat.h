@@ -2,6 +2,15 @@
 #ifndef __FAT_H
 #define __FAT_H
 
+//fat项占用位数
+#define FAT12_FAT_ENTRY_SIZE 12
+#define FAT16_FAT_ENTRY_SIZE 16
+#define FAT32_FAT_ENTRY_SIZE 32
+
+#define FAT12_MAX_CLUS_COUNT 4096
+#define FAT16_MAX_CLUS_COUNT 65536
+#define FAT32_MAX_CLUS_COUNT 268435456
+
 #define ROOT_DIR_ENTRY_SIZE 32 //根目录一条大小(字节)
 
 //一下为文件名的第一个字节的特殊值
@@ -56,10 +65,6 @@ struct fat12_root_dir_entry{
     unsigned int file_size;
 } __attribute__ ((packed));
 
-struct fat12_fat_entry{
-    unsigned short entry : 12;
-} __attribute__ ((packed));
-
 struct fat12_long_name{
     unsigned char count;
     unsigned short c1;
@@ -84,7 +89,8 @@ struct fat12_s_fs_info{
     int BPB_SecPerClus;
     int BPB_RsvdSecCnt;
     int BPB_BytsPerSec;
-    int fat_start;        //FAT表开始字节
+    int BPB_RootEntCnt;
+    int fat_start;                                         //FAT表开始字节
     int fat_size;                                          //一个FAT表的大小(字节)
     int root_dir_start; //根目录开始字节
     int root_dir_start_sector; //根目录起始扇区

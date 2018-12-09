@@ -257,7 +257,15 @@ BootKernel:
         mov dx, ROOT_DIR_SECTORS+SECTOR_NO_OF_ROOT_DIRECTORY-2
         add ax, dx
         add bx, [BPB_BytsPerSec]
+        jc .1 ;如果bx重新变成0，说明内核大于64KB
         jmp .Loading
+.1: ;es+=0x1000, 指向下一个段
+    push ax
+    mov ax, es
+    add ax, 1000h
+    mov es, ax
+    pop ax
+    jmp .Loading
 
 GetFATEntry:
     push es

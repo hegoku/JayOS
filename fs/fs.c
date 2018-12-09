@@ -190,6 +190,10 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
         return -1;
     }
+    if (file->inode==NULL) {
+        printk("File not exist (fd: %d)\n", fd);
+        return -1;
+    }
     if (nbyte==0) {
         return 0;
     }
@@ -228,6 +232,10 @@ int sys_read(int fd,char * buf, unsigned int nbyte)
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
         return -1;
     }
+    if (file->inode==NULL) {
+        printk("File not exist (fd: %d)\n", fd);
+        return -1;
+    }
     if (nbyte==0 || nbyte>file->inode->size) {
         return 0;
     }
@@ -248,6 +256,10 @@ off_t sys_lseek(int fd, off_t offset, int whence)
     if (fd >= PROC_FILES_MAX_COUNT || (file=current_process->file_table[fd]) == 0)
     {
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
+        return -1;
+    }
+    if (file->inode==NULL) {
+        printk("File not exist (fd: %d)\n", fd);
         return -1;
     }
 
@@ -554,7 +566,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type)
 
 static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, struct nameidata *nd)
 {
-    struct dir_entry *dir;
+    struct dir_entry *dir, *mid_dir;
     const char *thisname;
     int len, error;
     char c;
@@ -580,13 +592,12 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
         if (!c) {
             break;
         }
-
-        error = lookup(dir, thisname, len, &dir);
+        error = lookup(dir, thisname, len, &mid_dir);
         if (error)
         {
-            printk("get_parent_dir_entry lookup error\n");
             return error;
-        }        
+        }
+        dir = mid_dir;
     }
 
     nd->last_len = len;
@@ -597,12 +608,15 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
 
 int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir)
 {
+    if (len == 1 && name[0] == '.')
+    {
+        *res_dir = dir;
+        return 0;
+    }
     if (len == 2 && name[0] == '.' && name[1] == '.')
     {
-        if (dir==current_process->root) {
-            *res_dir = dir;
-            return 0;
-        }
+        *res_dir = dir->parent;
+        return 0;
     }
 
     if (!len) {
@@ -627,6 +641,8 @@ int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **
             return 0;
         }
     }
+
+    return dir->inode->inode_op->lookup(dir, name, len, res_dir);
     // for (struct list *i = &dir->children; i; i = i->next)
     // {
     //     struct dir_entry *tmp = (struct dir_entry *)i->value;

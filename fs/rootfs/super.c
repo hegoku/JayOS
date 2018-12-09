@@ -29,7 +29,7 @@ struct file_operation rootfs_f_op={
 };
 struct inode_operation rootfs_inode_op = {
     NULL,
-    i_op_lookup,
+    NULL,
     NULL,
     NULL,
     NULL,

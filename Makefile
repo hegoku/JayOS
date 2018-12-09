@@ -84,7 +84,7 @@ build/string.o : build/string_asm.o build/string_c.o
 build/math.o : lib/math.c include/math.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/process.o: kernel/process.c kernel/process.h
+build/process.o: kernel/process.c kernel/process.h include/sys/types.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
@@ -100,7 +100,7 @@ k1 : build/k1.o
 	$(LD) -s -Ttext $(ENTERPOINT) -m elf_i386 -o build/k1 build/k1.o
 
 build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tty.h \
-					include/sys/types.h include/system/fs.h kernel/kernel.h include/system/fs.h
+					include/sys/types.h include/system/fs.h kernel/kernel.h include/system/fs.h kernel/process.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h include/system/mm.h \

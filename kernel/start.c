@@ -264,10 +264,16 @@ void TestA()
     read(hd, a, 3);
     printf("%d %d %d\n", a[0], a[1], a[2]);
 
-    int ff = open("/root/a.txt", O_RDWR);
+    int ff = open("/root/d.txt", O_RDWR);
     memset(a, 0, 513);
-    int aaa=read(ff, a, 14);
-    printf("%d %s\n", aaa, a);
+    int aaa=read(ff, a, 2);
+    printf("%d\n%s\n", aaa, a);
+    close(ff);
+
+    ff = open("/root/b/c.txt", O_RDWR);
+    memset(a, 0, 513);
+    aaa=read(ff, a, 2);
+    printf("%d\n%s\n", aaa, a);
     // hd_open(0);
     // hd_rw(0, 1, "abc132", 0, sizeof("abc132"));
     while (1)

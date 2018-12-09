@@ -38,5 +38,6 @@ typedef struct s_proc {
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);
+int sys_fork();
 
 #endif

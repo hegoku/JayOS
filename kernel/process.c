@@ -1,6 +1,8 @@
+#include <sys/types.h>
 #include "system/desc.h"
 #include "process.h"
 #include "kernel.h"
+#include "global.h"
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
 {
@@ -21,4 +23,29 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.eflags = 0x3202;
 
     p->status = 0;
+}
+
+int sys_fork()
+{
+    int pid = -1;
+    int i;
+    for (i = 0; i < PROC_NUMBER; i++) {
+        if (current_process->file_table[i]==0) {
+            pid = i;
+            break;
+        }
+    }
+
+    if (pid<0 || pid>=PROC_NUMBER) {
+        printk("Process table is full\n");
+        return -1;
+    }
+    
+    process_table[pid].pid = pid;
+    process_table[pid].p_name[0] = 'p';
+    process_table[pid].p_name[1]='\0';
+    // create_process(gdt, &process_table[pid], (unsigned int)task_tty);
+    process_table[pid].regs.esp = TOP_OF_USER_STACK-0x400*pid;
+
+    return pid;
 }

@@ -44,7 +44,7 @@ int close(int fd)
 
 pid_t fork(void)
 {
-    return 0;
+    return sys_call_0_param(SYS_CALL_FORK);
 }
 
 int dup(unsigned int oldfd)

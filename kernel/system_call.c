@@ -5,12 +5,14 @@
 #include <system/fs.h>
 #include "global.h"
 #include <system/dev.h>
+#include "../kernel/process.h"
 
 static int sys_get_ticks();
 
 void init_system_call(sys_call_handler sys_call_table[])
 {
     sys_call_table[0] = sys_get_ticks;
+    sys_call_table[SYS_CALL_FORK] = sys_fork;
     sys_call_table[SYS_CALL_WRITE] = sys_write;
     sys_call_table[SYS_CALL_READ] = sys_read;
     sys_call_table[SYS_CALL_OPEN] = sys_open;

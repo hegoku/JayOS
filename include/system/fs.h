@@ -85,7 +85,7 @@ struct file_operation{
 
 struct inode_operation {
 	int (*create) (struct inode *,const char *,int,int,struct inode **);
-	int (*lookup) (struct inode *,const char *,int,struct inode **);
+	int (*lookup) (struct dir_entry *,const char *,int,struct dir_entry **);
 	int (*link) (struct inode *,struct inode *,const char *,int);
 	int (*unlink) (struct inode *,const char *,int);
 	int (*symlink) (struct inode *,const char *,int,const char *);
