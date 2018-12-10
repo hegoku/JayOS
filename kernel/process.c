@@ -1,3 +1,4 @@
+#include <system/compiler_types.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
@@ -112,17 +113,22 @@ pid_t sys_fork()
 	printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
 	       child_base, caller_T_base, caller_T_size, caller_T_limit);
 	/* child is a copy of the parent */
-	memcpy((void*)child_base, (void*)caller_T_base, caller_T_size);
-    while(1){}
+    char *tmp = (char*)(child_base+0x100000);
+	char *s = (char*)(caller_T_base+0x100000);
 
+	// while (caller_T_size--)
+        for (i = 0; i < caller_T_size-0x100000;i++)
+            *tmp++ = *s++;
+    // memcpy((void*)child_base, (void*)caller_T_base, caller_T_size);
+    // memcpy((void*)child_base, (void*)0x100000, PROC_IMAGE_SIZE_DEFAULT);
 	/* child's LDT */
 	process_table[pid].ldts[INDEX_LDT_CS]=create_descriptor(child_base,
-		//   (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
-		  (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
+		  (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
+		//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
 		  DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
 	process_table[pid].ldts[INDEX_LDT_DS]=create_descriptor(child_base,
-		//   (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
-		  (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
+		  (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
+		//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
 		  DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
 
     //文件描述符
@@ -156,21 +162,85 @@ pid_t sys_wait(int *status)
 
 static int alloc_mem(int pid, int memsize)
 {
-	if (memsize > PROC_IMAGE_SIZE_DEFAULT) {
-		printk("unsupported memory request: %d. "
-		      "(should be less than %d)\n",
-		      memsize,
-		      PROC_IMAGE_SIZE_DEFAULT);
-        return -1;
-    }
+	// if (memsize > PROC_IMAGE_SIZE_DEFAULT) {
+	// 	printk("unsupported memory request: %d. "
+	// 	      "(should be less than %d)\n",
+	// 	      memsize,
+	// 	      PROC_IMAGE_SIZE_DEFAULT);
+    //     return -1;
+    // }
 
     int base = PROCS_BASE +
 		pid * PROC_IMAGE_SIZE_DEFAULT;
 
-	if (base + memsize >= MemSize) {
-        printk("memory allocation failed. pid:%d\n", pid);
-        return -1;
-    }
+	// if (base + memsize >= MemSize) {
+    //     printk("memory allocation failed. pid:%d\n", pid);
+    //     return -1;
+    // }
 
     return base;
+}
+
+inline int copy_from_user(void *to, const void __user *from, unsigned long n)
+{
+    if (__builtin_constant_p(n)) {
+        switch(n) {
+        case 1:
+            *(unsigned char*)to = *(unsigned char *)from;
+            return 0;
+        case 2:
+            *(unsigned short*)to = *(unsigned short *)from;
+            return 0;
+        case 4:
+            *(unsigned int*)to = *(unsigned int *)from;
+            return 0;
+        case 8:
+            *(unsigned long*)to = *(unsigned long *)from;
+            return 0;
+        default:
+            break;
+        }
+    }
+    unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
+    printk("%x %x %x\n",seg_base, from, seg_base+from);
+    memcpy(to, (void*)(seg_base + (unsigned int)from), n);
+    return 0;
+}
+
+inline int copy_to_user(void __user *to, const void *from, unsigned long n)
+{
+    if (__builtin_constant_p(n)) {
+        switch(n) {
+        case 1:
+            *(unsigned char*)to = *(unsigned char *)from;
+            return 0;
+        case 2:
+            *(unsigned short*)to = *(unsigned short *)from;
+            return 0;
+        case 4:
+            *(unsigned int*)to = *(unsigned int *)from;
+            return 0;
+        case 8:
+            *(unsigned long*)to = *(unsigned long *)from;
+            return 0;
+        default:
+            break;
+        }
+    }
+    unsigned int seg_base=current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
+    memcpy((void*)(seg_base + (unsigned int)to), from, n);
+    return 0;
+}
+
+inline int strncpy_from_user(void *to, const void __user *from)
+{
+    unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
+    char *a = (char *)(seg_base + (unsigned int)from);
+    char *p = to;
+    while(*a!='\0') {
+        *p = *a;
+        a++;
+        p++;
+    }
+    return 0;
 }

@@ -1,3 +1,4 @@
+#include <system/compiler_types.h>
 #include <system/fs.h>
 #include <string.h>
 #include <sys/types.h>
@@ -8,6 +9,7 @@
 #include "../kernel/tty.h"
 #include <system/mm.h>
 #include <system/list.h>
+#include <../kernel/process.h>
 
 struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];
@@ -42,7 +44,7 @@ void mkfs()
 
 }
 
-int sys_open(const char *path, int flags, ...)
+int sys_open(const char __user *path, int flags, ...)
 {
     int fd = -1;
     int i;
@@ -70,9 +72,11 @@ int sys_open(const char *path, int flags, ...)
     }
 
     struct inode *p_inode = NULL;
+    char *filename=kzmalloc(256);
+    strncpy_from_user(filename, path);
 
-    if (get_inode_by_filename(path, &p_inode)) {
-        printk("file: %s not found\n", path);
+    if (get_inode_by_filename(filename, &p_inode)) {
+        printk("file: %s not found\n", filename);
         return -1;
     }
 
@@ -86,6 +90,8 @@ int sys_open(const char *path, int flags, ...)
         p_inode->f_op->open(p_inode, &f_desc_table[i]);
     }
     p_inode->used_count++;
+    
+    kfree(filename, 256);
 
     // if (p_inode->mode==FILE_MODE_CHR) {
     // }
@@ -205,10 +211,15 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
 	// 	printk("Trying to r/w from/to nonexistent character device\n");
     //     return -1;
     // }
+    char *kbuf = kzmalloc(nbyte);
+    copy_from_user(kbuf, buf, nbyte);
 
     if (file->op->write) {
-        return file->op->write(file, (char *)buf, nbyte);
+        int res=file->op->write(file, kbuf, nbyte);
+        kfree(kbuf, nbyte);
+        return res;
     }
+    kfree(kbuf, nbyte);
 
     // if (file->inode->mode == FILE_MODE_CHR)
     // {

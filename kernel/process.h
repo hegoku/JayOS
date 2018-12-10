@@ -1,6 +1,7 @@
 #ifndef _PROCESS_H
 #define _PROCESS_H
 
+#include <system/compiler_types.h>
 #include <system/desc.h>
 #include <system/fs.h>
 
@@ -46,5 +47,9 @@ pid_t sys_fork();
 pid_t sys_wait(int *status);
 pid_t sys_getpid();
 pid_t sys_getppid();
+
+int copy_from_user(void *to, const void __user *from, unsigned long n);
+int copy_to_user(void __user *to, const void *from, unsigned long n);
+int strncpy_from_user(void *to, const void __user *from);
 
 #endif

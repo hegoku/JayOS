@@ -235,6 +235,7 @@ void kernel_main()
     // a->dev_num = MKDEV(3, 0);
     // a->mode = FILE_MODE_BLK;
     // a->f_op = dev_table[3].f_op;
+    // printk("%x\n", init);while(1){}
     restart();
 }
 
@@ -242,11 +243,10 @@ void init()
 {
     // mount("/dev/hd1", "/root", "fat12");
 
-    (void) open("/dev/tty0", O_RDWR);
+    (void)open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
     printf("parent is running, %d\n", getpid());
-
     int i, pid;
     pid = fork();
     if (pid!=0)
