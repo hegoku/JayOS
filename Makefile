@@ -90,7 +90,7 @@ build/process.o: kernel/process.c kernel/process.h include/sys/types.h kernel/gl
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/hd.o: kernel/hd1.c kernel/hd.h include/string.h kernel/global.h include/unistd.h \
+build/hd.o: kernel/hd.c kernel/hd.h include/string.h kernel/global.h include/unistd.h \
 			kernel/process.h include/math.h include/system/dev.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<
 

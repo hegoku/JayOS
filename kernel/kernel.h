@@ -13,7 +13,14 @@
 #define TOP_OF_KERNEL_STACK 0x7C00
 #define BIOS_ADDR 0x7E00 //bios参数地址
 
-#define PROC_NUMBER 23
+#define GDT_SEL_KERNEL_CODE (0x8|SA_RPL0) //因为loader的 GDT_SEL_CODE 选择子为 8
+#define GDT_SEL_KERNEL_DATA (0x10|SA_RPL0)
+#define GDT_SEL_VIDEO (0x18|SA_RPL3)
+#define GDT_SEL_USER_CODE (0x20|SA_RPL3)
+#define GDT_SEL_USER_DATA (0x28|SA_RPL3)
+#define GDT_SEL_TSS (0x30|SA_RPL0)
+
+#define PROC_NUMBER 5
 
 extern char gdt_ptr[6];
 extern DESCRIPTOR gdt[GDT_SIZE];
@@ -23,14 +30,7 @@ extern GATE idt[IDT_SIZE];
 extern irq_handler irq_table[];
 extern sys_call_handler sys_call_table[];
 
-extern unsigned short SelectorKernelCs;
-extern unsigned short SelectorKernelDs;
-extern unsigned short SelectorVideo;
-extern unsigned short SelectorUserCs;
-extern unsigned short SelectorUserDs;
-extern unsigned short SelectorTss;
-
-int ticks;
+extern int ticks;
 
 extern PROCESS *current_process;
 extern PROCESS process_table[];

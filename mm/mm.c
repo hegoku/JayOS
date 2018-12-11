@@ -5,16 +5,19 @@
 
 #define MAX_SIZE 128*1024 //最大申请空间 128KB
 
-static unsigned short MCRNumber;
-static struct ARDStruct MemChkBuf[12];
-unsigned long MemSize;
-static unsigned long base_heap_addr; //堆基址
-static unsigned long max_heap_addr; //堆顶
-static char mmap[131072]; //一个占用512B, 1MB/512B=2048 2048/8=256
+static unsigned short MCRNumber=1;
+static struct ARDStruct MemChkBuf[12]={1};
+unsigned long MemSize = 1;
+static unsigned long base_heap_addr=1; //堆基址
+static unsigned long max_heap_addr=1; //堆顶
+static char mmap[131072]={1}; //一个占用512B, 1MB/512B=2048 2048/8=256
 
 void load_memory_size()
 {
-    memcpy(MemChkBuf, (void *)(0x7e00+2), 256);
+    MemSize = 0;
+    base_heap_addr = 0;
+    max_heap_addr = 0;
+    memcpy(MemChkBuf, (void *)(0x7e00 + 2), 256);
     MCRNumber = *(unsigned short *)(0x7e00);
     for (int i = 0; i < MCRNumber; i++)
     {
@@ -28,6 +31,7 @@ void load_memory_size()
         }
     }
     base_heap_addr = max_heap_addr - 1024 * 1024; //1MB的内核空间
+    memcpy(mmap, 0, 131072);
     // disp_int(mmap);
     // printk("mmap:%x\n", mmap);
 }

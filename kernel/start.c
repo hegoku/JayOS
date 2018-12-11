@@ -17,17 +17,14 @@
 #include "../fs/fat/fat.h"
 #include "system/mm.h"
 
-TSS tss;
-irq_handler irq_table[IRQ_NUMBER];
-sys_call_handler sys_call_table[SYS_CALL_NUMBER];
-unsigned short SelectorKernelCs;
-unsigned short SelectorKernelDs;
-unsigned short SelectorVideo;
-unsigned short SelectorUserCs;
-unsigned short SelectorUserDs;
-unsigned short SelectorTss;
+int ticks = 1;
+TSS tss={
+    .esp0 = TOP_OF_KERNEL_STACK,
+	.ss0 = GDT_SEL_KERNEL_DATA
+};
+extern irq_handler irq_table[];
 PROCESS process_table[PROC_NUMBER];
-PROCESS *current_process;
+PROCESS *current_process=(void*)1;
 
 static void init_idt();
 static void init_gdt();
@@ -35,7 +32,6 @@ void kernel_main();
 
 void clock_handler(int irq);
 
-int child_eip[2];
 void init();
 void calltest();
 void TestA();
@@ -57,10 +53,6 @@ void init_idt()
 {
     init_8259A();
     enable_irq(CASCADE_IRQ); //开启从片
-
-    for (int i; i < IRQ_NUMBER; i++) {
-        irq_table[i] = spurious_irq;
-    }
 
     // 全部初始化成中断门(没有陷阱门)
 	init_idt_desc(idt, INT_VECTOR_DIVIDE, DA_386IGate, divide_error, PRIVILEGE_KRNL);
@@ -109,24 +101,22 @@ static void init_gdt()
 	insert_descriptor(gdt, 0, gdt_0, PRIVILEGE_KRNL);
 
 	DESCRIPTOR kernel_cs = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL0);
-    SelectorKernelCs = insert_descriptor(gdt, 1, kernel_cs, PRIVILEGE_KRNL);
+    insert_descriptor(gdt, 1, kernel_cs, PRIVILEGE_KRNL);
 
     DESCRIPTOR kernel_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL0);
-	SelectorKernelDs=insert_descriptor(gdt, 2, kernel_ds, PRIVILEGE_KRNL);
+	insert_descriptor(gdt, 2, kernel_ds, PRIVILEGE_KRNL);
 
 	DESCRIPTOR video = create_descriptor(0xB8000, 0xBFFFF, DA_DRW | DA_32 | DA_DPL3);
-	SelectorVideo=insert_descriptor(gdt, 3, video, PRIVILEGE_USER);
+	insert_descriptor(gdt, 3, video, PRIVILEGE_USER);
 
 	DESCRIPTOR user_cs = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
-	SelectorUserCs=insert_descriptor(gdt, 4, user_cs, PRIVILEGE_USER);
+	insert_descriptor(gdt, 4, user_cs, PRIVILEGE_USER);
 
 	DESCRIPTOR user_ds = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
-	SelectorUserDs=insert_descriptor(gdt, 5, user_ds, PRIVILEGE_USER);
+	insert_descriptor(gdt, 5, user_ds, PRIVILEGE_USER);
 
-	tss.esp0 = TOP_OF_KERNEL_STACK;
-	tss.ss0 = SelectorKernelDs;
     DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
-    SelectorTss=insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
+    insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
 	
     // GATE call_test = create_gate(SelectorKernelCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
     // testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_KRNL);
@@ -138,7 +128,8 @@ static void init_gdt()
 void kernel_main()
 {
     ticks = 0;
-    init_system_call(sys_call_table);
+    current_process = NULL;
+    // init_system_call(sys_call_table);
 
     for (int i = 0; i < PROC_NUMBER;i++) {
         process_table[i].pid = i;
@@ -152,8 +143,6 @@ void kernel_main()
     // sprintf(process_table[1].name, "tty");
     // process_table[1].is_free = 1;
     // process_table[1].regs.eip = (unsigned int)task_tty;
-
-    int child_eip[2] = {(unsigned int)calltest, (unsigned int)TestA};
 
     // process_table[1].pid = 1;
     // process_table[1].name[0]='B';
@@ -243,6 +232,7 @@ void init()
 {
     // mount("/dev/hd1", "/root", "fat12");
 
+    mount("/dev/hd1", "/root", "fat12");
     (void)open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
@@ -254,7 +244,20 @@ void init()
         printf("parent is running, child pid: %d\n", pid);
     } else {
         printf("child is running, pid: 1\n");
+        char a[513];
+        int ff = open("/root/d.txt", O_RDWR);
+        memset(a, 0, 513);
+        printf("%d\n", ff);
+        int aaa=read(ff, a, 2);
+        printf("%d\n%s\n", aaa, a);
+        close(ff);
+
+        ff = open("/root/b/c.txt", O_RDWR);
+        memset(a, 0, 513);
+        aaa=read(ff, a, 2);
+        printf("%d\n%s\n", aaa, a);
         while(1){
+            
             // int ff = open("/root/d.txt", O_RDWR);
             // char *a[512];
             // memset(a, 0, 513);
@@ -275,9 +278,9 @@ void init()
 void TestA()
 {
     unsigned int i = 0;
-    hd_setup();
-    init_fat12();
-    mount("/dev/hd1", "/root", "fat12");
+    // hd_setup();
+    // init_fat12();
+    // mount("/dev/hd1", "/root", "fat12");
     // init_ext2();
     // mount("/dev/hd1", "/root", "ext2");
     int stdin = open("/dev/tty0", O_RDWR);

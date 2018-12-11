@@ -8,7 +8,7 @@ static struct dir_entry *rootfs_mount(struct file_system_type *fs_type, int dev_
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
 static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
 
-static int i_op_lookup(struct inode *base, const char *path, int len, struct inode **res_inode);
+static int rootfs_lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir);
 
 struct file_system_type rootfs_fs_type = {
     name: "rootfs",
@@ -29,7 +29,7 @@ struct file_operation rootfs_f_op={
 };
 struct inode_operation rootfs_inode_op = {
     NULL,
-    NULL,
+    rootfs_lookup,
     NULL,
     NULL,
     NULL,
@@ -84,7 +84,7 @@ static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
     return nbyte;
 }
 
-int i_op_lookup (struct inode *base, const char *path, int len,struct inode **res_inode)
+int rootfs_lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir)
 {
     return 0;
 }

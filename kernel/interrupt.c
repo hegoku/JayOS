@@ -1,6 +1,25 @@
 #include "interrupt.h"
 #include "global.h"
 
+irq_handler irq_table[IRQ_NUMBER] = {
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq,
+    spurious_irq
+};
+
 void init_8259A()
 {
     out_byte(INT_M_CTL,	0x11);			// Master 8259, ICW1.

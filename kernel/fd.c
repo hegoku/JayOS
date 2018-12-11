@@ -1,8 +1,11 @@
 #include "global.h"
 #include "fd.h"
 
+static unsigned short  current_dev = 1;
+
 void floppy_init()
 {
+    current_dev = 0;
     // out_byte(FD_DOR, 0x18); //重启软驱
     out_byte(FD_DOR, 0x1c); //重启软驱
     out_byte(FD_CCR, 0); //设置速度,1.44

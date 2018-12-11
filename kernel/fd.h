@@ -86,7 +86,6 @@ typedef struct {
 
 static floppy_struct floppy_type = {2880,18,2,80,0,0x1B,0x00,0xCF }; /* 1.44MB diskette */
 
-static unsigned short  current_dev = 0;
 
 void floppy_init();
 void floppy_handler(int irq);

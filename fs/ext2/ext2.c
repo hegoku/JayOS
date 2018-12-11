@@ -6,6 +6,8 @@
 #include "../../kernel/global.h"
 
 static struct dir_entry *ext2_mount(struct file_system_type *fs_type, int dev_num);
+static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
+static int ext2_lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir);
 
 struct file_system_type ext2_fs_type = {
     name : "ext2",
@@ -14,7 +16,7 @@ struct file_system_type ext2_fs_type = {
 };
 struct file_operation ext2_f_op={
     NULL,
-    NULL,
+    f_op_read,
     NULL,
     // 0,
     // 0,
@@ -26,7 +28,7 @@ struct file_operation ext2_f_op={
 };
 struct inode_operation ext2_inode_op = {
     NULL,
-    NULL,
+    ext2_lookup,
     NULL,
     NULL,
     NULL,
@@ -91,4 +93,14 @@ void move_ext2_sb_to_sb(struct super_block **sb, struct ext2_super_block esb)
 {
     int block_size = 1 << (esb.s_log_block_size + 10); //1个block大小
     int block_group_num = (esb.s_blocks_count - esb.s_first_data_block - 1) / esb.s_blocks_per_group + 1; //有多少个block_group
+}
+
+static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
+{
+    return 0;
+}
+
+static int ext2_lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir)
+{
+    return 0;
 }

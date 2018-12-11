@@ -14,10 +14,9 @@
 struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];
 struct inode inode_table[INODE_TABLE_MAX_COUNT];
-struct dir_entry dir_table[INODE_TABLE_MAX_COUNT];
+// struct dir_entry dir_table[INODE_TABLE_MAX_COUNT];
 static int inode_num = 0;
-static int dir_num=0;
-static int list_num = 0;
+// static int dir_num=0;
 
 static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, struct nameidata *nd);
 static int _namei(const char *pathname, struct dir_entry *base, struct dir_entry **dir);
@@ -198,8 +197,9 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
         return -1;
     }
-    if (file->inode==NULL) {
-        printk("File not exist (fd: %d)\n", fd);
+    if (file->inode == NULL)
+    {
+        printk("File not exist (fd: %d)\n %x", fd);
         return -1;
     }
     if (nbyte==0) {
@@ -401,9 +401,16 @@ struct super_block *get_block(int dev_num)
 
 struct dir_entry *get_dir()
 {
-    struct dir_entry a;
-    dir_table[dir_num]=a;
-    return &dir_table[dir_num++];
+    struct dir_entry *a = kzmalloc(sizeof(struct dir_entry));
+    if (a == NULL)
+    {
+        printk("Can't malloc dir_entry\n");
+        return NULL;
+    }
+    return a;
+    // struct dir_entry a;
+    // dir_table[dir_num]=a;
+    // return &dir_table[dir_num++];
 }
 
 int sys_mkdir(const char *dirname, int mode)

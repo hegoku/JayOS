@@ -12,7 +12,7 @@
 #define INDEX_LDT_DS 1
 
 #define PROC_IMAGE_SIZE_DEFAULT 128 * 1024 //一个进程占用128KB内存
-#define PROCS_BASE 0x120000 //用户进程起始地址 1MB+128KB
+#define PROCS_BASE 0x130000 //用户进程起始地址 1MB+128KB
 
 #define	reassembly(high, high_shift, mid, mid_shift, low)	\
 	(((high) << (high_shift)) +				\
@@ -34,7 +34,7 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.es = ((INDEX_LDT_DS * 0x8)&SA_RPL_MASK&SA_TI_MASK) | SA_TIL | SA_RPL3;
     p->regs.fs = ((INDEX_LDT_DS * 0x8)&SA_RPL_MASK&SA_TI_MASK) | SA_TIL | SA_RPL3;
     p->regs.ss = ((INDEX_LDT_DS * 0x8)&SA_RPL_MASK&SA_TI_MASK) | SA_TIL | SA_RPL3;
-    p->regs.gs = (SelectorVideo&SA_RPL_MASK)| SA_RPL3;
+    p->regs.gs = (GDT_SEL_VIDEO & SA_RPL_MASK) | SA_RPL3;
     p->regs.eip = process_entry;
     // p->regs.esp = TOP_OF_USER_STACK-0x400*p->pid;
     p->regs.esp = PROC_IMAGE_SIZE_DEFAULT-1;
@@ -110,17 +110,10 @@ pid_t sys_fork()
 	   so we allocate memory just once */
 	int child_base = alloc_mem(pid, caller_T_size);
 	/* int child_limit = caller_T_limit; */
-	printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
-	       child_base, caller_T_base, caller_T_size, caller_T_limit);
+	// printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
+	//        child_base, caller_T_base, caller_T_size, caller_T_limit);
 	/* child is a copy of the parent */
-    char *tmp = (char*)(child_base+0x100000);
-	char *s = (char*)(caller_T_base+0x100000);
-
-	// while (caller_T_size--)
-        for (i = 0; i < caller_T_size-0x100000;i++)
-            *tmp++ = *s++;
-    // memcpy((void*)child_base, (void*)caller_T_base, caller_T_size);
-    // memcpy((void*)child_base, (void*)0x100000, PROC_IMAGE_SIZE_DEFAULT);
+    memcpy((void*)child_base, (void*)caller_T_base, caller_T_size);
 	/* child's LDT */
 	process_table[pid].ldts[INDEX_LDT_CS]=create_descriptor(child_base,
 		  (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
@@ -132,9 +125,12 @@ pid_t sys_fork()
 		  DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
 
     //文件描述符
-    for (i = 0; i < FILE_DESC_TABLE_MAX_COUNT;i++) {
-        process_table[pid].file_table[i]->inode->used_count++;
-        process_table[pid].file_table[i]->used_count++;
+    for (i = 0; i < PROC_FILES_MAX_COUNT; i++)
+    {
+        if (process_table[pid].file_table[i]) {
+            process_table[pid].file_table[i]->inode->used_count++;
+            process_table[pid].file_table[i]->used_count++;
+        }
     }
 
     return pid;
@@ -202,7 +198,7 @@ inline int copy_from_user(void *to, const void __user *from, unsigned long n)
         }
     }
     unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
-    printk("%x %x %x\n",seg_base, from, seg_base+from);
+    // printk("%x %x %x\n",seg_base, from, seg_base+from);
     memcpy(to, (void*)(seg_base + (unsigned int)from), n);
     return 0;
 }

@@ -19,6 +19,6 @@
 
 typedef void *sys_call_handler;
 
-void init_system_call(sys_call_handler sys_call_table[]);
+// void init_system_call(sys_call_handler sys_call_table[]);
 
 #endif
