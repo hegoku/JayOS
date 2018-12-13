@@ -66,8 +66,9 @@ pid_t sys_fork()
     process_table[pid].pid = pid;
     sprintf(process_table[pid].name, "%s_%d", process_table[current_process->pid].name, pid);
     process_table[pid].parent_pid = current_process->pid;
-    
-    /* duplicate the process: T, D & S */
+	process_table[pid].regs.eax = 0;
+
+	/* duplicate the process: T, D & S */
 	DESCRIPTOR *ppd;
 
 	/* Text segment */
@@ -132,8 +133,9 @@ pid_t sys_fork()
             process_table[pid].file_table[i]->used_count++;
         }
     }
+	printk("%d\n", pid);
 
-    return pid;
+	return pid;
 }
 
 void sys_exit(int status)

@@ -242,14 +242,29 @@ void init()
     if (pid!=0)
     {
         printf("parent is running, child pid: %d\n", pid);
+        char a[513];
+        int ff = open("/root/d.txt", O_RDWR);
+        memset(a, 0, 513);
+        printf("%d\n", ff);
+        while(1){
+            delay(1);
+            lseek(ff, 5, SEEK_SET);
+            int aaa = read(ff, a, 2);
+            printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
+        }
     } else {
-        printf("child is running, pid: 1\n");
+        pid = getpid();
+        // while(1){
+        //     printf("child is running, pid: 1\n", pid);
+        //     delay(1);
+        // }
+        printf("child is running, pid: 1\n", pid);
         char a[513];
         int ff = open("/root/d.txt", O_RDWR);
         memset(a, 0, 513);
         printf("%d\n", ff);
         int aaa=read(ff, a, 2);
-        printf("%d\n%s\n", aaa, a);
+        printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
         close(ff);
 
         ff = open("/root/b/c.txt", O_RDWR);
@@ -257,7 +272,9 @@ void init()
         aaa=read(ff, a, 2);
         printf("%d\n%s\n", aaa, a);
         while(1){
-            
+            aaa=read(ff, a, 2);
+        printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
+        delay(1);
             // int ff = open("/root/d.txt", O_RDWR);
             // char *a[512];
             // memset(a, 0, 513);
