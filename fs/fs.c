@@ -188,7 +188,7 @@ int sys_close(int fd)
     return 0;
 }
 
-int sys_write(int fd, const void *buf, unsigned int nbyte)
+int sys_write(int fd, const char __user *buf, unsigned int nbyte)
 {
     struct file_descriptor *file;
     int res = -1;
@@ -233,7 +233,7 @@ int sys_write(int fd, const void *buf, unsigned int nbyte)
     // }
 }
 
-int sys_read(int fd,char * buf, unsigned int nbyte)
+int sys_read(int fd,char __user *buf, unsigned int nbyte)
 {
     struct file_descriptor *file;
     int res = -1;
@@ -320,7 +320,7 @@ void register_filesystem(struct file_system_type *fs_type)
     }
 }
 
-int do_mount(const char *dev_name, const char *dir, char *type)
+int do_mount(const char __user *dev_name, const char __user *dir, char __user *type)
 {
     struct dir_entry *dev_dir;
     struct dir_entry *dir_dir;
@@ -372,7 +372,6 @@ void mount_root()
     // } while (fs_type);
     sys_mkdir("/dev", 1);
     sys_mkdir("/root", 1);
-    sys_stat("/", NULL);
 }
 
 struct inode *get_inode()
@@ -415,7 +414,7 @@ struct dir_entry *get_dir()
     // return &dir_table[dir_num++];
 }
 
-int sys_mkdir(const char *dirname, int mode)
+int sys_mkdir(const char __user *dirname, int mode)
 {
     struct dir_entry *dir;
     char last_name[12];
@@ -489,7 +488,7 @@ int sys_mkdir(const char *dirname, int mode)
     return 0;
 }
 
-int sys_mount(char *dev_name, char *dir_name, char *type)
+int sys_mount(char __user *dev_name, char __user *dir_name, char *type)
 {
     struct dir_entry *dev_dir;
     struct dir_entry *dir_dir;
@@ -686,7 +685,7 @@ static int lookup_fs(const char *name, struct file_system_type **fs_type)
     return -1;
 }
 
-int sys_stat(char *filename, struct stat *statbuf)
+int sys_stat(char __user *filename, struct stat __user *statbuf)
 {
     struct dir_entry *dir;
     char *kfilename=kzmalloc(256);
@@ -697,16 +696,23 @@ int sys_stat(char *filename, struct stat *statbuf)
         return -1;
     }
 
-    printk("name: %s :\n", dir->name);
-    struct list *i;
-    list_for_each(i, &dir->children) {
-        struct dir_entry *tmp = (struct dir_entry *)i->value;
-        if (tmp->inode->mode==FILE_MODE_REG) {
-            printk("    - %dB name:%s\n", tmp->inode->size, tmp->name);
-        } else if (tmp->inode->mode==FILE_MODE_DIR) {
-            printk("    D %dB name:%s\n", tmp->inode->size, tmp->name);
-        }
-    }
+    struct stat *kstat=kzmalloc(sizeof(struct stat));
+    kstat->dev_num = dir->dev_num;
+    kstat->inode_num = dir->inode->num;
+    kstat->size = dir->inode->size;
+
+    copy_to_user(statbuf, kstat, sizeof(struct stat));
+    kfree(kstat, sizeof(struct stat));
+    // printk("name: %s :\n", dir->name);
+    // struct list *i;
+    // list_for_each(i, &dir->children) {
+    //     struct dir_entry *tmp = (struct dir_entry *)i->value;
+    //     if (tmp->inode->mode==FILE_MODE_REG) {
+    //         printk("    - %dB name:%s\n", tmp->inode->size, tmp->name);
+    //     } else if (tmp->inode->mode==FILE_MODE_DIR) {
+    //         printk("    D %dB name:%s\n", tmp->inode->size, tmp->name);
+    //     }
+    // }
     // for (struct list *i = &dir->children; i; i = i->next)
     // {
     //     struct dir_entry *tmp = (struct dir_entry *)i->value;

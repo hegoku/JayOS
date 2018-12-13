@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include <system/list.h>
+#include <system/compiler_types.h>
 
 #define PROC_FILES_MAX_COUNT 1024 //进程表文件最大数
 #define FILE_DESC_TABLE_MAX_COUNT 2048 //f_desc_table最大数
@@ -110,21 +111,21 @@ struct nameidata {
 struct stat{
     int dev_num;     /* ID of device containing file */
     unsigned long inode_num;     /* inode number */
-    int st_mode;    /* protection */
+    ssize_t size;
 };
 
 extern struct file_system_type *file_system_table;
 extern struct file_descriptor f_desc_table[];
 extern struct inode inode_table[];
 
-int sys_open(const char *path, int flags, ...);
-int sys_write(int fd, const void *buf, unsigned int nbyte);
-int sys_read(int fd, char *buf, unsigned int nbyte);
+int sys_open(const char __user *path, int flags, ...);
+int sys_write(int fd, const char __user *buf, unsigned int nbyte);
+int sys_read(int fd, char __user *buf, unsigned int nbyte);
 int sys_close(int fd);
-int sys_mkdir(const char *dirname, int mode);
-int sys_mount(char *dev_name, char *dir_name, char *type);
+int sys_mkdir(const char __user *dirname, int mode);
+int sys_mount(char __user *dev_name, char __user *dir_name, char __user *type);
 off_t sys_lseek(int fd, off_t offset, int whence);
-int sys_stat(char *filename, struct stat *statbuf);
+int sys_stat(char __user *filename, struct stat __user *statbuf);
 int sys_dup(unsigned int oldfd);
 
 int get_inode_by_filename(const char *filename, struct inode **res_inode);

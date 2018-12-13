@@ -42,6 +42,11 @@ pid_t wait(int *status)
     return sys_call_1_param(SYS_CALL_WAITPID, status);
 }
 
+int execve(const char *filename, const char *argv[], const char *envp[])
+{
+    return sys_call_3_param(SYS_CALL_EXECVE, filename, argv, envp);
+}
+
 int mount(char *dev_name, char *dir_name, char *type)
 {
     return sys_call_3_param(SYS_CALL_MOUNT, dev_name, dir_name, type);

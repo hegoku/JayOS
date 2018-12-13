@@ -2,11 +2,13 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
-#include "system/desc.h"
+#include <system/fs.h>
+#include <system/desc.h>
 #include "process.h"
 #include "kernel.h"
 #include "global.h"
-#include "system/mm.h"
+#include <system/mm.h>
+#include <system/elf.h>
 
 #define INDEX_LDT_CS 0
 #define INDEX_LDT_DS 1
@@ -39,6 +41,8 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     // p->regs.esp = TOP_OF_USER_STACK-0x400*p->pid;
     p->regs.esp = PROC_IMAGE_SIZE_DEFAULT-1;
     p->regs.eflags = 0x3202;
+
+    p->base_addr = 0;
 
     p->status = 0;
     p->is_free = 0;
@@ -109,19 +113,19 @@ pid_t sys_fork()
 
 	/* base of child proc, T, D & S segments share the same space,
 	   so we allocate memory just once */
-	int child_base = alloc_mem(pid, caller_T_size);
+	process_table[pid].base_addr = alloc_mem(pid, caller_T_size);
 	/* int child_limit = caller_T_limit; */
 	// printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
 	//        child_base, caller_T_base, caller_T_size, caller_T_limit);
 	/* child is a copy of the parent */
-    memcpy((void*)child_base, (void*)caller_T_base, caller_T_size);
+    memcpy((void*)process_table[pid].base_addr, (void*)caller_T_base, caller_T_size);
 	/* child's LDT */
-	process_table[pid].ldts[INDEX_LDT_CS]=create_descriptor(child_base,
-		  (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
+	process_table[pid].ldts[INDEX_LDT_CS]=create_descriptor(process_table[pid].base_addr,
+		  (process_table[pid].base_addr + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
 		//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
 		  DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
-	process_table[pid].ldts[INDEX_LDT_DS]=create_descriptor(child_base,
-		  (child_base + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
+	process_table[pid].ldts[INDEX_LDT_DS]=create_descriptor(process_table[pid].base_addr,
+		  (process_table[pid].base_addr + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
 		//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
 		  DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
 
@@ -155,6 +159,53 @@ pid_t sys_getppid()
 
 pid_t sys_wait(int *status)
 {
+    return 0;
+}
+
+int sys_execve(const char __user *filename, const char __user *argv[], const char __user *envp[])
+{
+    struct dir_entry *dir;
+    char *kfilename=kzmalloc(256);
+    int res;
+    strncpy_from_user(kfilename, filename);
+
+    if (namei(kfilename, &dir)) {
+        printk("%s not exist\n", kfilename);
+        return -1;
+    }
+
+    if (dir->inode->mode!=FILE_MODE_REG) {
+        printk("%s not a regular file\n", kfilename);
+        return -1;
+    }
+
+    char *program = kzmalloc(dir->inode->size);
+    struct file_descriptor *file = kzmalloc(sizeof(struct file_descriptor));
+    file->inode = dir->inode;
+    file->op = dir->inode->f_op;
+    file->pos = 0;
+    if (dir->inode->f_op->read)
+    {
+        res=file->op->read(file, program, dir->inode->size);
+    }
+    kfree(file, sizeof(struct file_descriptor));
+
+    if (res) {
+        kfree(program, dir->inode->size);
+        return -1;
+    }
+
+    struct elf32_hdr *elf_hdr = (struct elf32_hdr *)program;
+    for (int i = 0; i < elf_hdr->e_phnum; i++) {
+        struct elf32_phdr *phdr = (struct elf32_phdr *)(program + elf_hdr->e_phoff + (i * elf_hdr->e_phentsize));
+        if (phdr->p_type==PT_LOAD) {
+            memset((void*)process_table[current_process->pid].base_addr+phdr->p_vaddr, (char*)program+phdr->p_offset, phdr->p_filesz);
+        }
+    }
+    process_table[current_process->pid].regs.eip = elf_hdr->e_entry;
+    process_table[current_process->pid].regs.esp = PROC_IMAGE_SIZE_DEFAULT - 1;
+    strcpy(process_table[current_process->pid].name, kfilename);
+    kfree(program, dir->inode->size);
     return 0;
 }
 

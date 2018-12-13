@@ -20,7 +20,7 @@ sys_call_handler sys_call_table[65] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    sys_execve,
     NULL,
     NULL,
     NULL,

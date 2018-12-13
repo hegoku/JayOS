@@ -39,6 +39,7 @@ typedef struct s_proc {
     struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];
     struct dir_entry *root;
     struct dir_entry *pwd;
+    unsigned long base_addr;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);
@@ -47,6 +48,7 @@ pid_t sys_fork();
 pid_t sys_wait(int *status);
 pid_t sys_getpid();
 pid_t sys_getppid();
+int sys_execve(const char __user *filename, const char __user *argv[], const char __user *envp[]);
 
 int copy_from_user(void *to, const void __user *from, unsigned long n);
 int copy_to_user(void __user *to, const void *from, unsigned long n);
