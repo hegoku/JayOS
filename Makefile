@@ -1,5 +1,6 @@
-;ENTERPOINT  = 0x7E00
+# ;ENTERPOINT  = 0x7E00
 ENTERPOINT  = 0x100000
+# ENTERPOINT  = 0xC100000
 
 ASM			= nasm
 CC          = bin/bin/i386-elf-gcc

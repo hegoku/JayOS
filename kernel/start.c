@@ -46,6 +46,7 @@ void cstart()
     load_memory_size();
     init_gdt();
     init_idt();
+    init_paging();
     // hd_open(0);
 }
 
@@ -225,6 +226,7 @@ void kernel_main()
     // a->mode = FILE_MODE_BLK;
     // a->f_op = dev_table[3].f_op;
     // printk("%x\n", init);while(1){}
+    while(1){}
     restart();
 }
 

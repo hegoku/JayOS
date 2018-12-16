@@ -30,6 +30,7 @@ start:
     call ClearScreen
     ; call ReadBIOS
     call ReadMemorySize
+    ; call SetupPaging
     call FindKernel
     jmp $
 
@@ -149,6 +150,58 @@ ReadMemorySize:
     ; mov dword [_dwMCRNumber], 0
     mov dword [ds:BIOS_ADDR], 0
 .LABEL_MEM_CHK_OK:
+    call CalMemSize
+    pop es
+    pop ds
+    popad
+    ret
+
+CalMemSize:
+    xor esi, ecx
+    xor ecx, ecx
+    mov esi, BIOS_ADDR+2
+    mov ecx, dword[ds:BIOS_ADDR]
+.cloop:
+    mov eax, dword[esi+4*4]
+    cmp eax, 1
+    jne .2
+    mov eax, dword[esi+0]
+    add eax, dword[esi+2*4]
+    cmp eax, dword[MemSize]
+    jb .2
+    mov dword[MemSize], eax
+.2:
+    add esi, 5*4
+    loop .cloop
+    ret
+
+SetupPaging:
+    pushad
+    push ds
+    push es
+    xor eax, eax
+    mov ds, ax
+    mov es, ax
+
+    mov dword[Page_Dir_Base], Page_Tbl_base | PG_P | PG_USU | PG_RWW
+    ; mov dword[Page_Dir_Base+4], Page_Tbl_base+1000H | PG_P | PG_USU | PG_RWW ;第二个4MB
+    mov dword[Page_Dir_Base+3072], Page_Tbl_base | PG_P | PG_USU | PG_RWW
+    ; mov dword[Page_Dir_Base+3072+4], Page_Tbl_base+1000H | PG_P | PG_USU | PG_RWW
+    mov edi, Page_Tbl_base+4092
+    mov eax, 03ff007H  ;4Mb - 4096 + 7 (r/w user,p)
+    ; mov eax, 07ff007H  ;8Mb - 4096 + 7 (r/w user,p)
+    mov ecx, 1024
+    std
+ .1:
+    stosd
+    sub eax, 0x1000
+    loop .1
+    cld
+    mov eax, Page_Dir_Base
+    mov cr3, eax
+    ; mov eax, cr0
+    ; or eax, 0x80000000
+    ; mov cr0, eax
     pop es
     pop ds
     popad
@@ -361,6 +414,7 @@ InitProtectedModel:
     or eax, 1
     mov cr0, eax
 
+
     jmp dword GDT_SEL_CODE:(SELF_CS*10h+InitKernel)
 
 [section .s32]
@@ -488,11 +542,14 @@ GdtLen equ $-gdt_0
 GdtPtr dw GdtLen-1
        dd SELF_CS*10h+gdt_0
 
+Page_Dir_Base equ 1000H
+Page_Tbl_base equ 2000H
+
 GDT_SEL_CODE equ gdt_code-gdt_0
 GDT_SEL_DATA equ gdt_data-gdt_0
 GDT_SEL_VIDEO equ gdt_video-gdt_0
 ; GDT_SEL_USER_CODE equ gdt_user_code-gdt_0
 ; GDT_SEL_USER_DATA equ gdt_user_data-gdt_0
 
-_dwMCRNumber dd 0
-_MemChkBuf:times 256 db 0
+MemSize dd 0
+

@@ -44,6 +44,7 @@ global gdt
 global gdt_ptr
 global idt
 global idt_ptr
+global page_dir_ptr
 
 global restart
 ;默认中断向量
@@ -99,10 +100,11 @@ IdtLen equ $-idt
 idt_ptr dw IdtLen-1
 idt_ptr_base dd idt
 
+page_dir_ptr dw 0
+
 [BITS 32]
 _start:
     mov esp, TOP_OF_KERNEL_STACK
-
 	call cstart
     lgdt [gdt_ptr]
     lidt [idt_ptr]
@@ -111,6 +113,14 @@ _start:
 csinit:
     mov ax, GDT_SEL_TSS
     ltr ax
+
+    ; mov eax, page_dir_ptr
+    mov eax, 1000H
+    mov cr3, eax
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
+
     jmp kernel_main
     retf
     jmp $
