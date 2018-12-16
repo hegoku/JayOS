@@ -243,22 +243,23 @@ void init()
     {
         printf("parent is running, child pid: %d\n", pid);
         char a[513];
-        int ff = open("/root/d.txt", O_RDWR);
-        memset(a, 0, 513);
-        printf("%d\n", ff);
+        // int ff = open("/root/d.txt", O_RDWR);
+        // memset(a, 0, 513);
         while(1){
-            delay(1);
-            lseek(ff, 5, SEEK_SET);
-            int aaa = read(ff, a, 2);
-            printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
+            // delay(1);
+            // lseek(ff, 5, SEEK_SET);
+            // int aaa = read(ff, a, 2);
+            // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
         }
     } else {
         pid = getpid();
+        execve("/root/HELLO1" ,NULL, NULL);
+        // while(1){}
         // while(1){
         //     printf("child is running, pid: 1\n", pid);
         //     delay(1);
         // }
-        printf("child is running, pid: 1\n", pid);
+        printf("child is running, pid: %d\n", pid);
         char a[513];
         int ff = open("/root/d.txt", O_RDWR);
         memset(a, 0, 513);

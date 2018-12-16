@@ -261,7 +261,7 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     return new_dir;
 }
 
-//截取字符串开始到第一个空格的串
+//截取字符串开始到第一个空格的串,返回字符串实际长度
 int getStringFromDate(char *dest, char *src, int len)
 {
     char *tail;
@@ -278,7 +278,7 @@ int getStringFromDate(char *dest, char *src, int len)
     }
     act_len = len - i;
     memcpy(dest, src, act_len);
-    return 0;
+    return act_len-1;
 }
 
 //将root_dir_entry长文件名的一段取出给res
@@ -307,7 +307,7 @@ int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
             break;
         }
         dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, file_buf_pos, sector_list[i]*sb->BPB_BytsPerSec, sb->BPB_BytsPerSec*sb->BPB_SecPerClus);
-        file_buf_pos+=sb->BPB_BytsPerSec;
+        file_buf_pos+=sb->BPB_BytsPerSec*sb->BPB_SecPerClus;
     }
     if (fd->pos+nbyte>fd->inode->size) {
         nbyte=fd->inode->size-fd->pos;
@@ -384,7 +384,7 @@ static unsigned short read_fat12_entry(int clus_no, struct super_block *sb)
     int fat_entry_sec_num = fat12_sb->BPB_RsvdSecCnt + ((clus_no * 12) / (fat12_sb->BPB_BytsPerSec*8)); //某簇在fat表中的扇区位置,就是在硬盘的第几个扇区
     int fat_entry_start = fat_entry_sec_num*fat12_sb->BPB_BytsPerSec; //某簇在fat表中的扇区的起始位置, 就是在硬盘的第几个字节
 
-    printk("%d %d, %d %d %d\n", clus_no, fatentry_offset, fat_entry_sec_num, fat_entry_start);
+    // printk("%d %d, %d %d %d\n", clus_no, fatentry_offset, fat_entry_sec_num, fat_entry_start);
 
     memset(buf, 0, fat12_sb->BPB_BytsPerSec*2);
     dev_table[MAJOR(sb->dev_num)].request_fn(sb->dev_num, 0, buf, fat_entry_start, fat12_sb->BPB_BytsPerSec * 2); //读取簇所在fat表的扇区, 一次读取2个，因为可能一个fat项存在2个相邻的扇区里
@@ -756,10 +756,14 @@ int find_dir_from_fat12_root_dir_entry(struct fat12_root_dir_entry *root_dir_ent
             memset(tmp1, 0, 9);
             getStringFromDate(tmp1, root_dir_entry[i].dir_name, 8);
             memset(tmp2, 0, 4);
-            getStringFromDate(tmp2, root_dir_entry[i].ext_name, 3);
+            int a=getStringFromDate(tmp2, root_dir_entry[i].ext_name, 3);
             if ((root_dir_entry[i].dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
             {
-                sprintf(filename, "%s.%s", tmp1, tmp2);
+                if (a==0) { //没有扩展名
+                    sprintf(filename, "%s", tmp1);
+                } else {
+                    sprintf(filename, "%s.%s", tmp1, tmp2);
+                }
             } else if ((root_dir_entry[i].dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
                 sprintf(filename, "%s", tmp1, tmp2);
             }

@@ -1,4 +1,4 @@
-#ifndef	_STDIO_H_
+#ifndef	__STDIO_H_
 #define	__STDIO_H_
 
 #include <stdarg.h>
@@ -24,7 +24,6 @@ typedef struct _file_desc {
 
 } FILE;
 
-static int vsscanf(const char *buf, const char *s, va_list ap);
 
 int sprintf(char *str, const char *format, ...);
 int vsprintf(char *str, const char *format, va_list arg );

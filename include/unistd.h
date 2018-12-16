@@ -17,6 +17,7 @@ ssize_t write(int fd, const void *buf, size_t nbytes);
 int open(const char *path, int flags, ...);
 int close(int fd);
 pid_t wait(int *status);
+int execve(const char *filename, const char *argv[], const char *envp[]);
 int mount(char *dev_name, char *dir_name, char *type);
 off_t lseek(int fd, off_t offset, int whence);
 pid_t getpid();

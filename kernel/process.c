@@ -116,7 +116,7 @@ pid_t sys_fork()
 	process_table[pid].base_addr = alloc_mem(pid, caller_T_size);
 	/* int child_limit = caller_T_limit; */
 	// printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
-	//        child_base, caller_T_base, caller_T_size, caller_T_limit);
+	//        (void*)process_table[pid].base_addr, caller_T_base, caller_T_size, caller_T_limit);
 	/* child is a copy of the parent */
     memcpy((void*)process_table[pid].base_addr, (void*)caller_T_base, caller_T_size);
 	/* child's LDT */
@@ -137,7 +137,6 @@ pid_t sys_fork()
             process_table[pid].file_table[i]->used_count++;
         }
     }
-	printk("%d\n", pid);
 
 	return pid;
 }
@@ -189,8 +188,8 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         res=file->op->read(file, program, dir->inode->size);
     }
     kfree(file, sizeof(struct file_descriptor));
-
-    if (res) {
+    if (res==0)
+    {
         kfree(program, dir->inode->size);
         return -1;
     }
@@ -199,10 +198,15 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     for (int i = 0; i < elf_hdr->e_phnum; i++) {
         struct elf32_phdr *phdr = (struct elf32_phdr *)(program + elf_hdr->e_phoff + (i * elf_hdr->e_phentsize));
         if (phdr->p_type==PT_LOAD) {
-            memset((void*)process_table[current_process->pid].base_addr+phdr->p_vaddr, (char*)program+phdr->p_offset, phdr->p_filesz);
+            printk("%x %x %d\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz);
+            // memcpy((void*)process_table[current_process->pid].base_addr+phdr->p_vaddr, (char*)program+phdr->p_offset, phdr->p_filesz);
+            memcpy((void *)phdr->p_vaddr, (void *)(program + phdr->p_offset), phdr->p_filesz);
+        } else if(phdr->p_type==PT_INTERP){
+            
         }
     }
-    process_table[current_process->pid].regs.eip = elf_hdr->e_entry;
+    printk("e:%x\n", elf_hdr->e_entry);
+    process_table[current_process->pid].regs.eip = elf_hdr->e_entry-0x150000;
     process_table[current_process->pid].regs.esp = PROC_IMAGE_SIZE_DEFAULT - 1;
     strcpy(process_table[current_process->pid].name, kfilename);
     kfree(program, dir->inode->size);

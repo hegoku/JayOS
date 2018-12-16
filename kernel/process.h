@@ -33,7 +33,7 @@ typedef struct s_proc {
 
     unsigned int pid;
     unsigned int parent_pid;
-    char name[16];
+    char name[256];
     unsigned char status;
     unsigned char is_free;
     struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];

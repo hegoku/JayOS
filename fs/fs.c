@@ -193,7 +193,9 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte)
     struct file_descriptor *file;
     int res = -1;
 
-    if (fd >= PROC_FILES_MAX_COUNT || (file=current_process->file_table[fd]) == 0)
+    printk("a: %d %x\b", nbyte, buf);
+
+    if (fd >= PROC_FILES_MAX_COUNT || (file = current_process->file_table[fd]) == 0)
     {
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
         return -1;
@@ -207,11 +209,6 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte)
         return 0;
     }
 
-    // if (!dev_table[MAJOR(file->inode->dev_num)].request_fn) {
-    //     printk("dev: 0x%x\n",file->inode->dev_num);
-	// 	printk("Trying to r/w from/to nonexistent character device\n");
-    //     return -1;
-    // }
     char *kbuf = kzmalloc(nbyte);
     copy_from_user(kbuf, buf, nbyte);
 
