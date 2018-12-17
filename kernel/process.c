@@ -9,12 +9,13 @@
 #include "global.h"
 #include <system/mm.h>
 #include <system/elf.h>
+#include <system/page.h>
 
 #define INDEX_LDT_CS 0
 #define INDEX_LDT_DS 1
 
 #define PROC_IMAGE_SIZE_DEFAULT 128 * 1024 //一个进程占用128KB内存
-#define PROCS_BASE 0x130000 //用户进程起始地址 1MB+128KB
+#define PROCS_BASE 0x250000 //用户进程起始地址 1MB+128KB
 
 #define	reassembly(high, high_shift, mid, mid_shift, low)	\
 	(((high) << (high_shift)) +				\
@@ -43,8 +44,9 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.eflags = 0x3202;
 
     p->base_addr = 0;
+	p->page_dir = create_dir();
 
-    p->status = 0;
+	p->status = 0;
     p->is_free = 0;
 }
 

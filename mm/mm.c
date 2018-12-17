@@ -1,6 +1,7 @@
 #include <system/mm.h>
 #include <string.h>
 #include <sys/types.h>
+#include <system/page.h>
 #include "../kernel/global.h"
 
 #define MAX_SIZE 128*1024 //最大申请空间 128KB
@@ -98,3 +99,4 @@ void *kzmalloc(int size)
     }
     return a;
 }
+
