@@ -4,6 +4,7 @@
 #include <system/compiler_types.h>
 #include <system/desc.h>
 #include <system/fs.h>
+#include <system/page.h>
 
 typedef struct s_stackframe {
     unsigned int gs;
@@ -30,6 +31,7 @@ typedef struct s_proc {
     STACK_FRAME regs;
     unsigned short ldt_sel;
     DESCRIPTOR ldts[2];
+    struct PageDir *page_dir;
 
     unsigned int pid;
     unsigned int parent_pid;
@@ -40,7 +42,6 @@ typedef struct s_proc {
     struct dir_entry *root;
     struct dir_entry *pwd;
     unsigned long base_addr;
-    void  *page_dir;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);

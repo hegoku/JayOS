@@ -15,7 +15,7 @@
 #define INDEX_LDT_DS 1
 
 #define PROC_IMAGE_SIZE_DEFAULT 128 * 1024 //一个进程占用128KB内存
-#define PROCS_BASE 0x250000 //用户进程起始地址 1MB+128KB
+// #define PROCS_BASE 0x250000 //用户进程起始地址 1MB+128KB
 
 #define	reassembly(high, high_shift, mid, mid_shift, low)	\
 	(((high) << (high_shift)) +				\
@@ -29,8 +29,10 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
 
     DESCRIPTOR ldt=create_descriptor((unsigned int)p->ldts, 2*sizeof(DESCRIPTOR)-1, DA_LDT);
 	p->ldt_sel=insert_descriptor(gdt, 7+p->pid, ldt, PRIVILEGE_KRNL);
-    p->ldts[INDEX_LDT_CS] = create_descriptor(0, (PROCS_BASE-1)>>LIMIT_4K_SHIFT, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
-    p->ldts[INDEX_LDT_DS] = create_descriptor(0, (PROCS_BASE-1)>>LIMIT_4K_SHIFT, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
+    // p->ldts[INDEX_LDT_CS] = create_descriptor(0, (PROCS_BASE-1)>>LIMIT_4K_SHIFT, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
+    // p->ldts[INDEX_LDT_DS] = create_descriptor(0, (PROCS_BASE-1)>>LIMIT_4K_SHIFT, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
+    p->ldts[INDEX_LDT_CS] = create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
+    p->ldts[INDEX_LDT_DS] = create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
 
     p->regs.cs = ((INDEX_LDT_CS * 0x8)&SA_RPL_MASK&SA_TI_MASK) | SA_TIL | SA_RPL3;
     p->regs.ds = ((INDEX_LDT_DS * 0x8)&SA_RPL_MASK&SA_TI_MASK) | SA_TIL | SA_RPL3;
@@ -75,61 +77,63 @@ pid_t sys_fork()
 	process_table[pid].regs.eax = 0;
 
 	/* duplicate the process: T, D & S */
-	DESCRIPTOR *ppd;
+	// DESCRIPTOR *ppd;
 
-	/* Text segment */
-	ppd = &process_table[current_process->pid].ldts[INDEX_LDT_CS];
-	/* base of T-seg, in bytes */
-	int caller_T_base  = reassembly(ppd->base_high, 24,
-					ppd->base_mid,  16,
-					ppd->base_low);
-	/* limit of T-seg, in 1 or 4096 bytes,
-	   depending on the G bit of descriptor */
-	int caller_T_limit = reassembly(0, 0,
-					(ppd->limit_high_attr2 & 0xF), 16,
-					ppd->limit_low);
-	/* size of T-seg, in bytes */
-	int caller_T_size  = ((caller_T_limit + 1) *
-			      ((ppd->limit_high_attr2 & (DA_LIMIT_4K >> 8)) ?
-			       4096 : 1));
-    // int caller_T_size  = caller_T_limit + 1;
+	// /* Text segment */
+	// ppd = &process_table[current_process->pid].ldts[INDEX_LDT_CS];
+	// /* base of T-seg, in bytes */
+	// int caller_T_base  = reassembly(ppd->base_high, 24,
+	// 				ppd->base_mid,  16,
+	// 				ppd->base_low);
+	// /* limit of T-seg, in 1 or 4096 bytes,
+	//    depending on the G bit of descriptor */
+	// int caller_T_limit = reassembly(0, 0,
+	// 				(ppd->limit_high_attr2 & 0xF), 16,
+	// 				ppd->limit_low);
+	// /* size of T-seg, in bytes */
+	// int caller_T_size  = ((caller_T_limit + 1) *
+	// 		      ((ppd->limit_high_attr2 & (DA_LIMIT_4K >> 8)) ?
+	// 		       4096 : 1));
+    // // int caller_T_size  = caller_T_limit + 1;
 
-	/* Data & Stack segments */
-	ppd = &process_table[current_process->pid].ldts[INDEX_LDT_DS];
-	/* base of D&S-seg, in bytes */
-	int caller_D_S_base  = reassembly(ppd->base_high, 24,
-					  ppd->base_mid,  16,
-					  ppd->base_low);
-	/* limit of D&S-seg, in 1 or 4096 bytes,
-	   depending on the G bit of descriptor */
-	int caller_D_S_limit = reassembly((ppd->limit_high_attr2 & 0xF), 16,
-					  0, 0,
-					  ppd->limit_low);
-	/* size of D&S-seg, in bytes */
-	int caller_D_S_size  = ((caller_T_limit + 1) *
-				((ppd->limit_high_attr2 & (DA_LIMIT_4K >> 8)) ?
-				 4096 : 1));
+	// /* Data & Stack segments */
+	// ppd = &process_table[current_process->pid].ldts[INDEX_LDT_DS];
+	// /* base of D&S-seg, in bytes */
+	// int caller_D_S_base  = reassembly(ppd->base_high, 24,
+	// 				  ppd->base_mid,  16,
+	// 				  ppd->base_low);
+	// /* limit of D&S-seg, in 1 or 4096 bytes,
+	//    depending on the G bit of descriptor */
+	// int caller_D_S_limit = reassembly((ppd->limit_high_attr2 & 0xF), 16,
+	// 				  0, 0,
+	// 				  ppd->limit_low);
+	// /* size of D&S-seg, in bytes */
+	// int caller_D_S_size  = ((caller_T_limit + 1) *
+	// 			((ppd->limit_high_attr2 & (DA_LIMIT_4K >> 8)) ?
+	// 			 4096 : 1));
     // int caller_D_S_size  = caller_T_limit + 1;
 
 	/* we don't separate T, D & S segments, so we have: */
 
 	/* base of child proc, T, D & S segments share the same space,
 	   so we allocate memory just once */
-	process_table[pid].base_addr = alloc_mem(pid, caller_T_size);
-	/* int child_limit = caller_T_limit; */
-	// printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
+	// process_table[pid].base_addr = alloc_mem(pid, caller_T_size);
+    process_table[pid].page_dir = create_dir();
+    copy_page(current_process->page_dir, &(process_table[pid].page_dir));
+    /* int child_limit = caller_T_limit; */
+    // printk("{MM} 0x%x <- 0x%x (0x%x bytes) limit:%x\n",
 	//        (void*)process_table[pid].base_addr, caller_T_base, caller_T_size, caller_T_limit);
 	/* child is a copy of the parent */
-    memcpy((void*)process_table[pid].base_addr, (void*)caller_T_base, caller_T_size);
+    // memcpy((void*)process_table[pid].base_addr, (void*)caller_T_base, caller_T_size);
 	/* child's LDT */
-	process_table[pid].ldts[INDEX_LDT_CS]=create_descriptor(process_table[pid].base_addr,
-		  (process_table[pid].base_addr + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
-		//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
-		  DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
-	process_table[pid].ldts[INDEX_LDT_DS]=create_descriptor(process_table[pid].base_addr,
-		  (process_table[pid].base_addr + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
-		//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
-		  DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
+	// process_table[pid].ldts[INDEX_LDT_CS]=create_descriptor(process_table[pid].base_addr,
+	// 	  (process_table[pid].base_addr + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
+	// 	//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
+	// 	  DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
+	// process_table[pid].ldts[INDEX_LDT_DS]=create_descriptor(process_table[pid].base_addr,
+	// 	  (process_table[pid].base_addr + PROC_IMAGE_SIZE_DEFAULT - 1) >> LIMIT_4K_SHIFT,
+	// 	//   (PROC_IMAGE_SIZE_DEFAULT - 1)>>LIMIT_4K_SHIFT,
+	// 	  DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
 
     //文件描述符
     for (i = 0; i < PROC_FILES_MAX_COUNT; i++)

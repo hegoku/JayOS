@@ -22,6 +22,14 @@ TSS tss={
     .esp0 = TOP_OF_KERNEL_STACK,
 	.ss0 = GDT_SEL_KERNEL_DATA
 };
+// DESCRIPTOR ldt[2] = {
+//     {
+//         1,
+//     },
+//     {
+//         1
+//     }
+// };
 extern irq_handler irq_table[];
 PROCESS process_table[PROC_NUMBER];
 PROCESS *current_process=(void*)1;
@@ -118,6 +126,11 @@ static void init_gdt()
 
     DESCRIPTOR tss_desc = create_descriptor((unsigned int)&tss, sizeof(TSS) - 1, DA_386TSS);
     insert_descriptor(gdt, 6, tss_desc, PRIVILEGE_KRNL);
+
+    // ldt[0]=create_descriptor(0, 0xfffff, DA_CR | DA_32 | DA_LIMIT_4K | DA_DPL3);
+    // ldt[1]=create_descriptor(0, 0xfffff, DA_DRW | DA_32 | DA_LIMIT_4K | DA_DPL3);
+    // DESCRIPTOR ldt=create_descriptor((unsigned int)&ldt, 2*sizeof(DESCRIPTOR)-1, DA_LDT);
+	// insert_descriptor(gdt, 7, ldt, PRIVILEGE_KRNL);
 	
     // GATE call_test = create_gate(SelectorKernelCs, (unsigned int)&calltest, 0, DA_386CGate | DA_DPL3);
     // testcallS=insert_descriptor(gdt, 7, gate_to_descriptor(call_test), PRIVILEGE_KRNL);
