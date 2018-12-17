@@ -40,6 +40,7 @@ typedef struct s_proc {
     struct dir_entry *root;
     struct dir_entry *pwd;
     unsigned long base_addr;
+    void  *page_dir;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);
