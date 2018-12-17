@@ -101,14 +101,15 @@ void *kmalloc(int size)
         printk("kmalloc full\n");
         return NULL;
     }
-    printk("%x\n", KM_START+start_p);
+    // printk("%x\n", KM_START+start_p);
     return (void *)(KM_START+start_p);
     // return (void *)(base_heap_addr + start_p);
 }
 
 void kfree(void *ptr, int size)
 {
-    int offset = (int)ptr - base_heap_addr;
+    // int offset = (int)ptr - base_heap_addr;
+    int offset = (int)ptr - KM_START;
     // printk("%x %d\n", (int)ptr, offset);
     for (int i = offset; i < (offset+size);i++) {
         int j = i / 8;
