@@ -24,9 +24,14 @@ struct PageTable{
     unsigned int entry[1024];
 };
 
+extern unsigned int page_start;
+extern unsigned int  page_table_count;
+extern unsigned int kernel_page_count;
+
 struct PageDir *create_dir();
 struct PageTable *create_table();
 void clearDir(struct PageDir *pd);
 void removeDir(struct PageDir *pd);
 void copy_page(struct PageDir *pd, struct PageDir **res);
+void init_process_page(struct PageDir **res);
 #endif

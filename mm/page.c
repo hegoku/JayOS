@@ -3,6 +3,10 @@
 #include <system/page.h>
 #include <string.h>
 
+unsigned int page_start = 1;
+unsigned int  page_table_count = 1;
+unsigned int kernel_page_count = 1;
+
 inline struct PageDir *create_dir()
 {
     return kzmalloc(sizeof(struct PageDir));
@@ -33,7 +37,7 @@ inline void removeDir(struct PageDir *pd)
 
 void copy_page(struct PageDir *pd, struct PageDir **res)
 {
-     for (int i = 0; i < 1024; i++) {
+     for (int i = 0; i < 768; i++) {
         if (pd->entry[i]!= NULL) {
             (*res)->entry[i] = create_table();
             for (int j = 0; i < 1024;j++) {
@@ -51,5 +55,27 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
         {
             (*res)->entry[i] = NULL;
         }
+    }
+}
+
+void init_process_page(struct PageDir **res)
+{
+    *res = create_dir();
+
+    // struct PageTable *pt = (struct PageTable *)kzmalloc(page_table_count * 1024 * 4);
+    unsigned int a = 0;
+    int k = 768;
+    // pt += 1024 * (page_table_count - kernel_page_count);
+    for (int i = page_table_count - kernel_page_count; i < page_table_count; i++)
+    {
+        struct PageTable *pt = create_table();
+        (*res)->entry[k] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USS);
+        for (int j = 0; j < 1024; j++)
+        {
+            pt->entry[j] = a | PG_P | PG_RWW | PG_USS;
+            a += 4096;
+        }
+        k++;
+        // pt += 1024;
     }
 }
