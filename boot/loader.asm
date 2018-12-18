@@ -184,13 +184,13 @@ SetupPaging:
     mov es, ax
 
     mov dword[Page_Dir_Base], Page_Tbl_base | PG_P | PG_USS | PG_RWW
-    ; mov dword[Page_Dir_Base+4], Page_Tbl_base+1000H | PG_P | PG_USU | PG_RWW ;第二个4MB
+    mov dword[Page_Dir_Base+4], Page_Tbl_base+1000H | PG_P | PG_USS | PG_RWW ;第二个4MB
     mov dword[Page_Dir_Base+3072], Page_Tbl_base | PG_P | PG_USS | PG_RWW
-    ; mov dword[Page_Dir_Base+3072+4], Page_Tbl_base+1000H | PG_P | PG_USU | PG_RWW
-    mov edi, Page_Tbl_base+4092
-    mov eax, 03ff007H  ;4Mb - 4096 + 7 (r/w user,p)
-    ; mov eax, 07ff007H  ;8Mb - 4096 + 7 (r/w user,p)
-    mov ecx, 1024
+    mov dword[Page_Dir_Base+3072+4], Page_Tbl_base+1000H | PG_P | PG_USS | PG_RWW
+    mov edi, Page_Tbl_base+4092+4096
+    ; mov eax, 03ff007H  ;4Mb - 4096 + 7 (r/w user,p)
+    mov eax, 07ff007H  ;8Mb - 4096 + 7 (r/w user,p)
+    mov ecx, 1024*2
     std
  .1:
     stosd
@@ -410,10 +410,12 @@ InitProtectedModel:
     or al, 00000010b
     out 92h, al
 
+    mov eax, 0x1000
+    mov cr3, eax
     mov eax, cr0
     or eax, 1
+    or eax, 0x80000000
     mov cr0, eax
-
 
     jmp dword GDT_SEL_CODE:(SELF_CS*10h+InitKernel)
 

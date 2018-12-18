@@ -46,7 +46,7 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.eflags = 0x3202;
 
     p->base_addr = 0;
-	init_process_page((struct PageDir*)&(p->page_dir));
+	// init_process_page((struct PageDir*)&(p->page_dir));
 
 	p->status = 0;
     p->is_free = 0;

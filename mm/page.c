@@ -3,9 +3,11 @@
 #include <system/page.h>
 #include <string.h>
 
-unsigned int page_start = 1;
+unsigned int page_start = PAGE_OFFSET+1024*1024 + 512 * 1024;
 unsigned int  page_table_count = 1;
 unsigned int kernel_page_count = 1;
+struct Page *mem_map = (void*)1;
+struct PageDir *swapper_pg_dir=(void*)(PAGE_OFFSET+0x1000);
 
 inline struct PageDir *create_dir()
 {
@@ -77,5 +79,15 @@ void init_process_page(struct PageDir **res)
         }
         k++;
         // pt += 1024;
+    }
+}
+
+unsigned int get_free_page()
+{
+    for (int i = 0; i < page_table_count * 1024;i++) {
+        if (mem_map[i].status==0) {
+            mem_map[i].status = 1;
+            return mem_map[i].pyhsics_addr;
+        }
     }
 }

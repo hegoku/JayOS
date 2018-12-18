@@ -33,6 +33,8 @@ struct Page{
 extern unsigned int page_start;
 extern unsigned int  page_table_count;
 extern unsigned int kernel_page_count;
+extern struct Page *mem_map;
+extern struct PageDir *swapper_pg_dir;
 
 struct PageDir *create_dir();
 struct PageTable *create_table();

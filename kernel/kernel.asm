@@ -115,12 +115,12 @@ csinit:
     ltr ax
 
     ; mov eax, page_dir_ptr
-    mov eax, 1000H
+    ; mov eax, 1000H
     ; mov eax, 180000H
-    mov cr3, eax
-    mov eax, cr0
-    or eax, 0x80000000
-    mov cr0, eax
+    ; mov cr3, eax
+    ; mov eax, cr0
+    ; or eax, 0x80000000
+    ; mov cr0, eax
 
     jmp kernel_main
     retf

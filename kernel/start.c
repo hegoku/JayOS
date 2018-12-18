@@ -54,7 +54,8 @@ void cstart()
     load_memory_size();
     init_gdt();
     init_idt();
-    // init_paging();
+    init_paging();
+    while(1){}
     // hd_open(0);
 }
 

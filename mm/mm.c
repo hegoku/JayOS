@@ -28,13 +28,15 @@ void load_memory_size()
     MCRNumber = *(unsigned short *)(0x7e00);
     for (int i = 0; i < MCRNumber; i++)
     {
-        if ( MemChkBuf[i].type==ARD_TYPE_FREE) {
+        if (MemChkBuf[i].type == ARD_TYPE_FREE)
+        {
             if (MemChkBuf[i].baseAddrLow+MemChkBuf[i].lengthLow>MemSize) {
                 MemSize = MemChkBuf[i].baseAddrLow + MemChkBuf[i].lengthLow;
                 max_heap_addr = MemChkBuf[i].baseAddrLow + MemChkBuf[i].lengthLow;
             }
         }
     }
+    // printk("%x %x %x %x %x\n", MemChkBuf[].baseAddrLow, MemChkBuf[i].baseAddrHigh, MemChkBuf[i].lengthLow, MemChkBuf[i].lengthHigh, MemChkBuf[i].type);
     base_heap_addr = max_heap_addr - 1024 * 1024; //1MB的内核空间
     memcpy(mmap, 0, 131072);
     // disp_int(mmap);
@@ -87,49 +89,98 @@ void load_memory_size()
 //     page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
 // }
 
-// void init_paging()
-// {
-//     page_table_count = (MemSize + 0x400000 - 1) / 0x400000;
-//     struct Page *page_ptr = (void *)(1024*1024 + 512 * 1024);
-//     int a = 0;
-//     for (int i = 0; i < 1024*page_table_count; i++)
-//     {
-//         memset(page_ptr, 0, sizeof(struct Page));
-//         page_ptr->pyhsics_addr = a;
-//         a += 4096;
-//         page_ptr+=sizeof(struct Page);
-//     }
-//     page_start = (unsigned int)page_ptr;
-//     unsigned int page_end = (page_start + page_table_count * 1024 * 4) - 1;
-//     kernel_heap_start = page_end + 1;
-//     kernel_heap_end = kernel_heap_start + 1024 * 1024-1;
-//     kernel_page_count = (kernel_heap_end+1 + 0x1000 - 1) / 0x1000;
-//     printk("MemSize: %x\n", MemSize);
-//     printk("page_table_count: %x\n", page_table_count);
-//     printk("pdir: %x\n", page_dir_ptr);
-//     printk("page_start: %x\n", page_start);
-//     printk("page_end: %x\n", page_end);
-//     printk("kernel_heap_start: %x\n", kernel_heap_start);
-//     printk("kernel_heap_end: %x\n", kernel_heap_end);
-//     printk("kernel_page_count: %x\n", kernel_page_count);
+void init_paging()
+{
+    for (int i = 0; i < MCRNumber; i++)
+    {
+        printk("%x %x %x %x %x\n", MemChkBuf[i].baseAddrLow, MemChkBuf[i].baseAddrHigh, MemChkBuf[i].lengthLow, MemChkBuf[i].lengthHigh, MemChkBuf[i].type);
+    }
     
-    
-//     struct PageTable *pt = (struct PageTable *)page_start;
-//     int a = 0;
-//     for (int j = 0; j < page_table_count;j++) {
-//         for (int i = 0; i < 1024; i++)
-//         {
-//             pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
-//             a += 4096;
-//         }
-//         pt+=1024;
-//     }
+    page_table_count = (MemSize + 0x400000 - 1) / 0x400000;
+    // page_start = (unsigned int)page_ptr;
+    unsigned int page_end = (page_start + page_table_count * 1024 * 4) - 1;
+    mem_map = (struct Page*)(page_end + 1);
+    kernel_heap_start = (int)mem_map+page_table_count*1024*sizeof(struct Page);
+    kernel_heap_end = kernel_heap_start + 1024 * 1024-1;
+    kernel_page_count = (kernel_heap_end+1 + 0x1000 - 1) / 0x1000;
+    printk("MemSize: %x\n", MemSize);
+    printk("page_table_count: %x\n", page_table_count);
+    printk("pdir: %x\n", mem_map);
+    printk("page_start: %x\n", page_start);
+    printk("page_end: %x\n", page_end);
+    printk("kernel_heap_start: %x\n", kernel_heap_start);
+    printk("kernel_heap_end: %x\n", kernel_heap_end);
+    printk("kernel_page_count: %x\n", kernel_page_count);
 
-//     page_dir_ptr->entry[0] = (void *)(page_start | PG_P | PG_RWW | PG_USS);
-//     page_dir_ptr->entry[1] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
-//     page_dir_ptr->entry[768] = (void*)(page_start| PG_P | PG_RWW | PG_USS);
-//     page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
-// }
+    int a = 0;
+    int j = 0;
+    int i = 0;
+
+    struct PageTable *pt = (struct PageTable *)page_start;
+    struct Page *page_ptr = mem_map;
+    struct PageDir *pg = swapper_pg_dir;
+    for (j = 0; j < page_table_count; j++)
+    {
+        if (j>=768) { //内核空间
+            pg->entry[j] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USS);
+        } else {
+            pg->entry[j] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USU);
+        }
+        for (i = 0; i < 1024; i++)
+        {
+            // memset(page_ptr, 0, sizeof(struct Page));
+            // page_ptr->pyhsics_addr = a;
+            // page_ptr[i].status = 1;
+            if (j>=768) {
+                pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
+            } else {
+                pt->entry[i] = a | PG_P | PG_RWW | PG_USU;
+            }
+            a += 4096;
+        }
+        pt++;
+        // printk("%x ", j);
+    }
+    printk("i:%d %d %x\n", i, a, pt);
+
+    // pt = (struct PageTable *)page_start;
+    
+    // a = 0;
+    // for (j = 0; j < (kernel_page_count+1024-1)/1024; j++)
+    // {
+    //     // pg->entry[j] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USS);
+    //     pg->entry[768+j] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USS);
+    //     for (i = 0; i < 1024; i++)
+    //     {
+    //         memset(page_ptr, 0, sizeof(struct Page));
+    //         page_ptr->pyhsics_addr = a;
+    //         page_ptr[i].status = 1;
+    //         pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
+    //         a += 4096;
+    //     }
+    //     pt++;
+    // }
+
+    // struct Page *page_ptr = mem_map;
+    // a = 0;
+    // for (i = 0; i < 1024 * page_table_count; i++)
+    // {
+    //     // memset(page_ptr, 0, sizeof(struct Page));
+    //     // page_ptr->pyhsics_addr = a;
+    //     // a += 4096;
+    //     page_ptr++;
+    // }
+    
+    
+    
+
+    
+
+    // page_dir_ptr->entry[0] = (void *)(page_start | PG_P | PG_RWW | PG_USS);
+    // page_dir_ptr->entry[1] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+    // page_dir_ptr->entry[768] = (void*)(page_start| PG_P | PG_RWW | PG_USS);
+    // page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+}
 
 void *kmalloc(int size)
 {
@@ -158,7 +209,8 @@ void *kmalloc(int size)
             break;
         }
     }
-    for (int i = start_p; i < (start_p+size);i++) {
+    for (int i = start_p; i < (start_p + size); i++)
+    {
         int j = i / 8;
         unsigned char s1 = mmap[j]>>(8 - (i-j*8) - 1);
         s1 = (s1 | 1)<<(8 - (i-j*8) - 1);
@@ -168,7 +220,7 @@ void *kmalloc(int size)
         printk("kmalloc full\n");
         return NULL;
     }
-    // printk("%x\n", KM_START+start_p);
+    // printk("%x\n", PAGE_OFFSET+kernel_heap_start+start_p);
     return (void *)(PAGE_OFFSET+kernel_heap_start+start_p);
     // return (void *)(base_heap_addr + start_p);
 }

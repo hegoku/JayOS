@@ -68,7 +68,7 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     struct fat12_super_block *fat12_sb=kzmalloc(sizeof(struct fat12_super_block));
     memset(fat12_sb, 0, sizeof(struct fat12_super_block));
     dev_table[MAJOR(dev_num)].request_fn(dev_num, 0, (char *)fat12_sb, 0, sizeof(struct fat12_super_block)); //读引导扇区
-    char *fs_type_tmp=kzmalloc(9);
+    char *fs_type_tmp = kzmalloc(9);
     memset(fs_type_tmp, 0, 9);
     getStringFromDate(fs_type_tmp, fat12_sb->BS_FileSysType, 8);
     if (strcmp(fs_type_tmp, "FAT12"))
