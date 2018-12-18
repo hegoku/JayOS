@@ -24,6 +24,12 @@ struct PageTable{
     unsigned int entry[1024];
 };
 
+struct Page{
+    unsigned char status;
+    unsigned int virtual_addr;
+    unsigned int pyhsics_addr;
+};
+
 extern unsigned int page_start;
 extern unsigned int  page_table_count;
 extern unsigned int kernel_page_count;

@@ -30,7 +30,7 @@ start:
     call ClearScreen
     ; call ReadBIOS
     call ReadMemorySize
-    ; call SetupPaging
+    call SetupPaging
     call FindKernel
     jmp $
 
@@ -183,9 +183,9 @@ SetupPaging:
     mov ds, ax
     mov es, ax
 
-    mov dword[Page_Dir_Base], Page_Tbl_base | PG_P | PG_USU | PG_RWW
+    mov dword[Page_Dir_Base], Page_Tbl_base | PG_P | PG_USS | PG_RWW
     ; mov dword[Page_Dir_Base+4], Page_Tbl_base+1000H | PG_P | PG_USU | PG_RWW ;第二个4MB
-    mov dword[Page_Dir_Base+3072], Page_Tbl_base | PG_P | PG_USU | PG_RWW
+    mov dword[Page_Dir_Base+3072], Page_Tbl_base | PG_P | PG_USS | PG_RWW
     ; mov dword[Page_Dir_Base+3072+4], Page_Tbl_base+1000H | PG_P | PG_USU | PG_RWW
     mov edi, Page_Tbl_base+4092
     mov eax, 03ff007H  ;4Mb - 4096 + 7 (r/w user,p)

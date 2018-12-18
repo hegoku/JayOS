@@ -41,50 +41,95 @@ void load_memory_size()
     // printk("mmap:%x\n", mmap);
 }
 
-void init_paging()
-{
-    page_table_count = (MemSize + 0x400000 - 1) / 0x400000;
-    struct PageDir *page_dir_ptr = (void *)(1024*1024 + 512 * 1024);
-    page_start = (unsigned int)page_dir_ptr + 1024 * 4;
-    unsigned int page_end = (page_start + page_table_count * 1024 * 4) - 1;
-    kernel_heap_start = page_end + 1;
-    kernel_heap_end = kernel_heap_start + 1024 * 1024-1;
-    kernel_page_count = (kernel_heap_end+1 + 0x1000 - 1) / 0x1000;
-    printk("MemSize: %x\n", MemSize);
-    printk("page_table_count: %x\n", page_table_count);
-    printk("pdir: %x\n", page_dir_ptr);
-    printk("page_start: %x\n", page_start);
-    printk("page_end: %x\n", page_end);
-    printk("kernel_heap_start: %x\n", kernel_heap_start);
-    printk("kernel_heap_end: %x\n", kernel_heap_end);
-    printk("kernel_page_count: %x\n", kernel_page_count);
-    // page_dir_ptr = kzmalloc(1024*4);
-    // disp_int(page_dir_ptr);
-    // page_dir_ptr[0].entry = (void *)((int)kzmalloc(1024 * 4) | PG_P | PG_RWW | PG_USU);
-    // page_dir_ptr[768].entry = (void *)((int)kzmalloc(1024 * 4) | PG_P | PG_RWW | PG_USU);
-    // struct PageDir *page_dir_ptr = (void *)(0x1000);
+// void init_paging()
+// {
+//     page_table_count = (MemSize + 0x400000 - 1) / 0x400000;
+//     struct PageDir *page_dir_ptr = (void *)(1024*1024 + 512 * 1024);
+//     page_start = (unsigned int)page_dir_ptr + 1024 * 4;
+//     unsigned int page_end = (page_start + page_table_count * 1024 * 4) - 1;
+//     kernel_heap_start = page_end + 1;
+//     kernel_heap_end = kernel_heap_start + 1024 * 1024-1;
+//     kernel_page_count = (kernel_heap_end+1 + 0x1000 - 1) / 0x1000;
+//     printk("MemSize: %x\n", MemSize);
+//     printk("page_table_count: %x\n", page_table_count);
+//     printk("pdir: %x\n", page_dir_ptr);
+//     printk("page_start: %x\n", page_start);
+//     printk("page_end: %x\n", page_end);
+//     printk("kernel_heap_start: %x\n", kernel_heap_start);
+//     printk("kernel_heap_end: %x\n", kernel_heap_end);
+//     printk("kernel_page_count: %x\n", kernel_page_count);
+    
+//     // page_dir_ptr = kzmalloc(1024*4);
+//     // disp_int(page_dir_ptr);
+//     // page_dir_ptr[0].entry = (void *)((int)kzmalloc(1024 * 4) | PG_P | PG_RWW | PG_USU);
+//     // page_dir_ptr[768].entry = (void *)((int)kzmalloc(1024 * 4) | PG_P | PG_RWW | PG_USU);
+//     // struct PageDir *page_dir_ptr = (void *)(0x1000);
 
-    // page_dir_ptr->entry[0] = (void*)(0x2000| PG_P | PG_RWW | PG_USU);
-    // page_dir_ptr->entry[1] = (void*)(0x3000| PG_P | PG_RWW | PG_USU);
-    // page_dir_ptr->entry[768] = (void*)(0x2000| PG_P | PG_RWW | PG_USU);
-    // page_dir_ptr->entry[769] = (void*)(0x3000| PG_P | PG_RWW | PG_USU);
-    // struct PageTable *pt = (struct PageTable *)0x2000;
-    struct PageTable *pt = (struct PageTable *)page_start;
-    int a = 0;
-    for (int j = 0; j < page_table_count;j++) {
-        for (int i = 0; i < 1024; i++)
-        {
-            pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
-            a += 4096;
-        }
-        pt+=1024;
-    }
+//     // page_dir_ptr->entry[0] = (void*)(0x2000| PG_P | PG_RWW | PG_USU);
+//     // page_dir_ptr->entry[1] = (void*)(0x3000| PG_P | PG_RWW | PG_USU);
+//     // page_dir_ptr->entry[768] = (void*)(0x2000| PG_P | PG_RWW | PG_USU);
+//     // page_dir_ptr->entry[769] = (void*)(0x3000| PG_P | PG_RWW | PG_USU);
+//     // struct PageTable *pt = (struct PageTable *)0x2000;
+//     struct PageTable *pt = (struct PageTable *)page_start;
+//     int a = 0;
+//     for (int j = 0; j < page_table_count;j++) {
+//         for (int i = 0; i < 1024; i++)
+//         {
+//             pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
+//             a += 4096;
+//         }
+//         pt+=1024;
+//     }
 
-    page_dir_ptr->entry[0] = (void *)(page_start | PG_P | PG_RWW | PG_USS);
-    page_dir_ptr->entry[1] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
-    page_dir_ptr->entry[768] = (void*)(page_start| PG_P | PG_RWW | PG_USS);
-    page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
-}
+//     page_dir_ptr->entry[0] = (void *)(page_start | PG_P | PG_RWW | PG_USS);
+//     page_dir_ptr->entry[1] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+//     page_dir_ptr->entry[768] = (void*)(page_start| PG_P | PG_RWW | PG_USS);
+//     page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+// }
+
+// void init_paging()
+// {
+//     page_table_count = (MemSize + 0x400000 - 1) / 0x400000;
+//     struct Page *page_ptr = (void *)(1024*1024 + 512 * 1024);
+//     int a = 0;
+//     for (int i = 0; i < 1024*page_table_count; i++)
+//     {
+//         memset(page_ptr, 0, sizeof(struct Page));
+//         page_ptr->pyhsics_addr = a;
+//         a += 4096;
+//         page_ptr+=sizeof(struct Page);
+//     }
+//     page_start = (unsigned int)page_ptr;
+//     unsigned int page_end = (page_start + page_table_count * 1024 * 4) - 1;
+//     kernel_heap_start = page_end + 1;
+//     kernel_heap_end = kernel_heap_start + 1024 * 1024-1;
+//     kernel_page_count = (kernel_heap_end+1 + 0x1000 - 1) / 0x1000;
+//     printk("MemSize: %x\n", MemSize);
+//     printk("page_table_count: %x\n", page_table_count);
+//     printk("pdir: %x\n", page_dir_ptr);
+//     printk("page_start: %x\n", page_start);
+//     printk("page_end: %x\n", page_end);
+//     printk("kernel_heap_start: %x\n", kernel_heap_start);
+//     printk("kernel_heap_end: %x\n", kernel_heap_end);
+//     printk("kernel_page_count: %x\n", kernel_page_count);
+    
+    
+//     struct PageTable *pt = (struct PageTable *)page_start;
+//     int a = 0;
+//     for (int j = 0; j < page_table_count;j++) {
+//         for (int i = 0; i < 1024; i++)
+//         {
+//             pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
+//             a += 4096;
+//         }
+//         pt+=1024;
+//     }
+
+//     page_dir_ptr->entry[0] = (void *)(page_start | PG_P | PG_RWW | PG_USS);
+//     page_dir_ptr->entry[1] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+//     page_dir_ptr->entry[768] = (void*)(page_start| PG_P | PG_RWW | PG_USS);
+//     page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+// }
 
 void *kmalloc(int size)
 {
