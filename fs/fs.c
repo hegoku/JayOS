@@ -71,11 +71,11 @@ int sys_open(const char __user *path, int flags, ...)
     }
 
     struct inode *p_inode = NULL;
-    char *filename=kzmalloc(256);
-    strncpy_from_user(filename, path);
+    // char *filename=kzmalloc(256);
+    // strncpy_from_user(filename, path);
 
-    if (get_inode_by_filename(filename, &p_inode)) {
-        printk("file: %s not found\n", filename);
+    if (get_inode_by_filename(path, &p_inode)) {
+        printk("file: %s not found\n", path);
         return -1;
     }
 
@@ -90,7 +90,7 @@ int sys_open(const char __user *path, int flags, ...)
     }
     p_inode->used_count++;
     
-    kfree(filename, 256);
+    // kfree(filename, 256);
 
     // if (p_inode->mode==FILE_MODE_CHR) {
     // }
@@ -193,7 +193,7 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte)
     struct file_descriptor *file;
     int res = -1;
 
-    printk("a: %d %x\b", nbyte, buf);
+    // printk("a: %d %x\b", nbyte, buf);
 
     if (fd >= PROC_FILES_MAX_COUNT || (file = current_process->file_table[fd]) == 0)
     {
@@ -209,13 +209,13 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte)
         return 0;
     }
 
-    char *kbuf = kzmalloc(nbyte);
-    copy_from_user(kbuf, buf, nbyte);
+    // char *kbuf = kzmalloc(nbyte);
+    // copy_from_user(kbuf, buf, nbyte);
 
     if (file->op->write) {
-        res=file->op->write(file, kbuf, nbyte);
+        res = file->op->write(file, (char *)buf, nbyte);
     }
-    kfree(kbuf, nbyte);
+    // kfree(kbuf, nbyte);
     return res;
 
     // if (file->inode->mode == FILE_MODE_CHR)
@@ -248,14 +248,14 @@ int sys_read(int fd,char __user *buf, unsigned int nbyte)
         return 0;
     }
 
-    char *kbuf = kzmalloc(nbyte);
-    copy_from_user(kbuf, buf, nbyte);
+    // char *kbuf = kzmalloc(nbyte);
+    // copy_from_user(kbuf, buf, nbyte);
     
     if (file->op->read) {
-        res=file->op->read(file, (char *)kbuf, nbyte);
+        res=file->op->read(file, (char *)buf, nbyte);
     }
-    printk("k:%s\n", kbuf);
-    copy_to_user(buf, kbuf, nbyte);
+    // printk("k:%s\n", kbuf);
+    // copy_to_user(buf, kbuf, nbyte);
 
     return res;
 }
@@ -317,41 +317,41 @@ void register_filesystem(struct file_system_type *fs_type)
     }
 }
 
-int do_mount(const char __user *dev_name, const char __user *dir, char __user *type)
-{
-    struct dir_entry *dev_dir;
-    struct dir_entry *dir_dir;
-    struct dir_entry *new_dir;
-    struct file_system_type * fs_type;
+// int do_mount(const char __user *dev_name, const char __user *dir, char __user *type)
+// {
+//     struct dir_entry *dev_dir;
+//     struct dir_entry *dir_dir;
+//     struct dir_entry *new_dir;
+//     struct file_system_type * fs_type;
 
-    if (lookup_fs(type, &fs_type)) {
-        printk("fs %s not exist\n", type);
-        return -1;
-    }
+//     if (lookup_fs(type, &fs_type)) {
+//         printk("fs %s not exist\n", type);
+//         return -1;
+//     }
 
-    // if (namei(dev_name, &dev_dir)) {
-    //     printk("device %s not found\n", dev_name);
-    //     return -1;
-    // }
+//     // if (namei(dev_name, &dev_dir)) {
+//     //     printk("device %s not found\n", dev_name);
+//     //     return -1;
+//     // }
     
-    // if (namei(dir, &dir_dir)) {
-    //     printk("dir %s not found\n", dir);
-    //     return -1;
-    // }
-    // if (dir_dir->is_mounted) { //只能被挂载一次
-    //     printk("dir %s has been mounted\n", dir);
-    //     return -1;
-    // }
+//     // if (namei(dir, &dir_dir)) {
+//     //     printk("dir %s not found\n", dir);
+//     //     return -1;
+//     // }
+//     // if (dir_dir->is_mounted) { //只能被挂载一次
+//     //     printk("dir %s has been mounted\n", dir);
+//     //     return -1;
+//     // }
 
-    // new_dir = fs_type->mount(fs_type, dev_dir->dev_num);
+//     // new_dir = fs_type->mount(fs_type, dev_dir->dev_num);
 
-    // while (dir_dir->is_mounted) {
-    //     dir_dir = dir_dir->mounted_dir;
-    // }
-    // dir_dir->is_mounted = 1;
-    // dir_dir->mounted_dir = new_dir;
-    return 0;
-}
+//     // while (dir_dir->is_mounted) {
+//     //     dir_dir = dir_dir->mounted_dir;
+//     // }
+//     // dir_dir->is_mounted = 1;
+//     // dir_dir->mounted_dir = new_dir;
+//     return 0;
+// }
 
 void mount_root()
 {
@@ -451,10 +451,10 @@ int sys_mkdir(const char __user *dirname, int mode)
         last_name: last_name
     };
 
-    char *filename=kzmalloc(256);
-    strncpy_from_user(filename, dirname);
+    // char *filename=kzmalloc(256);
+    // strncpy_from_user(filename, dirname);
 
-    if (get_parent_dir_entry(filename, current_process->root, &ns)) {
+    if (get_parent_dir_entry(dirname, current_process->root, &ns)) {
         printk("fdsa\n");
         return -1;
     }
@@ -492,40 +492,40 @@ int sys_mount(char __user *dev_name, char __user *dir_name, char *type)
     struct dir_entry *new_dir;
     struct file_system_type * fs_type;
 
-    char *kdev_name=kzmalloc(256);
-    strncpy_from_user(kdev_name, dev_name);
+    // char *kdev_name=kzmalloc(256);
+    // strncpy_from_user(kdev_name, dev_name);
 
-    char *kdir_name=kzmalloc(256);
-    strncpy_from_user(kdir_name, dir_name);
+    // char *kdir_name=kzmalloc(256);
+    // strncpy_from_user(kdir_name, dir_name);
 
-    char *ktype=kzmalloc(100);
-    strncpy_from_user(ktype, type);
+    // char *ktype=kzmalloc(100);
+    // strncpy_from_user(ktype, type);
 
-    if (lookup_fs(ktype, &fs_type)) {
-        printk("fs %s not exist\n", ktype);
+    if (lookup_fs(type, &fs_type)) {
+        printk("fs %s not exist\n", type);
         return -1;
     }
 
-    if (namei(kdev_name, &dev_dir)) {
-        printk("device %s not found\n", kdev_name);
+    if (namei(dev_name, &dev_dir)) {
+        printk("device %s not found\n", dev_name);
         return -1;
     }
     if (dev_dir->inode->mode!=FILE_MODE_BLK) {
-        printk("%s is not a blk dev\n", kdev_name);
+        printk("%s is not a blk dev\n", dev_name);
         return -1;
     }
 
-    if (namei(kdir_name, &dir_dir))
+    if (namei(dir_name, &dir_dir))
     {
-        printk("dir %s not found\n", kdir_name);
+        printk("dir %s not found\n", dir_name);
         return -1;
     }
     if (dir_dir->inode->mode!=FILE_MODE_DIR) {
-        printk("%s is not a dir\n", kdir_name);
+        printk("%s is not a dir\n", dir_name);
         return -1;
     }
     if (dir_dir->is_mounted) { //只能被挂载一次
-        printk("dir %s has been mounted\n", kdir_name);
+        printk("dir %s has been mounted\n", dir_name);
         return -1;
     }
 
@@ -685,11 +685,11 @@ static int lookup_fs(const char *name, struct file_system_type **fs_type)
 int sys_stat(char __user *filename, struct stat __user *statbuf)
 {
     struct dir_entry *dir;
-    char *kfilename=kzmalloc(256);
-    strncpy_from_user(kfilename, filename);
+    // char *kfilename=kzmalloc(256);
+    // strncpy_from_user(kfilename, filename);
 
-    if (namei(kfilename, &dir)) {
-        printk("%s not exist\n", kfilename);
+    if (namei(filename, &dir)) {
+        printk("%s not exist\n", filename);
         return -1;
     }
 
@@ -698,8 +698,8 @@ int sys_stat(char __user *filename, struct stat __user *statbuf)
     kstat->inode_num = dir->inode->num;
     kstat->size = dir->inode->size;
 
-    copy_to_user(statbuf, kstat, sizeof(struct stat));
-    kfree(kstat, sizeof(struct stat));
+    // copy_to_user(statbuf, kstat, sizeof(struct stat));
+    // kfree(kstat, sizeof(struct stat));
     // printk("name: %s :\n", dir->name);
     // struct list *i;
     // list_for_each(i, &dir->children) {

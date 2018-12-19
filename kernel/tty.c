@@ -132,7 +132,7 @@ int do_write(struct file_descriptor *fd, char *buf, int nbyte)
 
 unsigned int tty_write(int mi_dev, char* buf, int len)
 {
-    TTY *tty=&tty_table[mi_dev];
+    TTY *tty = &tty_table[mi_dev];
     char *p = buf;
     int i = len;
     // return len;

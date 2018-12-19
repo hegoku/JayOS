@@ -34,8 +34,10 @@ extern unsigned int kernel_page_count;
 extern struct Page *mem_map;
 extern struct PageDir *swapper_pg_dir;
 
-#define __pa(v_addr) ((int)v_addr-PAGE_OFFSET)
-#define get_entry_address(entry) ((struct PageTable*)((int)(entry) & 0xfffff000))
+#define __pa(v_addr) ((int)(v_addr)-PAGE_OFFSET)
+#define __va(p_addr) ((int)(p_addr)+PAGE_OFFSET)
+#define get_pt_entry_p_addr(entry) ((struct PageTable*)((int)(entry) & 0xfffff000))
+#define get_pt_entry_v_addr(entry) ((struct PageTable*)(__va(get_pt_entry_p_addr(entry))))
 
 #define invalidate() \
 __asm__ __volatile__("movl %%cr3,%%eax\n\tmovl %%eax,%%cr3": : :"ax")

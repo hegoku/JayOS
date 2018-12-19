@@ -36,6 +36,7 @@ PROCESS *current_process=(void*)1;
 
 static void init_idt();
 static void init_gdt();
+static void init_fork();
 void kernel_main();
 
 void clock_handler(int irq);
@@ -239,7 +240,7 @@ void kernel_main()
     // a->mode = FILE_MODE_BLK;
     // a->f_op = dev_table[3].f_op;
     // printk("%x\n", init);while(1){}
-    printk("%x\n", __pa(process_table[0].page_dir->entry));
+    // printk("%x\n", __pa(process_table[0].page_dir->entry));
     // __asm__ __volatile__("push %%eax\n\tmovl %0,%%eax\n\tmovl %%eax,%%cr3\n\tpop %%eax"
     //                      :
     //                      : "r"((int)process_table[0].page_dir - PAGE_OFFSET)
@@ -247,8 +248,8 @@ void kernel_main()
     // while (1)
     // {
     // }
+    init_fork();
     load_cr3(process_table[0].page_dir->entry);
-    while(1){}
     restart();
 }
 
@@ -261,7 +262,6 @@ void init()
     (void) dup(0);
     (void) dup(0);
     printf("parent is running, %d\n", getpid());
-    while(1){}
     int i, pid;
     pid = fork();
     if (pid!=0)
@@ -277,14 +277,16 @@ void init()
             // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
         }
     } else {
+        while(1){}
         pid = getpid();
+        printf("child is running, pid: %d\n", pid);
+        while(1){}
         execve("/root/HELLO1" ,NULL, NULL);
         // while(1){}
         // while(1){
         //     printf("child is running, pid: 1\n", pid);
         //     delay(1);
         // }
-        printf("child is running, pid: %d\n", pid);
         char a[513];
         int ff = open("/root/d.txt", O_RDWR);
         memset(a, 0, 513);
@@ -509,6 +511,7 @@ void clock_handler(int irq)
             current_process = process_table;
         }
     } while (current_process->is_free != 1);
+    load_cr3(current_process->page_dir->entry);
     // do {
     //     current_process++;
     //     if (current_process >= process_table + PROC_NUMBER)
@@ -531,5 +534,34 @@ void task_tty()
     {
         keyboard_read(current_tty);
         tty_output(current_tty);
+    }
+}
+
+void init_fork()
+{
+    current_process->page_dir = create_dir();
+    int i = 0;
+    int j = 0;
+    for (i = 0; i < 768; i++)
+    {
+        current_process->page_dir->entry[i] = create_table(PG_P | PG_RWW | PG_USU);
+        for (int j = 0; j < 1024; j++)
+        {
+            if (get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j]!= 0) {
+                get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
+            }
+            else
+            {
+                get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = 0;
+            }
+        }
+        current_process->page_dir->entry[i]= swapper_pg_dir->entry[i];
+    }
+    for (int i = 768; i < 1024; i++)
+    {
+        current_process->page_dir->entry[i]= swapper_pg_dir->entry[i];
+        // for (int j = 0; j < 1024; j++) {
+        //     get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j];
+        // }
     }
 }

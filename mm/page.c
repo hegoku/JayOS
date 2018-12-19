@@ -18,9 +18,10 @@ inline struct PageDir *create_dir()
 
 inline unsigned int create_table(unsigned int attr)
 {
-    int a=get_free_page();
-    printk("%x %x %x\n", a, a+PAGE_OFFSET, (a+PAGE_OFFSET)|attr);
-    return ((int)kzmalloc(sizeof(struct PageTable)) - PAGE_OFFSET) | attr;
+    // int a=get_free_page();
+    // printk("%x %x %x\n", a, a+PAGE_OFFSET, (a+PAGE_OFFSET)|attr);
+    // return ((int)kzmalloc(sizeof(struct PageTable)) - PAGE_OFFSET) | attr;
+    return ((get_free_page())|attr);
 }
 
 //清除并释放pd下所有pt
@@ -28,7 +29,8 @@ inline void clearDir(struct PageDir *pd)
 {
     for (int i = 0; i < 1024; i++) {
         if (pd->entry[i]!= 0) {
-            kfree(get_entry_address(pd->entry[i]), sizeof(struct PageTable));
+            free_page((int)get_pt_entry_p_addr(pd->entry[i]));
+            // kfree(get_entry_address(pd->entry[i]), sizeof(struct PageTable));
             pd->entry[i] = 0;
         }
     }
@@ -38,19 +40,22 @@ inline void clearDir(struct PageDir *pd)
 inline void removeDir(struct PageDir *pd)
 {
     clearDir(pd);
-    kfree(pd, sizeof(struct PageDir));
+    free_page(__pa(pd));
 }
 
 void copy_page(struct PageDir *pd, struct PageDir **res)
 {
-     for (int i = 0; i < 1024; i++) {
+    int i = 0;
+    int j = 0;
+    for (i = 0; i < 768; i++)
+    {
         if (pd->entry[i]!= 0) {
             (*res)->entry[i] = create_table(PG_P | PG_RWW | PG_USU);
-            printk("%x %d ", (*res)->entry[i], i);while(1){}
-            for (int j = 0; j < 1024; j++)
+            // printk("%x %d ", (*res)->entry[i], i);while(1){}
+            for (j = 0; j < 1024; j++)
             {
-                if (get_entry_address(pd->entry[i])->entry[j]!= 0) {
-                    get_entry_address((*res)->entry[i])->entry[j] = get_entry_address(pd->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
+                if (get_pt_entry_v_addr(pd->entry[i])->entry[j]!= 0) {
+                    get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
                     //((struct PageTable*)((int)pd->entry[i] & 0xfffff000))
                     // printk(":%x:", get_entry_address(pd->entry[i])->entry[j]);
                     // (*res)->entry[i]->entry[j] = (unsigned int)kzmalloc(1024*4);
@@ -58,7 +63,7 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
                 }
                 else
                 {
-                    get_entry_address((*res)->entry[i])->entry[j] = 0;
+                    get_pt_entry_v_addr((*res)->entry[i])->entry[j] = 0;
                 }
             }
         }
@@ -66,6 +71,13 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
         {
             (*res)->entry[i] = 0;
         }
+    }
+    for (i = 768; i < 1024; i++)
+    {
+        (*res)->entry[i]= swapper_pg_dir->entry[i];
+        // for (j = 0; j < 1024; j++) {
+        //     get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j];
+        // }
     }
 }
 
@@ -84,7 +96,7 @@ void init_process_page(struct PageDir **res)
         // (*res)->entry[i]=kzmalloc(sizeof(struct PageTable));
         for (int j = 0; j < 1024; j++) {
             // (*res)->entry[i]->entry[j] = swapper_pg_dir->entry[i]->entry[j];
-            get_entry_address((*res)->entry[i])->entry[j] = get_entry_address(swapper_pg_dir->entry[i])->entry[j];
+            get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j];
         }
         // if (i>967) {
 

@@ -118,7 +118,8 @@ void init_paging()
 
     struct PageTable *pt = (struct PageTable *)page_start;
     struct PageDir *pg = swapper_pg_dir;
-    for (j = 0; j < (kernel_page_count+1024*4-1)/(1024*4); j++)
+    // for (j = 0; j < (kernel_page_count+1024*4-1)/(1024*4); j++)
+    for (j = 0; j < page_table_count; j++)
     {
         for (i = 0; i < 1024; i++)
         {
@@ -128,12 +129,12 @@ void init_paging()
             pt->entry[i] = a | PG_P | PG_RWW | PG_USU;
             a += 4096;
         }
-        // pg->entry[j] = (void *)(((unsigned int)pt-PAGE_OFFSET) | PG_P | PG_RWW | PG_USU);
+        pg->entry[j] = ((unsigned int)pt-PAGE_OFFSET) | PG_P | PG_RWW | PG_USU;
         pg->entry[768+j] = ((unsigned int)pt-PAGE_OFFSET)  | PG_P | PG_RWW | PG_USU;
         pt++;
         // printk("%x ", j);
     }
-    printk("i:%d %d %x\n", i, a, pt);
+    // printk("i:%d %d %x\n", i, a, pt);
 
     // pt = (struct PageTable *)page_start;
     
@@ -155,16 +156,18 @@ void init_paging()
 
     struct Page *page_ptr = mem_map;
     a = 0;
-    for (i = 0; i < 1024 * page_table_count; i++)
+    for (i = 0; i < 1024*page_table_count; i++)
     {
         // memset(page_ptr, 0, sizeof(struct Page));
-        page_ptr->pyhsics_addr = a;
         if (i<kernel_page_count) {
-            page_ptr->pyhsics_addr = page_ptr->pyhsics_addr | 1;
+            page_ptr->pyhsics_addr = a | 1;
+        } else {
+            page_ptr->pyhsics_addr = a;
         }
         a += 4096;
         page_ptr++;
     }
+    printk("Paging completed.\n");
 }
 
 void *kmalloc(int size)

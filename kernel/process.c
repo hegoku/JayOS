@@ -46,9 +46,10 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.eflags = 0x3202;
 
     p->base_addr = 0;
-	init_process_page(&(p->page_dir));
+    p->page_dir = NULL;
+    // init_process_page(&(p->page_dir));
 
-	p->status = 0;
+    p->status = 0;
     p->is_free = 0;
 }
 
@@ -72,13 +73,21 @@ pid_t sys_fork()
 	struct PageDir *my_cr3 = process_table[pid].page_dir;
 	process_table[pid] = process_table[current_process->pid];
 	process_table[pid].ldt_sel = my_idt_sel;
-	process_table[pid].page_dir = my_cr3;
+	// process_table[pid].page_dir = my_cr3;
 	process_table[pid].pid = pid;
 	sprintf(process_table[pid].name, "%s_%d", process_table[current_process->pid].name, pid);
     process_table[pid].parent_pid = current_process->pid;
 	process_table[pid].regs.eax = 0;
+    if (my_cr3==NULL) {
+        process_table[pid].page_dir = create_dir();
+        printk("c:%x %x\n", process_table[pid].page_dir, process_table[pid].page_dir->entry);
+    }
+    else
+    {
+        process_table[pid].page_dir = my_cr3;
+    }
 
-	/* duplicate the process: T, D & S */
+    /* duplicate the process: T, D & S */
 	// DESCRIPTOR *ppd;
 
 	// /* Text segment */
@@ -261,9 +270,10 @@ inline int copy_from_user(void *to, const void __user *from, unsigned long n)
             break;
         }
     }
-    unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
+    // unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
     // printk("%x %x %x\n",seg_base, from, seg_base+from);
-    memcpy(to, (void*)(seg_base + (unsigned int)from), n);
+    // memcpy(to, (void*)(seg_base + (unsigned int)from), n);
+    memcpy(to, from, n);
     return 0;
 }
 
@@ -287,15 +297,17 @@ inline int copy_to_user(void __user *to, const void *from, unsigned long n)
             break;
         }
     }
-    unsigned int seg_base=current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
-    memcpy((void*)(seg_base + (unsigned int)to), from, n);
+    // unsigned int seg_base=current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
+    // memcpy((void*)(seg_base + (unsigned int)to), from, n);
+    memcpy(to, from, n);
     return 0;
 }
 
 inline int strncpy_from_user(void *to, const void __user *from)
 {
-    unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
-    char *a = (char *)(seg_base + (unsigned int)from);
+    // unsigned int seg_base = current_process->ldts[INDEX_LDT_DS].base_high << 24 | current_process->ldts[INDEX_LDT_DS].base_mid << 16 | current_process->ldts[INDEX_LDT_DS].base_low;
+    // char *a = (char *)(seg_base + (unsigned int)from);
+    char *a = (void*)from;
     char *p = to;
     while(*a!='\0') {
         *p = *a;
