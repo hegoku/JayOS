@@ -220,7 +220,8 @@ void scroll_screen(CONSOLE* p_con, int direction)
 			p_con->current_start_addr -= SCREEN_WIDTH;
 		}
 	}else if (direction == SCR_DN) {
-		if (p_con->current_start_addr + SCREEN_SIZE < p_con->original_addr + p_con->v_mem_limit) {
+        if (p_con->current_start_addr + SCREEN_SIZE < p_con->original_addr + p_con->v_mem_limit)
+        {
             p_con->current_start_addr += SCREEN_WIDTH;
         }
 	}

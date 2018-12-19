@@ -17,7 +17,7 @@
 #define PG_USU		4	// U/S 属性位值, 用户级
 
 struct PageDir{
-    struct PageTable *entry[1024];
+    unsigned int entry[1024];
 };
 
 struct PageTable{
@@ -25,8 +25,6 @@ struct PageTable{
 };
 
 struct Page{
-    unsigned char status;
-    unsigned int virtual_addr;
     unsigned int pyhsics_addr;
 };
 
@@ -36,10 +34,21 @@ extern unsigned int kernel_page_count;
 extern struct Page *mem_map;
 extern struct PageDir *swapper_pg_dir;
 
+#define __pa(v_addr) ((int)v_addr-PAGE_OFFSET)
+#define get_entry_address(entry) ((struct PageTable*)((int)(entry) & 0xfffff000))
+
+#define invalidate() \
+__asm__ __volatile__("movl %%cr3,%%eax\n\tmovl %%eax,%%cr3": : :"ax")
+
+#define load_cr3(pgdir) \
+    asm volatile("movl %0,%%cr3": :"r" (__pa(pgdir)))
+
 struct PageDir *create_dir();
-struct PageTable *create_table();
+unsigned int create_table(unsigned int attr);
 void clearDir(struct PageDir *pd);
 void removeDir(struct PageDir *pd);
 void copy_page(struct PageDir *pd, struct PageDir **res);
 void init_process_page(struct PageDir **res);
+unsigned int get_free_page();
+void free_page(unsigned int pyhsics_addr);
 #endif

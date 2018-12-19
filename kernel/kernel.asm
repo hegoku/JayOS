@@ -421,8 +421,6 @@ save:
 restart:
     mov	esp, [current_process]
 	lldt [esp + P_LDT_SEL]
-    mov eax, dword[esp+P_CR3]
-    mov cr3, eax
 	lea	eax, [esp + P_STACKTOP]
 	mov	dword [tss + TSS3_S_SP0], eax
 ret_to_proc:

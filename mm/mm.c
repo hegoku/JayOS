@@ -95,14 +95,14 @@ void init_paging()
     {
         printk("%x %x %x %x %x\n", MemChkBuf[i].baseAddrLow, MemChkBuf[i].baseAddrHigh, MemChkBuf[i].lengthLow, MemChkBuf[i].lengthHigh, MemChkBuf[i].type);
     }
-    
+
     page_table_count = (MemSize + 0x400000 - 1) / 0x400000;
     // page_start = (unsigned int)page_ptr;
     unsigned int page_end = (page_start + page_table_count * 1024 * 4) - 1;
     mem_map = (struct Page*)(page_end + 1);
     kernel_heap_start = (int)mem_map+page_table_count*1024*sizeof(struct Page);
     kernel_heap_end = kernel_heap_start + 1024 * 1024-1;
-    kernel_page_count = (kernel_heap_end+1 + 0x1000 - 1) / 0x1000;
+    kernel_page_count = (kernel_heap_end-PAGE_OFFSET+1 + 0x1000 - 1) / 0x1000;
     printk("MemSize: %x\n", MemSize);
     printk("page_table_count: %x\n", page_table_count);
     printk("pdir: %x\n", mem_map);
@@ -112,32 +112,24 @@ void init_paging()
     printk("kernel_heap_end: %x\n", kernel_heap_end);
     printk("kernel_page_count: %x\n", kernel_page_count);
 
-    int a = 0;
+    unsigned int a = 0;
     int j = 0;
     int i = 0;
 
     struct PageTable *pt = (struct PageTable *)page_start;
-    struct Page *page_ptr = mem_map;
     struct PageDir *pg = swapper_pg_dir;
-    for (j = 0; j < page_table_count; j++)
+    for (j = 0; j < (kernel_page_count+1024*4-1)/(1024*4); j++)
     {
-        if (j>=768) { //内核空间
-            pg->entry[j] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USS);
-        } else {
-            pg->entry[j] = (void *)((unsigned int)pt | PG_P | PG_RWW | PG_USU);
-        }
         for (i = 0; i < 1024; i++)
         {
             // memset(page_ptr, 0, sizeof(struct Page));
             // page_ptr->pyhsics_addr = a;
             // page_ptr[i].status = 1;
-            if (j>=768) {
-                pt->entry[i] = a | PG_P | PG_RWW | PG_USS;
-            } else {
-                pt->entry[i] = a | PG_P | PG_RWW | PG_USU;
-            }
+            pt->entry[i] = a | PG_P | PG_RWW | PG_USU;
             a += 4096;
         }
+        // pg->entry[j] = (void *)(((unsigned int)pt-PAGE_OFFSET) | PG_P | PG_RWW | PG_USU);
+        pg->entry[768+j] = ((unsigned int)pt-PAGE_OFFSET)  | PG_P | PG_RWW | PG_USU;
         pt++;
         // printk("%x ", j);
     }
@@ -161,25 +153,18 @@ void init_paging()
     //     pt++;
     // }
 
-    // struct Page *page_ptr = mem_map;
-    // a = 0;
-    // for (i = 0; i < 1024 * page_table_count; i++)
-    // {
-    //     // memset(page_ptr, 0, sizeof(struct Page));
-    //     // page_ptr->pyhsics_addr = a;
-    //     // a += 4096;
-    //     page_ptr++;
-    // }
-    
-    
-    
-
-    
-
-    // page_dir_ptr->entry[0] = (void *)(page_start | PG_P | PG_RWW | PG_USS);
-    // page_dir_ptr->entry[1] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
-    // page_dir_ptr->entry[768] = (void*)(page_start| PG_P | PG_RWW | PG_USS);
-    // page_dir_ptr->entry[769] = (void*)(page_start+0x1000| PG_P | PG_RWW | PG_USS);
+    struct Page *page_ptr = mem_map;
+    a = 0;
+    for (i = 0; i < 1024 * page_table_count; i++)
+    {
+        // memset(page_ptr, 0, sizeof(struct Page));
+        page_ptr->pyhsics_addr = a;
+        if (i<kernel_page_count) {
+            page_ptr->pyhsics_addr = page_ptr->pyhsics_addr | 1;
+        }
+        a += 4096;
+        page_ptr++;
+    }
 }
 
 void *kmalloc(int size)
@@ -220,15 +205,15 @@ void *kmalloc(int size)
         printk("kmalloc full\n");
         return NULL;
     }
-    // printk("%x\n", PAGE_OFFSET+kernel_heap_start+start_p);
-    return (void *)(PAGE_OFFSET+kernel_heap_start+start_p);
+    // printk("%x ", kernel_heap_start+start_p);
+    return (void *)(kernel_heap_start+start_p);
     // return (void *)(base_heap_addr + start_p);
 }
 
 void kfree(void *ptr, int size)
 {
     // int offset = (int)ptr - base_heap_addr;
-    int offset = (int)ptr - kernel_heap_start-PAGE_OFFSET;
+    int offset = (int)ptr - kernel_heap_start;
     // printk("%x %d\n", (int)ptr, offset);
     for (int i = offset; i < (offset+size);i++) {
         int j = i / 8;

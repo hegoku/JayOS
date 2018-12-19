@@ -55,7 +55,6 @@ void cstart()
     init_gdt();
     init_idt();
     init_paging();
-    while(1){}
     // hd_open(0);
 }
 
@@ -203,7 +202,7 @@ void kernel_main()
     //     process_table[i].root = tmp;
     // }
 
-    printk("MemSize:%d\n", MemSize);
+    printk("MemSize:%x\n", MemSize);
     char *a = kmalloc(1);
     *a = 'B';
     printk("%x %c\n", a, *a);
@@ -240,6 +239,15 @@ void kernel_main()
     // a->mode = FILE_MODE_BLK;
     // a->f_op = dev_table[3].f_op;
     // printk("%x\n", init);while(1){}
+    printk("%x\n", __pa(process_table[0].page_dir->entry));
+    // __asm__ __volatile__("push %%eax\n\tmovl %0,%%eax\n\tmovl %%eax,%%cr3\n\tpop %%eax"
+    //                      :
+    //                      : "r"((int)process_table[0].page_dir - PAGE_OFFSET)
+    //                      : "eax");
+    // while (1)
+    // {
+    // }
+    load_cr3(process_table[0].page_dir->entry);
     while(1){}
     restart();
 }
@@ -253,6 +261,7 @@ void init()
     (void) dup(0);
     (void) dup(0);
     printf("parent is running, %d\n", getpid());
+    while(1){}
     int i, pid;
     pid = fork();
     if (pid!=0)
