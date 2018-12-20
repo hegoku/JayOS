@@ -39,6 +39,7 @@ extern irq_table
 extern sys_call_table
 extern current_process
 extern is_in_ring0
+extern do_wp_page
 
 global gdt
 global gdt_ptr
@@ -179,8 +180,34 @@ general_protection:
 	push	13		; vector_no	= D
 	jmp	exception
 page_fault:
-	push	14		; vector_no	= E
+    xchg [esp],eax	;// 取出错码到eax。
+	push ecx
+	push edx
+	push ds
+	push es
+	push fs
+	mov edx,10h		;// 置内核数据段选择符。
+	mov ds,dx
+	mov es,dx
+	mov fs,dx
+	mov edx,cr2			;// 取引起页面异常的线性地址
+	push edx			;// 将该线性地址和出错码压入堆栈，作为调用函数的参数。
+	push eax
+	test eax,1			;// 测试标志P，如果不是缺页引起的异常则跳转。
+	jne .l1
+    push	14		; vector_no	= 10h
 	jmp	exception
+	; call _do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
+	jmp .l2			
+.l1:	call do_wp_page	;// 调用写保护处理函数（mm/memory.c,247 行）。
+.l2:	add esp,8		;// 丢弃压入栈的两个参数。
+	pop fs
+	pop es
+	pop ds
+	pop edx
+	pop ecx
+	pop eax
+	iretd
 copr_error:
 	push	0xFFFFFFFF	; no err code
 	push	16		; vector_no	= 10h

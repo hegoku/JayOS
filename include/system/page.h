@@ -16,6 +16,9 @@
 #define PG_USS		0	// U/S 属性位值, 系统级
 #define PG_USU		4	// U/S 属性位值, 用户级
 
+#define MP_USE 1 //被使用
+#define MP_OCW 2
+
 struct PageDir{
     unsigned int entry[1024];
 };
@@ -26,6 +29,7 @@ struct PageTable{
 
 struct Page{
     unsigned int pyhsics_addr;
+    unsigned int count;
 };
 
 extern unsigned int page_start;
@@ -33,6 +37,9 @@ extern unsigned int  page_table_count;
 extern unsigned int kernel_page_count;
 extern struct Page *mem_map;
 extern struct PageDir *swapper_pg_dir;
+
+#define PG_P_ADDR unsigned int //物理页的物理地址
+#define PG_KV_ADDR unsigned int //物理页在内核空间的虚拟地址
 
 #define __pa(v_addr) ((int)(v_addr)-PAGE_OFFSET)
 #define __va(p_addr) ((int)(p_addr)+PAGE_OFFSET)
@@ -53,4 +60,6 @@ void copy_page(struct PageDir *pd, struct PageDir **res);
 void init_process_page(struct PageDir **res);
 unsigned int get_free_page();
 void free_page(unsigned int pyhsics_addr);
+
+void do_wp_page(unsigned int error_code,unsigned int address);
 #endif

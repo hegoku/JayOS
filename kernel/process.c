@@ -154,7 +154,7 @@ pid_t sys_fork()
         }
     }
 
-	return pid;
+    return pid;
 }
 
 void sys_exit(int status)

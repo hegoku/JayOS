@@ -3,6 +3,7 @@
 #include <system/page.h>
 #include <string.h>
 #include <../kernel/global.h>
+#include <../kernel/kernel.h>
 
 unsigned int page_start = PAGE_OFFSET+1024*1024 + 512 * 1024;
 unsigned int  page_table_count = 1;
@@ -55,7 +56,13 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
             for (j = 0; j < 1024; j++)
             {
                 if (get_pt_entry_v_addr(pd->entry[i])->entry[j]!= 0) {
-                    get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
+                    // int new_page = get_free_page();
+                    // get_pt_entry_v_addr((*res)->entry[i])->entry[j] = new_page | PG_P | PG_RWW | PG_USU;
+                    // memcpy(__va(new_page), __va(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000), 1024 * 4);
+                    get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j] & ~PG_RWW;
+                    get_pt_entry_v_addr(pd->entry[i])->entry[j] &= ~PG_RWW;
+                    mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].count++;
+                    mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].pyhsics_addr |= MP_OCW;
                     //((struct PageTable*)((int)pd->entry[i] & 0xfffff000))
                     // printk(":%x:", get_entry_address(pd->entry[i])->entry[j]);
                     // (*res)->entry[i]->entry[j] = (unsigned int)kzmalloc(1024*4);
@@ -71,6 +78,7 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
         {
             (*res)->entry[i] = 0;
         }
+        invalidate();
     }
     for (i = 768; i < 1024; i++)
     {
@@ -117,12 +125,15 @@ void init_process_page(struct PageDir **res)
     //     }
 }
 
-unsigned int get_free_page()
+//返回一个未使用的页的物理地址, 即物理页地址
+PG_P_ADDR get_free_page()
 {
     for (int i = 0; i < page_table_count * 1024;i++) {
-        if ((mem_map[i].pyhsics_addr & 1) == 0)
+        if ((mem_map[i].pyhsics_addr & MP_USE) == 0)
         {
-            mem_map[i].pyhsics_addr |= 1;
+            mem_map[i].pyhsics_addr &= 0xfffff000;
+            mem_map[i].pyhsics_addr |= MP_USE;
+            mem_map[i].count = 0;
             return mem_map[i].pyhsics_addr & 0xfffff000;
         }
     }
@@ -130,8 +141,25 @@ unsigned int get_free_page()
     return -1;
 }
 
-void free_page(unsigned int pyhsics_addr)
+//将物理页释放
+void free_page(PG_P_ADDR pyhsics_addr)
 {
     pyhsics_addr >>= 12;
     mem_map[pyhsics_addr].pyhsics_addr &= 0xfffff000;
+}
+
+void do_wp_page(unsigned int error_code, unsigned int address)
+{
+    printk("%x ", address);
+    int index1 = address >> 22;
+    int index2 = address >> 12 & 0x03FF;
+    unsigned int old_page, new_page;
+    old_page = 0xfffff000 & address;
+    new_page = get_free_page();
+    get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
+    while (1)
+    {
+    }
+    invalidate();
+    __asm__("cld ; rep ; movsl"::"S" (old_page),"D" (new_page),"c" (1024):"cx","di","si")
 }

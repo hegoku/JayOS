@@ -160,10 +160,11 @@ void init_paging()
     {
         // memset(page_ptr, 0, sizeof(struct Page));
         if (i<kernel_page_count) {
-            page_ptr->pyhsics_addr = a | 1;
+            page_ptr->pyhsics_addr = a | MP_USE;
         } else {
             page_ptr->pyhsics_addr = a;
         }
+        page_ptr->count = 1;
         a += 4096;
         page_ptr++;
     }

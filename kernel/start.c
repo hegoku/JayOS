@@ -544,11 +544,16 @@ void init_fork()
     int j = 0;
     for (i = 0; i < 768; i++)
     {
+        if (swapper_pg_dir->entry[i]==0) {
+            current_process->page_dir->entry[i] = 0;
+            continue;
+        }
         current_process->page_dir->entry[i] = create_table(PG_P | PG_RWW | PG_USU);
         for (int j = 0; j < 1024; j++)
         {
             if (get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j]!= 0) {
                 get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
+                mem_map[(get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000)>>12].count++;
             }
             else
             {
