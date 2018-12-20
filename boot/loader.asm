@@ -410,7 +410,7 @@ InitProtectedModel:
     or al, 00000010b
     out 92h, al
 
-    mov eax, 0x1000
+    mov eax, Page_Dir_Base
     mov cr3, eax
     mov eax, cr0
     or eax, 1

@@ -213,6 +213,9 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte)
     // copy_from_user(kbuf, buf, nbyte);
 
     if (file->op->write) {
+        // if (strcmp("/root/b/c.txt", buf)) {
+        //     printk("1\n");while(1){}
+        // }
         res = file->op->write(file, (char *)buf, nbyte);
     }
     // kfree(kbuf, nbyte);

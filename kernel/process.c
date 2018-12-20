@@ -215,7 +215,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         struct elf32_phdr *phdr = (struct elf32_phdr *)(program + elf_hdr->e_phoff + (i * elf_hdr->e_phentsize));
         if (phdr->p_type==PT_LOAD) {
             printk("%x %x %d\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz);
-            // memcpy((void*)process_table[current_process->pid].base_addr+phdr->p_vaddr, (char*)program+phdr->p_offset, phdr->p_filesz);
+            memcpy((void*)process_table[current_process->pid].base_addr+phdr->p_vaddr, (char*)program+phdr->p_offset, phdr->p_filesz);
             memcpy((void *)phdr->p_vaddr, (void *)(program + phdr->p_offset), phdr->p_filesz);
         } else if(phdr->p_type==PT_INTERP){
             

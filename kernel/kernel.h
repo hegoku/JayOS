@@ -10,6 +10,7 @@
 // #define IDT_SIZE 256
 
 #define TOP_OF_USER_STACK 0x6C00
+// #define TOP_OF_KERNEL_STACK 0x7C00
 #define TOP_OF_KERNEL_STACK 0x7C00
 #define BIOS_ADDR 0x7E00 //bios参数地址
 

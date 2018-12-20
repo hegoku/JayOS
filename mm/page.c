@@ -150,16 +150,23 @@ void free_page(PG_P_ADDR pyhsics_addr)
 
 void do_wp_page(unsigned int error_code, unsigned int address)
 {
-    printk("%x ", address);
     int index1 = address >> 22;
     int index2 = address >> 12 & 0x03FF;
     unsigned int old_page, new_page;
-    old_page = 0xfffff000 & address;
+    old_page = 0xfffff000 & get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2];
     new_page = get_free_page();
     get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
-    while (1)
-    {
-    }
+    printk("%x %x %x %x", address, old_page, new_page, old_page >> 12);
+    // while (1)
+    // {
+    // }
     invalidate();
-    __asm__("cld ; rep ; movsl"::"S" (old_page),"D" (new_page),"c" (1024):"cx","di","si")
+    // memset((void *)__va(old_page), 2, 1024);
+    memcpy((void *)__va(new_page), (void *)__va(old_page), 1024);
+    mem_map[old_page >> 12].count--;
+    if (mem_map[old_page >> 12].count==0) {
+        free_page(old_page);
+    }
+    // __asm__("cld ; rep ; movsl" ::"S"(__va(old_page)), "D"(__va(new_page)), "c"(1024)
+    //         : "cx", "di", "si");
 }

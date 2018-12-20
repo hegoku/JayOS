@@ -14,6 +14,7 @@ global _start
 
 ; TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
 TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
+; TOP_OF_KERNEL_STACK equ 0x90000 ;内核栈顶
 TOP_OF_USER_STACK equ 0x6C00 ;用户栈顶
 BASE_OF_KERNEL_STACK equ 6C00H ;kernel栈基地址
 ; SELF_CS equ 7E0H ;当前程序的段基址
@@ -180,16 +181,40 @@ general_protection:
 	push	13		; vector_no	= D
 	jmp	exception
 page_fault:
-    xchg [esp],eax	;// 取出错码到eax。
-	push ecx
-	push edx
-	push ds
-	push es
-	push fs
-	mov edx,10h		;// 置内核数据段选择符。
-	mov ds,dx
-	mov es,dx
-	mov fs,dx
+    pushad
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov esi,ss
+    mov ds, esi
+    mov es,esi
+
+    mov esi, esp ;进程表起始地址
+
+    xchg [esp+RETADR-P_STACKBASE], eax	;// 取出错码到eax。
+
+    inc dword[is_in_ring0]
+    cmp dword[is_in_ring0], 0
+    jne .1
+    mov esp, TOP_OF_KERNEL_STACK
+    push restart
+    jmp .2
+.1:
+    push ret_to_proc
+.2:
+    ; xchg [esp], eax	;// 取出错码到eax。
+	; push ecx
+	; push edx
+	; push ds
+	; push es
+	; push fs
+	; mov edx,10h		;// 置内核数据段选择符。
+	; mov ds,dx
+	; mov es,dx
+	; mov fs,dx
+    sti
 	mov edx,cr2			;// 取引起页面异常的线性地址
 	push edx			;// 将该线性地址和出错码压入堆栈，作为调用函数的参数。
 	push eax
@@ -197,17 +222,20 @@ page_fault:
 	jne .l1
     push	14		; vector_no	= 10h
 	jmp	exception
+    add esp,4
 	; call _do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
 	jmp .l2			
 .l1:	call do_wp_page	;// 调用写保护处理函数（mm/memory.c,247 行）。
 .l2:	add esp,8		;// 丢弃压入栈的两个参数。
-	pop fs
-	pop es
-	pop ds
-	pop edx
-	pop ecx
-	pop eax
-	iretd
+	; pop fs
+	; pop es
+	; pop ds
+	; pop edx
+	; pop ecx
+	; pop eax
+	; iretd
+    cli
+    ret
 copr_error:
 	push	0xFFFFFFFF	; no err code
 	push	16		; vector_no	= 10h
