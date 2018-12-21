@@ -1,5 +1,6 @@
 #include "interrupt.h"
 #include "global.h"
+#include "kernel.h"
 
 irq_handler irq_table[IRQ_NUMBER] = {
     spurious_irq,
@@ -105,11 +106,14 @@ void exception_handler(int vec_no,int err_code,int eip,int cs,int eflags)
 	disp_int(cs);
 	DispColorStr("EIP:", text_color);
 	disp_int(eip);
+	DispColorStr("PID:", text_color);
+	disp_int(current_process->pid);
 
 	if(err_code != 0xFFFFFFFF){
 		DispColorStr("Error code:", text_color);
 		disp_int(err_code);
 	}
+	while(1){}
 }
 
 void spurious_irq(int irq)

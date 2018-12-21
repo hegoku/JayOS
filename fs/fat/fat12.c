@@ -8,6 +8,7 @@
 #include <system/fs.h>
 #include <system/mm.h>
 #include <system/list.h>
+#include <math.h>
 
 static struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num);
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
@@ -301,13 +302,15 @@ int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
         return 0;
     }
     char *file_buf=kzmalloc(fd->inode->size);
-    char *file_buf_pos=file_buf;
+    int left_bytes = fd->inode->size;
+    char *file_buf_pos = file_buf;
     for (int i=0;i<100;i++) {
         if (sector_list[i]==0) {
             break;
         }
-        dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, file_buf_pos, sector_list[i]*sb->BPB_BytsPerSec, sb->BPB_BytsPerSec*sb->BPB_SecPerClus);
-        file_buf_pos+=sb->BPB_BytsPerSec*sb->BPB_SecPerClus;
+        int min_bytes = fmin(sb->BPB_BytsPerSec * sb->BPB_SecPerClus, left_bytes);
+        dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, file_buf_pos, sector_list[i] * sb->BPB_BytsPerSec, min_bytes);
+        file_buf_pos+=min_bytes;
     }
     if (fd->pos+nbyte>fd->inode->size) {
         nbyte=fd->inode->size-fd->pos;
@@ -341,12 +344,16 @@ int get_sector_list(struct inode *node, unsigned int *sector_list)
     char is_odd;
 
     while(clus_no<0xFF8) { //是否最后一个簇
-        sector_list[i] = (clus_no - 2) * sb->BPB_SecPerClus + sb->data_start_sector; //某簇对应的数据在哪个扇区
-        clus_no=read_fat12_entry(clus_no, node->sb);
         if (clus_no==0xFF7) { //坏簇
             printk("Bad FAT Cluster\n");
             return -1;
         }
+        if (clus_no>=0xFF0 && clus_no<=0xFF6) {
+            break;
+        }
+        sector_list[i] = (clus_no - 2) * sb->BPB_SecPerClus + sb->data_start_sector; //某簇对应的数据在哪个扇区
+        clus_no=read_fat12_entry(clus_no, node->sb);
+        
 
         // fatentry_offset = ((clus_no * 12) % (sb->BPB_BytsPerSec*8))/8; //某簇在fat entry一个扇区里的偏移位置(即第几个字节) ，因为一个簇占用12位，即1.5个字节
 

@@ -250,6 +250,9 @@ int sys_read(int fd,char __user *buf, unsigned int nbyte)
     if (nbyte==0 || nbyte>file->inode->size) {
         return 0;
     }
+    if(nbyte+file->pos>file->inode->size) {
+        return 0;
+    }
 
     // char *kbuf = kzmalloc(nbyte);
     // copy_from_user(kbuf, buf, nbyte);
@@ -559,6 +562,7 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
     }
     pathname++;
     dir = base;
+    // printk("%s %x %s %x", pathname, base, current_process->root->name, *(char*)(0xc0300efc));
 
     while (1)
     {

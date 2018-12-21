@@ -80,7 +80,7 @@ pid_t sys_fork()
 	process_table[pid].regs.eax = 0;
     if (my_cr3==NULL) {
         process_table[pid].page_dir = create_dir();
-        printk("c:%x %x\n", process_table[pid].page_dir, process_table[pid].page_dir->entry);
+        printk("c:%x p:%x\n", process_table[pid].page_dir, current_process->page_dir);
     }
     else
     {

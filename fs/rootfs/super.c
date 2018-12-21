@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <system/mm.h>
+#include <../kernel/global.h>
 
 static struct dir_entry *rootfs_mount(struct file_system_type *fs_type, int dev_num);
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
@@ -44,7 +45,7 @@ struct inode_operation rootfs_inode_op = {
 
 static struct dir_entry *rootfs_mount(struct file_system_type *fs_type, int dev_num)
 {
-    struct super_block *sb=get_block(0);
+    struct super_block *sb = get_block(0);
     fs_type->sb_table=sb;
 
     sb->fs_type = fs_type;

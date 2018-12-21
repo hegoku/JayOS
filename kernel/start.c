@@ -299,21 +299,21 @@ void init()
         close(ff);
 
         ff = open("/root/b/c.txt", O_RDWR);
-        while(1){}
-        // memset(a, 0, 513);
-        // aaa=read(ff, a, 2);
-        // printf("%d\n%s\n", aaa, a);
-        // while(1){
-        //     aaa=read(ff, a, 2);
+        memset(a, 0, 513);
+        aaa=read(ff, a, 2);
+        printf("c.txt: %d\n%s\n====\n", aaa, a);
+        while(1){
+            lseek(ff, 0, SEEK_SET);
+            aaa=read(ff, a, 2);
         // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
-        // delay(1);
-        //     // int ff = open("/root/d.txt", O_RDWR);
-        //     // char *a[512];
-        //     // memset(a, 0, 513);
-        //     // int aaa=read(ff, a, 2);
-        //     // printf("%d\n%s\n", aaa, a);
-        //     // close(ff);
-        // }
+        delay(1);
+            // int ff = open("/root/d.txt", O_RDWR);
+            // char *a[512];
+            // memset(a, 0, 513);
+            // int aaa=read(ff, a, 2);
+            // printf("%d\n%s\n", aaa, a);
+            // close(ff);
+        }
     }
 
     while(1) {
