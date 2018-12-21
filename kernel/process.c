@@ -180,17 +180,17 @@ pid_t sys_wait(int *status)
 int sys_execve(const char __user *filename, const char __user *argv[], const char __user *envp[])
 {
     struct dir_entry *dir;
-    char *kfilename=kzmalloc(256);
+    // char *kfilename=kzmalloc(256);
     int res;
-    strncpy_from_user(kfilename, filename);
+    // strncpy_from_user(kfilename, filename);
 
-    if (namei(kfilename, &dir)) {
-        printk("%s not exist\n", kfilename);
+    if (namei(filename, &dir)) {
+        printk("%s not exist\n", filename);
         return -1;
     }
 
     if (dir->inode->mode!=FILE_MODE_REG) {
-        printk("%s not a regular file\n", kfilename);
+        printk("%s not a regular file\n", filename);
         return -1;
     }
 
@@ -210,22 +210,30 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         return -1;
     }
 
+    clear_page_tables(current_process->page_dir);
+    printk("%s %x %x\n", filename, program, current_process->page_dir);
+
     struct elf32_hdr *elf_hdr = (struct elf32_hdr *)program;
     for (int i = 0; i < elf_hdr->e_phnum; i++) {
         struct elf32_phdr *phdr = (struct elf32_phdr *)(program + elf_hdr->e_phoff + (i * elf_hdr->e_phentsize));
         if (phdr->p_type==PT_LOAD) {
-            printk("%x %x %d\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz);
-            memcpy((void*)process_table[current_process->pid].base_addr+phdr->p_vaddr, (char*)program+phdr->p_offset, phdr->p_filesz);
+            int index1 = phdr->p_vaddr >> 22;
+            int index2 = phdr->p_vaddr >> 12 & 0x03FF;
+            current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
+            printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
+            get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = get_free_page() | PG_P | PG_RWW | PG_USU;
+            printk("%x %x \n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2]);
             memcpy((void *)phdr->p_vaddr, (void *)(program + phdr->p_offset), phdr->p_filesz);
         } else if(phdr->p_type==PT_INTERP){
             
         }
     }
     printk("e:%x\n", elf_hdr->e_entry);
-    process_table[current_process->pid].regs.eip = elf_hdr->e_entry-0x150000;
+    process_table[current_process->pid].regs.eip = elf_hdr->e_entry;
     process_table[current_process->pid].regs.esp = PROC_IMAGE_SIZE_DEFAULT - 1;
-    strcpy(process_table[current_process->pid].name, kfilename);
+    strcpy(process_table[current_process->pid].name, (char*)filename);
     kfree(program, dir->inode->size);
+    invalidate();
     return 0;
 }
 

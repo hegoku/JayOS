@@ -60,6 +60,7 @@ void copy_page(struct PageDir *pd, struct PageDir **res);
 void init_process_page(struct PageDir **res);
 unsigned int get_free_page();
 void free_page(unsigned int pyhsics_addr);
+void clear_page_tables(struct PageDir *pd);
 
 void do_wp_page(unsigned int error_code,unsigned int address);
 #endif

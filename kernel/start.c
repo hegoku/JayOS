@@ -274,7 +274,7 @@ void init()
             // printf("p:%d ", pid);
             delay(1);
             lseek(ff, 5, SEEK_SET);
-            int aaa = read(ff, a, 2);
+            // int aaa = read(ff, a, 2);
             // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
         }
     } else {
@@ -284,7 +284,7 @@ void init()
         // {
         //     printf("c:%d ", pid);
         // }
-        // execve("/root/HELLO1" ,NULL, NULL);
+        execve("/root/HELLO1" ,NULL, NULL);
         // while(1){}
         // while(1){
         //     printf("child is running, pid: 1\n", pid);
@@ -304,7 +304,7 @@ void init()
         printf("c.txt: %d\n%s\n====\n", aaa, a);
         while(1){
             lseek(ff, 0, SEEK_SET);
-            aaa=read(ff, a, 2);
+            // aaa=read(ff, a, 2);
         // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
         delay(1);
             // int ff = open("/root/d.txt", O_RDWR);

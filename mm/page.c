@@ -146,6 +146,7 @@ void free_page(PG_P_ADDR pyhsics_addr)
 {
     pyhsics_addr >>= 12;
     mem_map[pyhsics_addr].pyhsics_addr &= 0xfffff000;
+    // mem_map[pyhsics_addr].count--;
 }
 
 void do_wp_page(unsigned int error_code, unsigned int address)
@@ -169,4 +170,16 @@ void do_wp_page(unsigned int error_code, unsigned int address)
     }
     // __asm__("cld ; rep ; movsl" ::"S"(__va(old_page)), "D"(__va(new_page)), "c"(1024)
     //         : "cx", "di", "si");
+}
+
+void clear_page_tables(struct PageDir *pd)
+{
+    for (int i = 0; i < 768; i++) {
+        if (pd->entry[i]!= 0) {
+            free_page((int)get_pt_entry_p_addr(pd->entry[i]));
+            // kfree(get_entry_address(pd->entry[i]), sizeof(struct PageTable));
+            // pd->entry[i] = 0;
+        }
+    }
+    invalidate();
 }
