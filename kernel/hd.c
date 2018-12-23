@@ -5,7 +5,7 @@
 #include <math.h>
 #include "hd.h"
 #include "kernel.h"
-#include "process.h"
+#include <system/process.h>
 #include <system/dev.h>
 #include <system/fs.h>
 
@@ -121,7 +121,7 @@ static int waitfor(int mask, int val, int timeout)
 
 static void interrupt_wait(PROCESS *p)
 {
-    while (p->status == 1){
+    while (p->status == TASK_INTERRUPTIBLE){
         // printk("1 %d name:%s mem:%x\n", p->status, p->p_name, p);
     }
 }
@@ -160,7 +160,7 @@ void do_hd_request()
         printk("unknow hd-command\n");
         return;
     }
-    current->waiting->status = 1;
+    current->waiting->status = TASK_INTERRUPTIBLE;
     hd_cmd_out(&cmd);
     if (current->cmd==1) {
         do_write();
@@ -195,7 +195,7 @@ static void do_read()
     //     return;
     // }
 
-    current->waiting->status = 0;
+    current->waiting->status = TASK_RUNNING;
     // printk("end read\n");
     dev_table[MAJOR_NR].current_request = current->next;
     // do_hd_request ();
@@ -224,7 +224,7 @@ static void do_write()
         return;
     }
 
-    current->waiting->status = 0;
+    current->waiting->status = TASK_RUNNING;
     dev_table[MAJOR_NR].current_request = current->next;
 }
 

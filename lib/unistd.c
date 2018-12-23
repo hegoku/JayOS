@@ -37,9 +37,9 @@ int close(int fd)
     return sys_call_1_param(SYS_CALL_CLOSE, fd);
 }
 
-pid_t wait(int *status)
+pid_t waitpid(pid_t pid, int *wstatus, int options)
 {
-    return sys_call_1_param(SYS_CALL_WAITPID, status);
+    return sys_call_1_param(SYS_CALL_WAITPID, wstatus);
 }
 
 int execve(const char *filename, const char *argv[], const char *envp[])
@@ -65,6 +65,11 @@ off_t lseek(int fd, off_t offset, int whence)
 pid_t getpid()
 {
     return sys_call_0_param(SYS_CALL_GETPID);
+}
+
+int pause()
+{
+    return sys_call_0_param(SYS_CALL_PAUSE);
 }
 
 int dup(unsigned int oldfd)

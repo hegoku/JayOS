@@ -5,7 +5,7 @@
 #include "interrupt.h"
 #include <system/system_call.h>
 #include "tty.h"
-#include "process.h"
+#include <system/process.h>
 // #define GDT_SIZE 128
 // #define IDT_SIZE 256
 

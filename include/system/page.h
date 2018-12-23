@@ -2,6 +2,8 @@
 #define __SYSTE_PAGE_H
 
 #define PAGE_OFFSET 0xC0000000 // 3GB   内核入口地址为0xC0100000-0xc0150000 (320K)   0xc0150000开始的1MB给kmalloc
+#define PAGE_SIZE 1024*4
+#define PAGE_SHIFT 12
 
 #define PDINDEX(virtualaddr) ((unsigned long)virtualaddr >> 22) //获取虚拟地址的目录页下标
 #define PTINDEX(virtualaddr) ((unsigned long)virtualaddr >> 12 & 0x03FF) //获取虚拟地址的页下标

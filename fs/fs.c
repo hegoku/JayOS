@@ -9,7 +9,7 @@
 #include "../kernel/tty.h"
 #include <system/mm.h>
 #include <system/list.h>
-#include <../kernel/process.h>
+#include <system/process.h>
 
 struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];

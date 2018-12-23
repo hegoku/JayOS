@@ -6,6 +6,12 @@
 #include <system/fs.h>
 #include <system/page.h>
 
+#define TASK_RUNNING		0
+#define TASK_INTERRUPTIBLE	1
+#define TASK_UNINTERRUPTIBLE	2
+#define TASK_ZOMBIE		3
+#define TASK_STOPPED		4
+
 typedef struct s_stackframe {
     unsigned int gs;
     unsigned int fs;
@@ -41,13 +47,16 @@ typedef struct s_proc {
     struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];
     struct dir_entry *root;
     struct dir_entry *pwd;
+    unsigned char exit_code;
+    unsigned char signal;
+    void *sig_fn[32];
     unsigned long base_addr;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);
 void sys_exit(int status);
 pid_t sys_fork();
-pid_t sys_wait(int *status);
+pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
 pid_t sys_getpid();
 pid_t sys_getppid();
 int sys_execve(const char __user *filename, const char __user *argv[], const char __user *envp[]);

@@ -4,6 +4,7 @@
 #include <sys/types.h>
 
 struct list{
+    struct list *prev;
     void *value;
     struct list *next;
 };
@@ -64,8 +65,13 @@ static inline void list_add(struct list *new_list, struct list *head)
 {
 	if (head->next==NULL) {
 		head->next = new_list;
-	} else {
-		new_list->next = head->next;
+        new_list->prev = head;
+    }
+    else
+    {
+        new_list->next = head->next;
+        new_list->next->prev=new_list;
+        new_list->prev = head;
 		head->next = new_list;
 	}
 }

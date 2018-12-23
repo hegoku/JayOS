@@ -4,7 +4,8 @@
 #include <sys/types.h>
 #include <system/fs.h>
 #include <system/dev.h>
-#include "../kernel/process.h"
+#include <system/process.h>
+#include <system/schedule.h>
 
 static int sys_get_ticks();
 
@@ -16,7 +17,7 @@ sys_call_handler sys_call_table[65] = {
     sys_write,
     sys_open,
     sys_close,
-    sys_wait, //7
+    sys_waitpid, //7
     NULL,
     NULL,
     NULL,
@@ -38,7 +39,7 @@ sys_call_handler sys_call_table[65] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    sys_pause,
     NULL,
     NULL,
     NULL,

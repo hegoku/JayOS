@@ -11,7 +11,7 @@ TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
-				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o
+				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o build/schedule.o
 
 all : clean everything image
 
@@ -42,7 +42,7 @@ build/kernel.o : kernel/kernel.asm include/func.inc include/pm.inc
 	$(ASM) -f elf -o $@ $<
 
 build/start.o : kernel/start.c kernel/kernel.h kernel/interrupt.h kernel/global.h \
-				kernel/process.h include/unistd.h include/stdio.h kernel/hd.h include/string.h include/fcntl.h \
+				include/system/process.h include/unistd.h include/stdio.h kernel/hd.h include/string.h include/fcntl.h \
 				include/system/rootfs.h fs/ext2/ext2.h fs/fat/fat.h include/system/mm.h
 	$(CC) $(CFLAGS) -o $@ $<
 
@@ -85,14 +85,14 @@ build/string.o : build/string_asm.o build/string_c.o
 build/math.o : lib/math.c include/math.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/process.o: kernel/process.c kernel/process.h include/sys/types.h kernel/global.h
+build/process.o: kernel/process.c include/system/process.h include/sys/types.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/floppy.o: kernel/fd.c kernel/fd.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/hd.o: kernel/hd.c kernel/hd.h include/string.h kernel/global.h include/unistd.h \
-			kernel/process.h include/math.h include/system/dev.h include/system/fs.h
+			include/system/process.h include/math.h include/system/dev.h include/system/fs.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/global.o: kernel/global.c kernel/global.h include/stdlib.h kernel/kernel.h include/stdio.h
@@ -101,11 +101,11 @@ k1 : build/k1.o
 	$(LD) -s -Ttext $(ENTERPOINT) -m elf_i386 -o build/k1 build/k1.o
 
 build/system_call.o: kernel/system_call.c include/system/system_call.h kernel/tty.h \
-					include/sys/types.h include/system/fs.h kernel/kernel.h include/system/fs.h kernel/process.h
+					include/sys/types.h include/system/fs.h kernel/kernel.h include/system/fs.h include/system/process.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/fs.o: fs/fs.c include/system/fs.h kernel/hd.h include/sys/types.h include/system/mm.h \
-			kernel/process.h include/system/desc.h kernel/kernel.h \
+			include/system/process.h include/system/desc.h kernel/kernel.h \
 			kernel/interrupt.h include/system/system_call.h  kernel/tty.h kernel/global.h include/system/list.h
 	$(CC) $(CFLAGS) -o $@ $<
 
@@ -129,4 +129,7 @@ build/list.o: kernel/list.c include/system/list.h kernel/global.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/page.o: mm/page.c include/system/mm.h include/system/page.h include/sys/types.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/schedule.o: kernel/schedule.c
 	$(CC) $(CFLAGS) -o $@ $<

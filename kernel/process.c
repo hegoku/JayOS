@@ -4,12 +4,15 @@
 #include <string.h>
 #include <system/fs.h>
 #include <system/desc.h>
-#include "process.h"
+#include <system/process.h>
 #include "kernel.h"
 #include "global.h"
 #include <system/mm.h>
 #include <system/elf.h>
 #include <system/page.h>
+#include <math.h>
+#include <system/schedule.h>
+#include <errno.h>
 
 #define INDEX_LDT_CS 0
 #define INDEX_LDT_DS 1
@@ -78,6 +81,7 @@ pid_t sys_fork()
 	sprintf(process_table[pid].name, "%s_%d", process_table[current_process->pid].name, pid);
     process_table[pid].parent_pid = current_process->pid;
 	process_table[pid].regs.eax = 0;
+	process_table[pid].status = TASK_RUNNING;
     if (my_cr3==NULL) {
         process_table[pid].page_dir = create_dir();
         printk("c:%x p:%x\n", process_table[pid].page_dir, current_process->page_dir);
@@ -159,7 +163,21 @@ pid_t sys_fork()
 
 void sys_exit(int status)
 {
-
+    int i = 0;
+    process_table->exit_code = status;
+    for (i = 0; i < PROC_NUMBER; i++)
+    {
+        if (process_table[i].parent_pid==current_process->pid) {
+            process_table[i].parent_pid = 0;
+        }
+    }
+    for (i = 0; i < PROC_FILES_MAX_COUNT; i++)
+    {
+        sys_close(i);
+    }
+    clear_page_tables(current_process->page_dir);
+    current_process->is_free = 0;
+    current_process->status = TASK_ZOMBIE;
 }
 
 pid_t sys_getpid()
@@ -172,9 +190,26 @@ pid_t sys_getppid()
     return current_process->parent_pid;
 }
 
-pid_t sys_wait(int *status)
+pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 {
-    return 0;
+    unsigned char flag = 0;
+    for (int i = 0; i < PROC_NUMBER; i++)
+    {
+        if (process_table[i].pid!=current_process->pid && (pid==-1 || process_table[i].pid==pid)) {
+            if (process_table[i].parent_pid==current_process->pid) {
+                flag = 1;
+                if (process_table[i].status==TASK_ZOMBIE) {
+                    flag = process_table[i].pid;
+                    *(unsigned int *)wstatus = process_table[i].exit_code;
+                    return flag;
+                }
+            }
+        }
+    }
+    if (flag==1) {
+        sys_pause();
+    }
+    return -ECHILD;
 }
 
 int sys_execve(const char __user *filename, const char __user *argv[], const char __user *envp[])
@@ -219,11 +254,33 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         if (phdr->p_type==PT_LOAD) {
             int index1 = phdr->p_vaddr >> 22;
             int index2 = phdr->p_vaddr >> 12 & 0x03FF;
+            int page_count = (phdr->p_memsz + PAGE_SIZE -1) >> PAGE_SHIFT;
+            int left_bytes = phdr->p_filesz;
+            int offset = 0;
+            printk("%d %d\n", page_count, phdr->p_memsz);
             current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
-            printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
-            get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = get_free_page() | PG_P | PG_RWW | PG_USU;
-            printk("%x %x \n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2]);
-            memcpy((void *)phdr->p_vaddr, (void *)(program + phdr->p_offset), phdr->p_filesz);
+            while (page_count)
+            {
+                if (index2>=1024) {
+                    index2 = 0;
+                    index1++;
+                    current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
+                }
+                printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
+                get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = get_free_page() | PG_P | PG_RWW | PG_USU;
+                printk("%x %x %x\n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2], phdr->p_flags);
+                if (left_bytes) {
+                    int b = fmin(left_bytes, PAGE_SIZE);
+                    memcpy((void *)(phdr->p_vaddr+offset), (void *)(program + phdr->p_offset+offset), b);
+                    if ((phdr->p_flags & PF_X) || !(phdr->p_flags & PF_W)) {
+                        get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] &= ~PG_RWR;
+                    }
+                    offset += b;
+                    left_bytes -= b;
+                }
+                index2++;
+                page_count--;
+            }
         } else if(phdr->p_type==PT_INTERP){
             
         }

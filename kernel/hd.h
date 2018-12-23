@@ -1,7 +1,7 @@
 #ifndef	_HD_H_
 #define	_HD_H_
 
-#include "process.h"
+#include <system/process.h>
 #include <system/dev.h>
 /**
  * @struct part_ent

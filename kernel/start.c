@@ -4,7 +4,7 @@
 #include "fd.h"
 #include "hd.h"
 #include "tty.h"
-#include "process.h"
+#include <system/process.h>
 #include "system/desc.h"
 #include "kernel.h"
 #include "unistd.h"
@@ -16,6 +16,7 @@
 #include "../fs/ext2/ext2.h"
 #include "../fs/fat/fat.h"
 #include "system/mm.h"
+#include <system/schedule.h>
 
 int ticks = 1;
 TSS tss={
@@ -258,7 +259,7 @@ void init()
     // mount("/dev/hd1", "/root", "fat12");
 
     mount("/dev/hd1", "/root", "fat12");
-    (void)open("/dev/tty0", O_RDWR);
+    (void) open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
     printf("parent is running, %d\n", getpid());
@@ -319,7 +320,7 @@ void init()
     while(1) {
         int i;
         pid_t child;
-        child=wait(&i);
+        child=waitpid(-1, &i, 0);
         // printf("Child (%d) exited with status: %d\n", child, i);
     }
 }
@@ -495,27 +496,7 @@ void clock_handler(int irq)
     {
         ticks = 0;
     }
-    if (is_in_ring0 != 0)
-    {
-        // a[0]='1';
-        // // i=sprintf(buf, "!");
-        // tty_write(&tty, a, 1);
-        return;
-    }
-    
-    // disp_int((int)current_process);
-    do {
-        current_process++;
-    
-    // if (disp_pos>80*25) {
-    //     disp_pos = 0;
-    // }
-        if (current_process >= process_table + PROC_NUMBER)
-        {
-            current_process = process_table;
-        }
-    } while (current_process->is_free != 1);
-    load_cr3(current_process->page_dir->entry);
+    schedule();
     // do {
     //     current_process++;
     //     if (current_process >= process_table + PROC_NUMBER)
