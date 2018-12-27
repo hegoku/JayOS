@@ -13,6 +13,7 @@
 #include <math.h>
 #include <system/schedule.h>
 #include <errno.h>
+#include <system/signal.h>
 
 #define INDEX_LDT_CS 0
 #define INDEX_LDT_DS 1
@@ -82,7 +83,8 @@ pid_t sys_fork()
     process_table[pid].parent_pid = current_process->pid;
 	process_table[pid].regs.eax = 0;
 	process_table[pid].status = TASK_RUNNING;
-    if (my_cr3==NULL) {
+    if (my_cr3 == NULL)
+    {
         process_table[pid].page_dir = create_dir();
         printk("c:%x p:%x\n", process_table[pid].page_dir, current_process->page_dir);
     }
@@ -164,7 +166,7 @@ pid_t sys_fork()
 void sys_exit(int status)
 {
     int i = 0;
-    process_table->exit_code = status;
+    current_process->exit_code = status;
     for (i = 0; i < PROC_NUMBER; i++)
     {
         if (process_table[i].parent_pid==current_process->pid) {
@@ -178,6 +180,7 @@ void sys_exit(int status)
     clear_page_tables(current_process->page_dir);
     current_process->is_free = 0;
     current_process->status = TASK_ZOMBIE;
+    // send_sig(SIGCHLD, &process_table[current_process->parent_pid]);
 }
 
 pid_t sys_getpid()

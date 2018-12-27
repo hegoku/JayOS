@@ -324,12 +324,6 @@ INT_S_CTL equ 0xA0
 INT_S_CTLMASK equ 0xA1
 EOI equ 0x20
 
-; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-;                               sconst.inc
-; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-;                                                     Forrest Yu, 2005
-; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 P_STACKBASE	equ	0
 GSREG		equ	P_STACKBASE
 FSREG		equ	GSREG		+ 4
@@ -351,6 +345,8 @@ ESPREG		equ	EFLAGSREG	+ 4
 SSREG		equ	ESPREG		+ 4
 P_STACKTOP	equ	SSREG		+ 4
 P_LDT_SEL	equ	P_STACKTOP
-P_LDT		equ	P_LDT_SEL	+ 4
+P_LDT		equ	P_LDT_SEL	+ 2
+P_STATUS    equ P_LDT       + 16
+P_SIGNAL    equ P_STATUS    + 1
 
 TSS3_S_SP0	equ	4

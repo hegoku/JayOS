@@ -28,5 +28,5 @@
 #define SIGTTOU		22
 
 void send_sig(unsigned char sig, PROCESS *p);
-
+void do_signal();
 #endif

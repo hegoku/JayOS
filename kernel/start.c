@@ -256,8 +256,6 @@ void kernel_main()
 
 void init()
 {
-    // mount("/dev/hd1", "/root", "fat12");
-
     mount("/dev/hd1", "/root", "fat12");
     (void) open("/dev/tty0", O_RDWR);
     (void) dup(0);
@@ -275,16 +273,20 @@ void init()
             // printf("p:%d ", pid);
             delay(1);
             lseek(ff, 5, SEEK_SET);
+            printf("0 ");
+            delay(1);
             // int aaa = read(ff, a, 2);
             // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
         }
     } else {
         pid = getpid();
         printf("child is running, pid: %d\n", pid);
-        // while (1)
-        // {
-        //     printf("c:%d ", pid);
-        // }
+        while (1)
+        {
+            printf("c:%d ", pid);
+            delay(1);
+            pause();
+        }
         execve("/root/HELLO1" ,NULL, NULL);
         // while(1){}
         // while(1){

@@ -415,6 +415,11 @@ hwint14:		; Interrupt routine for irq 14 (AT winchester)
 hwint15:		; Interrupt routine for irq 15
 	hwint_slave	15
 
+extern schedule
+reschedule:
+    push restart
+    jmp schedule
+
 sys_call:
     call save
     ; sub esp,4
@@ -446,7 +451,16 @@ sys_call:
     pop esi
     mov [esi+EAXREG-P_STACKBASE], eax ;保存 [sys_call_table+4*eax]  函数的返回值到进程表的eax寄存器以便获取
 
+    cmp dword[is_in_ring0], 0 ;如果在内核态就不用判断进程是否在TASK_RUNNING状态
+    jne .1
+    mov eax, [current_process]
+    mov eax, [eax+P_STATUS]
+    mov ebx, current_process
+    cmp eax, 0
+    jne reschedule
+.1:
     cli
+    
     ; push restart
 	ret
 

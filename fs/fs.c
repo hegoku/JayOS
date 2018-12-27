@@ -542,6 +542,7 @@ int sys_mount(char __user *dev_name, char __user *dir_name, char *type)
     }
     dir_dir->is_mounted = 1;
     dir_dir->mounted_dir = new_dir;
+
     return 0;
 }
 

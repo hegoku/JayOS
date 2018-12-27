@@ -24,13 +24,14 @@ void schedule()
         {
             current_process = process_table;
         }
-    } while (current_process->is_free != 1);
+        
+    } while (current_process->is_free != 1 || current_process->status != TASK_RUNNING);
     load_cr3(current_process->page_dir->entry);
 }
 
 int sys_pause()
 {
 	current_process->status = TASK_INTERRUPTIBLE;
-	schedule();
+	// schedule();
 	return 0;
 }

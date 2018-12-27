@@ -37,18 +37,18 @@ typedef struct s_proc {
     STACK_FRAME regs;
     unsigned short ldt_sel;
     DESCRIPTOR ldts[2];
+    unsigned char status;
+    unsigned char signal;
     struct PageDir *page_dir;
 
     unsigned int pid;
     unsigned int parent_pid;
     char name[256];
-    unsigned char status;
     unsigned char is_free;
     struct file_descriptor *file_table[PROC_FILES_MAX_COUNT];
     struct dir_entry *root;
     struct dir_entry *pwd;
     unsigned char exit_code;
-    unsigned char signal;
     void *sig_fn[32];
     unsigned long base_addr;
 } PROCESS;
