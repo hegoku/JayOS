@@ -208,7 +208,6 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
                 flag = 1;
                 if (process_table[i].status==TASK_ZOMBIE) {
                     flag = process_table[i].pid;
-                    printk("%x\n", wstatus);
                     *wstatus = process_table[i].exit_code;
                     process_table[i].is_free = 0;
                     return flag;
