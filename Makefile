@@ -11,7 +11,8 @@ TARGET		= boot.bin loader kernel k1
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
-				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o build/schedule.o
+				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o build/schedule.o \
+				build/errno.o
 
 all : clean everything image
 
@@ -132,4 +133,7 @@ build/page.o: mm/page.c include/system/mm.h include/system/page.h include/sys/ty
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/schedule.o: kernel/schedule.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/errno.o: lib/errno.c
 	$(CC) $(CFLAGS) -o $@ $<

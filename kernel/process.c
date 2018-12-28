@@ -216,6 +216,9 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
         }
     }
     if (flag==1) {
+        if (options & WNOHANG) {
+            return 0;
+        }
         sys_pause();
     }
     return -ECHILD;

@@ -269,6 +269,7 @@ void init()
             printf("parent is running,child pid: %d %d %d %d\n", pid, j, getpid(), getppid());
         } else {
             pid = getpid();
+            execve("/root/HELLO1" ,NULL, NULL);
             // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
             while(1){
                 printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());

@@ -12,6 +12,9 @@
 #define TASK_ZOMBIE		3
 #define TASK_STOPPED		4
 
+#define WNOHANG		1
+#define WUNTRACED	2
+
 typedef struct s_stackframe {
     unsigned int gs;
     unsigned int fs;

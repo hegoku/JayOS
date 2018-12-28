@@ -7,5 +7,5 @@ int main()
     // memset(a, 0, 513);
     // printf("%d\n", ff);
     printf("Hello World!\n");
-    while(1){}
+    return 0;
 }

@@ -1,4 +1,5 @@
 extern main
+extern exit
 
 bits 32
 
@@ -18,6 +19,7 @@ _start:
     call main
     
     push eax
+    call exit
 
 sys_call_0_param:
     push esi
