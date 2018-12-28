@@ -182,7 +182,6 @@ int sys_close(int fd)
 {
     current_process->file_table[fd]->used_count--;
     current_process->file_table[fd]->inode->used_count--;
-    current_process->file_table[fd]->inode = 0;
     current_process->file_table[fd] = 0;
 
     return 0;

@@ -157,13 +157,14 @@ void do_wp_page(unsigned int error_code, unsigned int address)
     old_page = 0xfffff000 & get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2];
     new_page = get_free_page();
     get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
-    printk("%x %x %x %x", address, old_page, new_page, old_page >> 12);
+    printk("pid(%d): %x %x %x %x ", current_process->pid, address, old_page, new_page, old_page >> 12);
     // while (1)
     // {
     // }
     invalidate();
     // memset((void *)__va(old_page), 2, 1024);
-    memcpy((void *)__va(new_page), (void *)__va(old_page), 1024);
+    memcpy((void *)__va(new_page), (void *)__va(old_page), 1024*4);
+    mem_map[new_page >> 12].count++;
     mem_map[old_page >> 12].count--;
     if (mem_map[old_page >> 12].count==0) {
         free_page(old_page);

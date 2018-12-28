@@ -260,8 +260,31 @@ void init()
     (void) open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
-    printf("parent is running, %d\n", getpid());
+    printf("parent is running, pid: %d\n", getpid());
     int i, pid;
+    for (int j = 0; j < 4;j++) {
+        pid = fork();
+        if (pid != 0)
+        {
+            printf("parent is running,child pid: %d %d %d %d\n", pid, j, getpid(), getppid());
+        } else {
+            pid = getpid();
+            // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+            while(1){
+                printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+                delay(1);
+                // if (pid==2) {
+                    exit(1);
+                // }
+            }
+        }
+    }
+    while(pid=waitpid(-1, &i, 0)) {
+        if (pid>0) {
+            printf("child: %d exit with status: %d\n", pid, i);
+        }
+    }
+    while(1){}
     pid = fork();
     if (pid!=0)
     {
@@ -281,12 +304,12 @@ void init()
     } else {
         pid = getpid();
         printf("child is running, pid: %d\n", pid);
-        while (1)
-        {
-            printf("c:%d ", pid);
-            delay(1);
-            pause();
-        }
+        // while (1)
+        // {
+        //     printf("c:%d ", pid);
+        //     delay(1);
+        //     pause();
+        // }
         execve("/root/HELLO1" ,NULL, NULL);
         // while(1){}
         // while(1){

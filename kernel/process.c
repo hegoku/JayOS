@@ -55,6 +55,7 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
 
     p->status = 0;
     p->is_free = 0;
+    p->parent_pid = -1;
 }
 
 pid_t sys_fork()
@@ -175,11 +176,13 @@ void sys_exit(int status)
     }
     for (i = 0; i < PROC_FILES_MAX_COUNT; i++)
     {
-        sys_close(i);
+        if (current_process->file_table[i]!=0) {
+            sys_close(i);
+        }
     }
     clear_page_tables(current_process->page_dir);
-    current_process->is_free = 0;
     current_process->status = TASK_ZOMBIE;
+    process_table[current_process->parent_pid].status = TASK_RUNNING;
     // send_sig(SIGCHLD, &process_table[current_process->parent_pid]);
 }
 
@@ -198,12 +201,16 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
     unsigned char flag = 0;
     for (int i = 0; i < PROC_NUMBER; i++)
     {
-        if (process_table[i].pid!=current_process->pid && (pid==-1 || process_table[i].pid==pid)) {
-            if (process_table[i].parent_pid==current_process->pid) {
+        if (process_table[i].pid != current_process->pid && (pid == -1 || process_table[i].pid == pid))
+        {
+            if (process_table[i].parent_pid == current_process->pid && process_table[i].is_free==1)
+            {
                 flag = 1;
                 if (process_table[i].status==TASK_ZOMBIE) {
                     flag = process_table[i].pid;
-                    *(unsigned int *)wstatus = process_table[i].exit_code;
+                    printk("%x\n", wstatus);
+                    *wstatus = process_table[i].exit_code;
+                    process_table[i].is_free = 0;
                     return flag;
                 }
             }
