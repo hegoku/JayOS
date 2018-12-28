@@ -258,7 +258,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     }
 
     clear_page_tables(current_process->page_dir);
-    printk("%s %x %x\n", filename, program, current_process->page_dir);
+    // printk("%s %x %x\n", filename, program, current_process->page_dir);
 
     struct elf32_hdr *elf_hdr = (struct elf32_hdr *)program;
     for (int i = 0; i < elf_hdr->e_phnum; i++) {
@@ -294,7 +294,9 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
                 page_count--;
             }
         } else if(phdr->p_type==PT_INTERP){
-            
+            char *elf_interpreter = kzmalloc(phdr->p_filesz);
+            memcpy((void*)elf_interpreter, (void *)(program + phdr->p_offset), phdr->p_filesz);
+            printk("\ninterp:%s\n", elf_interpreter);while(1){}
         }
     }
     printk("e:%x\n", elf_hdr->e_entry);
