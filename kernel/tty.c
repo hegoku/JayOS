@@ -74,17 +74,17 @@ void tty_input(TTY* tty, int content)
             key = content & 0xFF;
             break;
         }
-        // console_out_char(&(tty->console), content& 0xff);
-        if (tty->inbuf_count < TTY_IN_BYTES)
-        {
-            *(tty->inbuf_head) = key;
-            tty->inbuf_head++;
-            if (tty->inbuf_head == tty->in_buff + TTY_IN_BYTES)
-            {
-                tty->inbuf_head = tty->in_buff;
-            }
-            tty->inbuf_count++;
-        }
+        console_out_char(&(tty->console), key& 0xff);
+        // if (tty->inbuf_count < TTY_IN_BYTES)
+        // {
+        //     *(tty->inbuf_head) = key;
+        //     tty->inbuf_head++;
+        //     if (tty->inbuf_head == tty->in_buff + TTY_IN_BYTES)
+        //     {
+        //         tty->inbuf_head = tty->in_buff;
+        //     }
+        //     tty->inbuf_count++;
+        // }
     }
     
 }

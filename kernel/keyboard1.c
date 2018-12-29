@@ -32,8 +32,7 @@ static unsigned char get_byte_from_kb_buf();
 static void	set_leds();
 static void	kb_wait();
 static void	kb_ack();
-static unsigned char get_tail();
-static void pop_buf();
+
 
 /*****************************************************************************
  *                                keyboard_handler
@@ -47,17 +46,14 @@ void keyboard_handler(int irq)
 {
     // DispStr("@");
     unsigned char scan_code = in_byte(KB_DATA);
-	// printk("%x ", scan_code);
 
-	if (kb_in.count < KB_IN_BYTES) {
+    if (kb_in.count < KB_IN_BYTES) {
 		*(kb_in.p_head) = scan_code;
 		kb_in.p_head++;
 		if (kb_in.p_head == kb_in.buf + KB_IN_BYTES)
 			kb_in.p_head = kb_in.buf;
 		kb_in.count++;
 	}
-
-	keyboard_read(&tty_table[0]);
 
 	// key_pressed = 1;
 }
@@ -97,237 +93,6 @@ void keyboard_init()
  *
  * @param tty  Which TTY is reading the keyboard input.
  *****************************************************************************/
-// void keyboard_read(TTY *tty)
-// {
-// 	unsigned char scan_code;
-
-// 	/**
-// 	 * 1 : make
-// 	 * 0 : break
-// 	 */
-// 	int	make;
-
-// 	/**
-// 	 * We use a integer to record a key press.
-// 	 * For instance, if the key HOME is pressed, key will be evaluated to
-// 	 * `HOME' defined in keyboard.h.
-// 	 */
-// 	unsigned int key = 0;
-
-
-// 	/**
-// 	 * This var points to a row in keymap[]. I don't use two-dimension
-// 	 * array because I don't like it.
-// 	 */
-// 	unsigned int*	keyrow;
-
-//     while (kb_in.count > 0) {
-// 		code_with_E0 = 0;
-// 		scan_code = get_byte_from_kb_buf();
-
-//         /* parse the scan code below */
-// 		if (scan_code == 0xE1) {
-// 			int i;
-// 			unsigned char pausebreak_scan_code[] = {0xE1, 0x1D, 0x45, 0xE1, 0x9D, 0xC5};
-// 			int is_pausebreak = 1;
-// 			for (i = 1; i < 6; i++) {
-// 				if (get_byte_from_kb_buf() != pausebreak_scan_code[i]) {
-// 					is_pausebreak = 0;
-// 					break;
-// 				}
-// 			}
-// 			if (is_pausebreak) {
-// 				key = PAUSEBREAK;
-// 			}
-// 		}
-// 		else if (scan_code == 0xE0) {
-// 			code_with_E0 = 1;
-// 			scan_code = get_byte_from_kb_buf();
-
-// 			/* PrintScreen is pressed */
-// 			if (scan_code == 0x2A) {
-// 				code_with_E0 = 0;
-// 				if ((scan_code = get_byte_from_kb_buf()) == 0xE0) {
-// 					code_with_E0 = 1;
-// 					if ((scan_code = get_byte_from_kb_buf()) == 0x37) {
-// 						key = PRINTSCREEN;
-// 						make = 1;
-// 					}
-// 				}
-// 			}
-// 			/* PrintScreen is released */
-// 			else if (scan_code == 0xB7) {
-// 				code_with_E0 = 0;
-// 				if ((scan_code = get_byte_from_kb_buf()) == 0xE0) {
-// 					code_with_E0 = 1;
-// 					if ((scan_code = get_byte_from_kb_buf()) == 0xAA) {
-// 						key = PRINTSCREEN;
-// 						make = 0;
-// 					}
-// 				}
-// 			}
-// 		}
-
-// 		if ((key != PAUSEBREAK) && (key != PRINTSCREEN)) {
-// 			int caps;
-
-// 			/* make or break */
-// 			make = (scan_code & FLAG_BREAK ? 0 : 1);
-			
-// 			keyrow = &keymap[(scan_code & 0x7F) * MAP_COLS];
-
-// 			column = 0;
-
-// 			caps = shift_l || shift_r;
-// 			if (caps_lock &&
-// 			    keyrow[0] >= 'a' && keyrow[0] <= 'z')
-// 				caps = !caps;
-
-// 			if (caps)
-// 				column = 1;
-
-// 			if (code_with_E0)
-// 				column = 2;
-
-// 			key = keyrow[column];
-
-// 			switch(key) {
-// 			case SHIFT_L:
-// 				shift_l	= make;
-// 				break;
-// 			case SHIFT_R:
-// 				shift_r	= make;
-// 				break;
-// 			case CTRL_L:
-// 				ctrl_l	= make;
-// 				break;
-// 			case CTRL_R:
-// 				ctrl_r	= make;
-// 				break;
-// 			case ALT_L:
-// 				alt_l	= make;
-// 				break;
-// 			case ALT_R:
-// 				alt_l	= make;
-// 				break;
-// 			case CAPS_LOCK:
-// 				if (make) {
-// 					caps_lock   = !caps_lock;
-// 					set_leds();
-// 				}
-// 				break;
-// 			case NUM_LOCK:
-// 				if (make) {
-// 					num_lock    = !num_lock;
-// 					set_leds();
-// 				}
-// 				break;
-// 			case SCROLL_LOCK:
-// 				if (make) {
-// 					scroll_lock = !scroll_lock;
-// 					set_leds();
-// 				}
-// 				break;
-// 			default:
-// 				break;
-// 			}
-// 		}
-
-// 		if(make){ /* Break Code is ignored */
-// 			int pad = 0;
-
-// 			/* deal with the numpad first */
-// 			if ((key >= PAD_SLASH) && (key <= PAD_9)) {
-// 				pad = 1;
-// 				switch(key) {	/* '/', '*', '-', '+',
-// 						 * and 'Enter' in num pad
-// 						 */
-// 				case PAD_SLASH:
-// 					key = '/';
-// 					break;
-// 				case PAD_STAR:
-// 					key = '*';
-// 					break;
-// 				case PAD_MINUS:
-// 					key = '-';
-// 					break;
-// 				case PAD_PLUS:
-// 					key = '+';
-// 					break;
-// 				case PAD_ENTER:
-// 					key = ENTER;
-// 					break;
-// 				default:
-// 					/* the value of these keys
-// 					 * depends on the Numlock
-// 					 */
-// 					if (num_lock) {	/* '0' ~ '9' and '.' in num pad */
-// 						if (key >= PAD_0 && key <= PAD_9)
-// 							key = key - PAD_0 + '0';
-// 						else if (key == PAD_DOT)
-// 							key = '.';
-// 					}
-// 					else{
-// 						switch(key) {
-//                             case PAD_HOME:
-//                                 key = HOME;
-//                                 break;
-//                             case PAD_END:
-//                                 key = END;
-//                                 break;
-//                             case PAD_PAGEUP:
-//                                 key = PAGEUP;
-//                                 break;
-//                             case PAD_PAGEDOWN:
-//                                 key = PAGEDOWN;
-//                                 break;
-//                             case PAD_INS:
-//                                 key = INSERT;
-//                                 break;
-//                             case PAD_UP:
-//                                 key = UP;
-//                                 break;
-//                             case PAD_DOWN:
-//                                 key = DOWN;
-//                                 break;
-//                             case PAD_LEFT:
-//                                 key = LEFT;
-//                                 break;
-//                             case PAD_RIGHT:
-//                                 key = RIGHT;
-//                                 break;
-//                             case PAD_DOT:
-//                                 key = DELETE;
-//                                 break;
-//                             default:
-//                                 break;
-// 						}
-// 					}
-// 					break;
-// 				}
-// 			}
-// 			key |= shift_l	? FLAG_SHIFT_L	: 0;
-// 			key |= shift_r	? FLAG_SHIFT_R	: 0;
-// 			key |= ctrl_l	? FLAG_CTRL_L	: 0;
-// 			key |= ctrl_r	? FLAG_CTRL_R	: 0;
-// 			key |= alt_l	? FLAG_ALT_L	: 0;
-// 			key |= alt_r	? FLAG_ALT_R	: 0;
-// 			key |= pad	? FLAG_PAD	: 0;
-
-//             tty_input(tty, key);
-//             // if (!(key & FLAG_EXT))
-//             // {
-//             //     char a[2]={'\0', '\0'};
-//             //     a[1] = key & 0xFF;
-//             //     tty_write(tty, a, 1);
-//             // }
-
-//             // return key;
-//             // in_process(tty, key);
-//         }
-// 	}
-// }
-
 void keyboard_read(TTY *tty)
 {
 	unsigned char scan_code;
@@ -354,24 +119,15 @@ void keyboard_read(TTY *tty)
 
     while (kb_in.count > 0) {
 		code_with_E0 = 0;
-		scan_code = get_tail();
-		if (scan_code==-1) {
-			return;
-		}
-		// scan_code = get_byte_from_kb_buf();
+		scan_code = get_byte_from_kb_buf();
 
-		/* parse the scan code below */
+        /* parse the scan code below */
 		if (scan_code == 0xE1) {
 			int i;
 			unsigned char pausebreak_scan_code[] = {0xE1, 0x1D, 0x45, 0xE1, 0x9D, 0xC5};
 			int is_pausebreak = 1;
 			for (i = 1; i < 6; i++) {
-				scan_code = get_tail();
-				if (scan_code ==-1)
-				{
-					return;
-				}
-				if (scan_code != pausebreak_scan_code[i]) {
+				if (get_byte_from_kb_buf() != pausebreak_scan_code[i]) {
 					is_pausebreak = 0;
 					break;
 				}
@@ -379,69 +135,33 @@ void keyboard_read(TTY *tty)
 			if (is_pausebreak) {
 				key = PAUSEBREAK;
 			}
-			pop_buf();
-			pop_buf();
-			pop_buf();
-			pop_buf();
-			pop_buf();
-			pop_buf();
-			pop_buf();
-		} else if (scan_code == 0xE0) {
+		}
+		else if (scan_code == 0xE0) {
 			code_with_E0 = 1;
-			scan_code = get_tail();
-			if (scan_code==-1) {
-				return;
-			}
+			scan_code = get_byte_from_kb_buf();
 
 			/* PrintScreen is pressed */
 			if (scan_code == 0x2A) {
 				code_with_E0 = 0;
-				scan_code = get_tail();
-				if (scan_code==-1) {
-					return;
-				}
-				if (scan_code == 0xE0)
-				{
+				if ((scan_code = get_byte_from_kb_buf()) == 0xE0) {
 					code_with_E0 = 1;
-					scan_code = get_tail();
-					if (scan_code==-1) {
-						return;
-					}
-					if (scan_code == 0x37) {
+					if ((scan_code = get_byte_from_kb_buf()) == 0x37) {
 						key = PRINTSCREEN;
 						make = 1;
 					}
 				}
-				pop_buf();
-				pop_buf();
-				pop_buf();
-				pop_buf();
 			}
 			/* PrintScreen is released */
 			else if (scan_code == 0xB7) {
 				code_with_E0 = 0;
-				scan_code = get_tail();
-				if (scan_code==-1) {
-					return;
-				}
-				if (scan_code == 0xE0)
-				{
+				if ((scan_code = get_byte_from_kb_buf()) == 0xE0) {
 					code_with_E0 = 1;
-					scan_code = get_tail();
-					if (scan_code==-1) {
-						return;
-					}
-					if (scan_code == 0xAA) {
+					if ((scan_code = get_byte_from_kb_buf()) == 0xAA) {
 						key = PRINTSCREEN;
 						make = 0;
 					}
 				}
-				pop_buf();
-				pop_buf();
-				pop_buf();
 			}
-		} else {
-			pop_buf();
 		}
 
 		if ((key != PAUSEBREAK) && (key != PRINTSCREEN)) {
@@ -467,8 +187,7 @@ void keyboard_read(TTY *tty)
 
 			key = keyrow[column];
 
-			switch (key)
-			{
+			switch(key) {
 			case SHIFT_L:
 				shift_l	= make;
 				break;
@@ -512,11 +231,10 @@ void keyboard_read(TTY *tty)
 
 		if(make){ /* Break Code is ignored */
 			int pad = 0;
-			
+
 			/* deal with the numpad first */
 			if ((key >= PAD_SLASH) && (key <= PAD_9)) {
 				pad = 1;
-				
 				switch(key) {	/* '/', '*', '-', '+',
 						 * and 'Enter' in num pad
 						 */
@@ -592,8 +310,8 @@ void keyboard_read(TTY *tty)
 			key |= alt_r	? FLAG_ALT_R	: 0;
 			key |= pad	? FLAG_PAD	: 0;
 
-			tty_input(tty, key);
-			// if (!(key & FLAG_EXT))
+            tty_input(tty, key);
+            // if (!(key & FLAG_EXT))
             // {
             //     char a[2]={'\0', '\0'};
             //     a[1] = key & 0xFF;
@@ -603,11 +321,6 @@ void keyboard_read(TTY *tty)
             // return key;
             // in_process(tty, key);
         }
-
-		if (key<=0) {
-			pop_buf();
-			return;
-		}
 	}
 }
 
@@ -638,33 +351,6 @@ static unsigned char get_byte_from_kb_buf()
 	return scan_code;
 }
 
-inline static unsigned char get_tail()
-{
-	if (kb_in.count<=0) {
-		return -1;
-	}
-	return *(kb_in.p_tail);
-}
-
-static void pop_buf()
-{
-	unsigned char scan_code;
-
-	if (kb_in.count<=0) {
-		return;
-	}
-
-	asm("cli");
-    scan_code = *(kb_in.p_tail);
-    kb_in.p_tail++;
-	if (kb_in.p_tail == kb_in.buf + KB_IN_BYTES) {
-		kb_in.p_tail = kb_in.buf;
-	}
-	kb_in.count--;
-	asm("sti");
-
-	return;
-}
 
 /*****************************************************************************
  *                                kb_wait
