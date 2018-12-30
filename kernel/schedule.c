@@ -2,6 +2,17 @@
 #include "global.h"
 #include <system/page.h>
 #include <system/schedule.h>
+#include <system/time.h>
+#include <system/signal.h>
+
+unsigned int ticks = 1;
+
+void timer_init()
+{
+    out_byte(0x43, 0x34);
+    out_byte(0x40, (unsigned char)(TIMER_FREQ / HZ));
+    out_byte(0x40, (unsigned char)((TIMER_FREQ / HZ)>>8));
+}
 
 void schedule()
 {
@@ -15,6 +26,20 @@ void schedule()
     
     // disp_int((int)current_process);
     PROCESS *prev = current_process;
+    for (int i = 0; i < PROC_NUMBER;i++) {
+        if (process_table[i].is_free == 1)
+        {
+            if (process_table[i].alarm && process_table[i].alarm < ticks)
+            {
+                process_table[i].signal |= (1 << (SIGALRM - 1));
+                process_table[i].alarm = 0;
+            }
+            if (process_table[i].signal && process_table[i].status == TASK_INTERRUPTIBLE)
+            {
+                process_table[i].status = TASK_RUNNING;
+            }
+        }
+    }
     do
     {
         current_process++;
@@ -26,7 +51,6 @@ void schedule()
         {
             current_process = process_table;
         }
-
     } while (current_process->is_free != 1 || current_process->status != TASK_RUNNING);
     if (prev!=current_process) {
         // printk("%d %d %d %d|",current_process->is_free, current_process->status, current_process->pid, prev->pid);
@@ -40,4 +64,10 @@ int sys_pause()
 	current_process->status = TASK_INTERRUPTIBLE;
 	schedule();
 	return 0;
+}
+
+int sys_alarm(unsigned int seconds)
+{
+	current_process->alarm = (seconds>0)?(ticks+HZ*seconds):0;
+	return seconds;
 }

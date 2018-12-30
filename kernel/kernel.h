@@ -31,8 +31,6 @@ extern GATE idt[IDT_SIZE];
 extern irq_handler irq_table[];
 extern sys_call_handler sys_call_table[];
 
-extern int ticks;
-
 extern PROCESS *current_process;
 extern PROCESS process_table[];
 

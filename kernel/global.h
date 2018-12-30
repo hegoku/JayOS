@@ -2,8 +2,6 @@
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
 
-#define	MAX_TICKS	0x7FFFABCD
-
 void DispStr(char* msg);
 // void memcpy(void *pDest, void *pSrc, int iSize);
 void DispColorStr(char * info, int color);

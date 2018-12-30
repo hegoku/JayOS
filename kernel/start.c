@@ -19,7 +19,6 @@
 #include <system/schedule.h>
 #include <errno.h>
 
-int ticks = 1;
 TSS tss={
     .esp0 = TOP_OF_KERNEL_STACK,
 	.ss0 = GDT_SEL_KERNEL_DATA
@@ -182,12 +181,9 @@ void kernel_main()
 
     init_tty();
 
+    timer_init();
     irq_table[CLOCK_IRQ] = clock_handler;
     enable_irq(CLOCK_IRQ);
-
-    out_byte(0x43, 0x34);
-    out_byte(0x40, (unsigned char)(1193182L / 100));
-    out_byte(0x40, (unsigned char)((1193182L / 100)>>8));
 
     keyboard_init();
     irq_table[KEYBOARD_IRQ] = keyboard_handler;
@@ -270,16 +266,16 @@ void init()
             printf("parent is running,child pid: %d %d %d %d\n", pid, j, getpid(), getppid());
         } else {
             pid = getpid();
-            execve("/root/HELLO1" ,NULL, NULL);
+            // execve("/root/HELLO1" ,NULL, NULL);
             printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
             while(1){
                 // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
                 delay(1);
-                // if (pid == 2)
-                // {
+                if (pid == 2)
+                {
                     // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
                     exit(1);
-                // }
+                }
             }
         }
     }

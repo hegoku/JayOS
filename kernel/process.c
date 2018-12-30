@@ -189,6 +189,7 @@ void sys_exit(int status)
     current_process->status = TASK_ZOMBIE;
     process_table[current_process->parent_pid].status = TASK_RUNNING;
     free_page(current_process->kernel_regs.esp_addr);
+    process_table[current_process->parent_pid].signal |= (1 << (SIGCHLD - 1));
     // send_sig(SIGCHLD, &process_table[current_process->parent_pid]);
 }
 
@@ -205,6 +206,7 @@ pid_t sys_getppid()
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 {
     unsigned char flag = 0;
+repeat:
     for (int i = 0; i < PROC_NUMBER; i++)
     {
         if (process_table[i].pid != current_process->pid && (pid == -1 || process_table[i].pid == pid))
@@ -226,6 +228,10 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
             return 0;
         }
         sys_pause();
+        if (!(current_process->signal &= ~(1<<(SIGCHLD-1))))
+			goto repeat;
+		else
+			return -EINTR;
     }
     return -ECHILD;
 }

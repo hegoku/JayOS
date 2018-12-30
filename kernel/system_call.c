@@ -37,9 +37,9 @@ sys_call_handler sys_call_table[65] = {
     NULL,
     NULL,
     NULL,
+    sys_alarm, //27
     NULL,
-    NULL,
-    sys_pause,
+    sys_pause, //29
     NULL,
     NULL,
     NULL,

@@ -67,6 +67,11 @@ inline pid_t getpid()
     return sys_call_0_param(SYS_CALL_GETPID);
 }
 
+inline int alarm(unsigned int seconds)
+{
+    return sys_call_0_param(SYS_CALL_ALARM);
+}
+
 inline int pause()
 {
     return sys_call_0_param(SYS_CALL_PAUSE);

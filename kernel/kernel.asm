@@ -306,6 +306,8 @@ hwint00:		; Interrupt routine for irq 0 (the clock).
 	call [irq_table]
 	add	esp, 4
 
+    jmp ret_from_sys_call
+.1:
 	ret
     ; sub esp,4
 ;     pushad
@@ -467,6 +469,12 @@ sys_call:
     pop esi
     mov [esi+EAXREG-P_STACKBASE], eax ;保存 [sys_call_table+4*eax]  函数的返回值到进程表的eax寄存器以便获取
 
+    jmp ret_from_sys_call
+.1:
+    cli
+	ret
+
+ret_from_sys_call:
     cmp dword[is_in_ring0], 0 ;如果在内核态就不用判断进程是否在TASK_RUNNING状态
     jne .1
     mov eax, [current_process]
@@ -475,10 +483,7 @@ sys_call:
     cmp eax, 0
     jne schedule
 .1:
-    cli
-    
-    ; push restart
-	ret
+    ret
 
 save:
     pushad

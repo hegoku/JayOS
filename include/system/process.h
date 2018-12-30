@@ -45,10 +45,10 @@ typedef struct {
 
 typedef struct s_proc {
     STACK_FRAME regs;
-    unsigned short ldt_sel;
+    unsigned int ldt_sel;
     DESCRIPTOR ldts[2];
-    unsigned char status;
-    unsigned char signal;
+    unsigned int status;
+    unsigned int signal;
     KERNEL_FRAME kernel_regs;
     struct PageDir *page_dir;
 
@@ -62,6 +62,7 @@ typedef struct s_proc {
     unsigned char exit_code;
     void *sig_fn[32];
     unsigned long base_addr;
+    unsigned int alarm;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);

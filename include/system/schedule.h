@@ -1,6 +1,8 @@
 #ifndef __SYSTEM_SCHEDULE_H
 #define __SYSTEM_SCHEDULE_H
 
+#include <system/time.h>
+
 #define switch_to(prev, next, last) \
     { \
         __asm__ volatile("pushfl\n\t" \
@@ -32,6 +34,15 @@
         ); \
     }
 
+extern unsigned int ticks;
+
+#define pass_seconds() (ticks/HZ) //过了多少秒
+// #define	MAX_TICKS	0x7FFFABCD
+#define	MAX_TICKS	0xFFFFFFFF
+
+void timer_init();
 void schedule();
+int sys_alarm(unsigned int seconds);
 int sys_pause();
+
 #endif

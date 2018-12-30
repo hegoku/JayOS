@@ -130,6 +130,13 @@ int do_write(struct file_descriptor *fd, char *buf, int nbyte)
     return a;
 }
 
+int do_read(struct file_descriptor *fd, char *buf, int nbyte)
+{
+    int a = tty_write(MINOR(fd->inode->dev_num), (char *)buf, nbyte);
+    fd->pos = tty_table[MINOR(fd->inode->dev_num)].console.cursor;
+    return a;
+}
+
 unsigned int tty_write(int mi_dev, char* buf, int len)
 {
     TTY *tty = &tty_table[mi_dev];

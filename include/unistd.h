@@ -21,6 +21,7 @@ int execve(const char *filename, const char *argv[], const char *envp[]);
 int mount(char *dev_name, char *dir_name, char *type);
 off_t lseek(int fd, off_t offset, int whence);
 pid_t getpid();
+int alarm(unsigned int seconds);
 int pause();
 int dup(unsigned int oldfd);
 pid_t getppid();
