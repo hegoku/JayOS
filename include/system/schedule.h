@@ -2,6 +2,7 @@
 #define __SYSTEM_SCHEDULE_H
 
 #include <system/time.h>
+#include <system/process.h>
 
 #define switch_to(prev, next, last) \
     { \
@@ -42,6 +43,9 @@ extern unsigned int ticks;
 
 void timer_init();
 void schedule();
+void interruptible_sleep_on(PROCESS **p);
+void wake_up(PROCESS **p);
+
 int sys_alarm(unsigned int seconds);
 int sys_pause();
 

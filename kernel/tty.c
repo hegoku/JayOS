@@ -1,7 +1,9 @@
 #include "tty.h"
 #include <system/dev.h>
 #include <system/fs.h>
+#include <system/schedule.h>
 #include "global.h"
+#include "kernel.h"
 #include "keyboard.h"
 
 #define MAJOR_NR 4
@@ -10,10 +12,11 @@ TTY tty_table[TTY_NUM];
 TTY *current_tty;
 
 static int do_request();
+static int do_read(struct file_descriptor *fd, char *buf, int nbyte);
 static int do_write(struct file_descriptor *fd, char *buf, int nbyte);
 struct file_operation tty_f_op = {
     0,
-    0,
+    do_read,
     do_write,
     // 0,
     // 0,
@@ -74,17 +77,17 @@ void tty_input(TTY* tty, int content)
             key = content & 0xFF;
             break;
         }
-        console_out_char(&(tty->console), key& 0xff);
-        // if (tty->inbuf_count < TTY_IN_BYTES)
-        // {
-        //     *(tty->inbuf_head) = key;
-        //     tty->inbuf_head++;
-        //     if (tty->inbuf_head == tty->in_buff + TTY_IN_BYTES)
-        //     {
-        //         tty->inbuf_head = tty->in_buff;
-        //     }
-        //     tty->inbuf_count++;
-        // }
+        // console_out_char(&(tty->console), key& 0xff);
+        if (tty->inbuf_count < TTY_IN_BYTES)
+        {
+            *(tty->inbuf_head) = key;
+            tty->inbuf_head++;
+            if (tty->inbuf_head == tty->in_buff + TTY_IN_BYTES)
+            {
+                tty->inbuf_head = tty->in_buff;
+            }
+            tty->inbuf_count++;
+        }
     }
     
 }
@@ -132,9 +135,38 @@ int do_write(struct file_descriptor *fd, char *buf, int nbyte)
 
 int do_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
-    int a = tty_write(MINOR(fd->inode->dev_num), (char *)buf, nbyte);
-    fd->pos = tty_table[MINOR(fd->inode->dev_num)].console.cursor;
-    return a;
+    nbyte = 0;
+    buf[0] = '\0';
+    TTY *tty = &tty_table[MINOR(fd->inode->dev_num)];
+repeat:
+    while (tty->inbuf_count)
+    {
+        char ch = *(tty->inbuf_tail);
+        tty->inbuf_tail++;
+        if (tty->inbuf_tail==tty->in_buff+TTY_IN_BYTES) {
+            tty->inbuf_tail = tty->in_buff;
+        }
+        tty->inbuf_count--;
+        // DispStr(output);
+        console_out_char(&(tty->console), ch);
+        switch (ch)
+        {
+        case '\n':
+            return nbyte;
+            break;
+        case '\b':
+            buf[--nbyte] = '\0';
+            break;
+        default:
+            buf[nbyte++] = ch;
+            buf[nbyte] = '\0';
+            break;
+        }
+    }
+    sys_alarm(1);
+    schedule();
+    goto repeat;
+    return -1;
 }
 
 unsigned int tty_write(int mi_dev, char* buf, int len)

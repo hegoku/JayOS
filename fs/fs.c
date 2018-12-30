@@ -246,18 +246,20 @@ int sys_read(int fd,char __user *buf, unsigned int nbyte)
         printk("File not exist (fd: %d)\n", fd);
         return -1;
     }
-    if (nbyte==0 || nbyte>file->inode->size) {
-        return 0;
-    }
-    if(nbyte+file->pos>file->inode->size) {
-        return 0;
-    }
+    
+    // if (nbyte == 0 || nbyte > file->inode->size)
+    // {
+    //     return 0;
+    // }
+    // if(nbyte+file->pos>file->inode->size) {
+    //     return 0;
+    // }
 
     // char *kbuf = kzmalloc(nbyte);
     // copy_from_user(kbuf, buf, nbyte);
     
     if (file->op->read) {
-        res=file->op->read(file, (char *)buf, nbyte);
+        res = file->op->read(file, (char *)buf, nbyte);
     }
     // printk("k:%s\n", kbuf);
     // copy_to_user(buf, kbuf, nbyte);

@@ -375,6 +375,13 @@ int dev_do_write(struct file_descriptor *fd, char *buf, int nbyte)
 
 int dev_do_read(struct file_descriptor *fd, char *buf, int nbyte)
 {
+    if (nbyte == 0 || nbyte > fd->inode->size)
+    {
+        return 0;
+    }
+    if(nbyte+fd->pos>fd->inode->size) {
+        return 0;
+    }
     // unsigned long start_pos = fd->pos + fd->inode->start_pos;
     // unsigned long start_block = start_pos / SECTOR_SIZE;
     // unsigned long end_block = (start_pos + nbyte) / SECTOR_SIZE;

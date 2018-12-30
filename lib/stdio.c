@@ -293,7 +293,7 @@ int scanf(const char *format, ...)
     int i;
     char buf[STR_DEFAULT_LEN];
     va_list arg = (va_list)((char*)(&format) + 4);
-	read(STDIN_FILENO, buf, i);
+	read(STDIN_FILENO, buf, STR_DEFAULT_LEN);
     i = vsscanf (buf, format, arg);
 	return i;
 }
@@ -311,60 +311,60 @@ static int vsscanf (const char *buf, const char *s, va_list ap)
 	if (*s == '%') {
 	    s++;
 	    for (; *s; s++) {
-		if (strchr ("dibouxcsefg%", *s))
-		    break;
-		if (*s == '*')
-		    noassign = 1;
-		else if (*s == 'l' || *s == 'L')
-		    lflag = 1;
-		else if (*s >= '1' && *s <= '9') {
-		    for (tc = s; isdigit (*s); s++);
-		    strncpy (tmp, tc, s - tc);
-		    tmp[s - tc] = '\0';
-		    atob (&width, tmp, 10);
-		    s--;
-		}
+            if (strchr ("dibouxcsefg%", *s))
+                break;
+            if (*s == '*')
+                noassign = 1;
+            else if (*s == 'l' || *s == 'L')
+                lflag = 1;
+            else if (*s >= '1' && *s <= '9') {
+                for (tc = s; isdigit (*s); s++);
+                strncpy (tmp, tc, s - tc);
+                tmp[s - tc] = '\0';
+                atob (&width, tmp, 10);
+                s--;
+            }
 	    }
 	    if (*s == 's') {
-		while (isspace (*buf))
-		    buf++;
-		if (!width)
-		    width = strcspn (buf, " ");
-		if (!noassign) {
-		    strncpy (t = va_arg (ap, char *), buf, width);
-		    t[width] = '\0';
-		}
-		buf += width;
+            while (isspace (*buf))
+                buf++;
+            if (!width)
+                width = strcspn (buf, " ");
+            if (!noassign) {
+                strncpy (t = va_arg (ap, char *), buf, width);
+                t[width] = '\0';
+            }
+            buf += width;
 	    } else if (*s == 'c') {
-		if (!width)
-		    width = 1;
-		if (!noassign) {
-		    strncpy (t = va_arg (ap, char *), buf, width);
-		    t[width] = '\0';
-		}
-		buf += width;
+            if (!width)
+                width = 1;
+            if (!noassign) {
+                strncpy (t = va_arg (ap, char *), buf, width);
+                t[width] = '\0';
+            }
+            buf += width;
 	    } else if (strchr ("dobxu", *s)) {
-		while (isspace (*buf))
-		    buf++;
-		if (*s == 'd' || *s == 'u')
-		    base = 10;
-		else if (*s == 'x')
-		    base = 16;
-		else if (*s == 'o')
-		    base = 8;
-		else if (*s == 'b')
-		    base = 2;
-		if (!width) {
-		    if (isspace (*(s + 1)) || *(s + 1) == 0)
-			width = strcspn (buf, " ");
-		    else
-			width = strchr (buf, *(s + 1)) - buf;
-		}
-		strncpy (tmp, buf, width);
-		tmp[width] = '\0';
-		buf += width;
-		if (!noassign)
-		    atob (va_arg (ap, unsigned int *), tmp, base);
+            while (isspace (*buf))
+                buf++;
+            if (*s == 'd' || *s == 'u')
+                base = 10;
+            else if (*s == 'x')
+                base = 16;
+            else if (*s == 'o')
+                base = 8;
+            else if (*s == 'b')
+                base = 2;
+            if (!width) {
+                if (isspace (*(s + 1)) || *(s + 1) == 0)
+                width = strcspn (buf, " ");
+                else
+                width = strchr (buf, *(s + 1)) - buf;
+            }
+            strncpy (tmp, buf, width);
+            tmp[width] = '\0';
+            buf += width;
+            if (!noassign)
+                atob (va_arg (ap, unsigned int *), tmp, base);
 	    }
 	    if (!noassign)
 		count++;

@@ -259,7 +259,8 @@ void init()
     (void) dup(0);
     printf("parent is running, pid: %d\n", getpid());
     int i, pid;
-    for (int j = 0; j < 4;j++) {
+    for (int j = 0; j < 4; j++)
+    {
         pid = fork();
         if (pid != 0)
         {
@@ -270,7 +271,7 @@ void init()
             printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
             while(1){
                 // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
-                delay(1);
+                delay(100);
                 if (pid == 2)
                 {
                     // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());

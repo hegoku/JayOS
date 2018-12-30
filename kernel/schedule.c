@@ -4,6 +4,8 @@
 #include <system/schedule.h>
 #include <system/time.h>
 #include <system/signal.h>
+#include <sys/types.h>
+#include <system/process.h>
 
 unsigned int ticks = 1;
 
@@ -70,4 +72,33 @@ int sys_alarm(unsigned int seconds)
 {
 	current_process->alarm = (seconds>0)?(ticks+HZ*seconds):0;
 	return seconds;
+}
+
+void interruptible_sleep_on(PROCESS **p)
+{
+	PROCESS *tmp;
+
+	if (!p)
+		return;
+	// if (current_process == &(init_task.task))
+	// 	panic("task[0] trying to sleep");
+	tmp=*p;
+	*p=current_process;
+repeat:	current_process->status = TASK_INTERRUPTIBLE;
+	schedule();
+	if (*p && *p != current_process) {
+		(**p).status=0;
+		goto repeat;
+	}
+	*p=NULL;
+	if (tmp)
+		tmp->status=0;
+}
+
+void wake_up(PROCESS **p)
+{
+	if (p && *p) {
+		(**p).status=0;
+		*p=NULL;
+	}
 }
