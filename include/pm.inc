@@ -348,5 +348,6 @@ P_LDT_SEL	equ	P_STACKTOP
 P_LDT		equ	P_LDT_SEL	+ 2
 P_STATUS    equ P_LDT       + 16
 P_SIGNAL    equ P_STATUS    + 1
+P_K_ESP     equ P_SIGNAL    + 1
 
 TSS3_S_SP0	equ	4

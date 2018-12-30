@@ -36,12 +36,20 @@ typedef struct s_stackframe {
     unsigned int ss;
 } STACK_FRAME;
 
+typedef struct {
+    unsigned int esp;
+    unsigned int esp_addr;
+    unsigned int eip;
+} KERNEL_FRAME;
+
+
 typedef struct s_proc {
     STACK_FRAME regs;
     unsigned short ldt_sel;
     DESCRIPTOR ldts[2];
     unsigned char status;
     unsigned char signal;
+    KERNEL_FRAME kernel_regs;
     struct PageDir *page_dir;
 
     unsigned int pid;

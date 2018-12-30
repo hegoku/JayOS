@@ -27,6 +27,7 @@
 	 (low))
 
 static int alloc_mem(int pid, int memsize);
+extern void restart();
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
 {
@@ -161,6 +162,10 @@ pid_t sys_fork()
         }
     }
 
+    process_table[pid].kernel_regs.eip = (unsigned int)restart;
+    process_table[pid].kernel_regs.esp_addr = get_free_page();
+    process_table[pid].kernel_regs.esp = process_table[pid].kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
+
     return pid;
 }
 
@@ -183,6 +188,7 @@ void sys_exit(int status)
     clear_page_tables(current_process->page_dir);
     current_process->status = TASK_ZOMBIE;
     process_table[current_process->parent_pid].status = TASK_RUNNING;
+    free_page(current_process->kernel_regs.esp_addr);
     // send_sig(SIGCHLD, &process_table[current_process->parent_pid]);
 }
 
@@ -278,9 +284,9 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
                     index1++;
                     current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
                 }
-                printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
+                // printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
                 get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = get_free_page() | PG_P | PG_RWW | PG_USU;
-                printk("%x %x %x\n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2], phdr->p_flags);
+                // printk("%x %x %x\n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2], phdr->p_flags);
                 if (left_bytes) {
                     int b = fmin(left_bytes, PAGE_SIZE);
                     memcpy((void *)(phdr->p_vaddr+offset), (void *)(program + phdr->p_offset+offset), b);

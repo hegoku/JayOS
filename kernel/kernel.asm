@@ -198,7 +198,9 @@ page_fault:
     inc dword[is_in_ring0]
     cmp dword[is_in_ring0], 0
     jne .1
-    mov esp, TOP_OF_KERNEL_STACK
+    ; mov esp, TOP_OF_KERNEL_STACK
+    mov esp, [current_process]
+    mov esp, [esp+P_K_ESP]
     push restart
     jmp .2
 .1:
@@ -216,17 +218,23 @@ page_fault:
 	; mov fs,dx
     sti
 	mov edx,cr2			;// 取引起页面异常的线性地址
-	push edx			;// 将该线性地址和出错码压入堆栈，作为调用函数的参数。
-	push eax
 	test eax,1			;// 测试标志P，如果不是缺页引起的异常则跳转。
 	jne .l1
-    push	14		; vector_no	= 10h
+
+    push dword[esi+EFLAGSREG]
+    push dword[esi+CSREG]
+    push dword[esi+EIPREG]
+    push eax
+    push 14		; vector_no	= 10h
 	jmp	exception
-    add esp,4
+    add esp,4*3
 	; call _do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
 	jmp .l2			
-.l1:	call do_wp_page	;// 调用写保护处理函数（mm/memory.c,247 行）。
-.l2:	add esp,8		;// 丢弃压入栈的两个参数。
+.l1:
+    push edx			;// 将该线性地址和出错码压入堆栈，作为调用函数的参数。
+	push eax
+    call do_wp_page	;// 调用写保护处理函数（mm/memory.c,247 行）。
+.l2: add esp,8		;// 丢弃压入栈的两个参数。
 	; pop fs
 	; pop es
 	; pop ds
@@ -287,7 +295,18 @@ exception:
 %endmacro
 
 hwint00:		; Interrupt routine for irq 0 (the clock).
-hwint_master 0
+; hwint_master 0
+    call save
+    mov al, EOI
+    out INT_M_CTL, al
+
+    sti
+
+    push 0
+	call [irq_table]
+	add	esp, 4
+
+	ret
     ; sub esp,4
 ;     pushad
 ;     push ds
@@ -416,9 +435,6 @@ hwint15:		; Interrupt routine for irq 15
 	hwint_slave	15
 
 extern schedule
-reschedule:
-    push restart
-    jmp schedule
 
 sys_call:
     call save
@@ -457,7 +473,7 @@ sys_call:
     mov eax, [eax+P_STATUS]
     mov ebx, current_process
     cmp eax, 0
-    jne reschedule
+    jne schedule
 .1:
     cli
     
@@ -480,7 +496,9 @@ save:
     inc dword[is_in_ring0]
     cmp dword[is_in_ring0], 0
     jne .1
-    mov esp, TOP_OF_KERNEL_STACK
+    ; mov esp, TOP_OF_KERNEL_STACK
+    mov esp, [current_process]
+    mov esp, [esp+P_K_ESP]
     push restart
     jmp [esi+RETADR-P_STACKBASE]
 .1:

@@ -17,6 +17,7 @@
 #include "../fs/fat/fat.h"
 #include "system/mm.h"
 #include <system/schedule.h>
+#include <errno.h>
 
 int ticks = 1;
 TSS tss={
@@ -269,21 +270,23 @@ void init()
             printf("parent is running,child pid: %d %d %d %d\n", pid, j, getpid(), getppid());
         } else {
             pid = getpid();
-            execve("/root/HELLO" ,NULL, NULL);
-            // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+            execve("/root/HELLO1" ,NULL, NULL);
+            printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
             while(1){
-                printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+                // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
                 delay(1);
-                // if (pid==2) {
+                // if (pid == 2)
+                // {
+                    // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
                     exit(1);
                 // }
             }
         }
     }
     while(pid=waitpid(-1, &i, 0)) {
-        if (pid>0) {
+        // if (pid>0) {
             printf("child: %d exit with status: %d\n", pid, i);
-        }
+        // }
     }
     while(1){}
     pid = fork();
@@ -580,4 +583,7 @@ void init_fork()
         //     get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j];
         // }
     }
+
+    current_process->kernel_regs.esp_addr=get_free_page();
+    current_process->kernel_regs.esp = current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
 }
