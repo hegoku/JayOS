@@ -7,7 +7,7 @@ CC          = bin/bin/i386-elf-gcc
 LD			= bin/bin/i386-elf-ld
 CFLAGS      = -c -fno-builtin -I include/
 
-TARGET		= boot.bin loader kernel k1
+TARGET		= boot.bin loader kernel k1 hdboot.bin hdloader
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
@@ -16,7 +16,7 @@ OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o buil
 
 all : clean everything image
 
-everything : boot.bin loader kernel k1
+everything : boot.bin loader kernel k1 hdboot.bin hdloader
 
 clean :
 	rm -f build/*
@@ -29,11 +29,22 @@ buildimg:
 	cp build/loader /Volumes/JayOS/
 	cp build/kernel /Volumes/JayOS/kernel
 	hdiutil detach /Volumes/JayOS/
+	dd if=build/hdboot.bin of=c1.img bs=1 count=448 conv=notrunc  seek=5243454 skip=62
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
+	cp build/hdloader /Volumes/NO\ NAME/loader
+	cp build/kernel /Volumes/NO\ NAME/kernel
+	hdiutil detach /Volumes/NO\ NAME/
 
 boot.bin : boot/boot.asm include/fat12hdr.inc
 	$(ASM)  -o build/$@ $<
 
 loader : boot/loader.asm include/fat12hdr.inc include/elf.inc include/func.inc include/pm.inc
+	$(ASM) -o build/$@ $<
+
+hdboot.bin : boot/hdboot.asm include/fat12hdr.inc
+	$(ASM)  -o build/$@ $<
+
+hdloader : boot/hdloader.asm include/fat12hdr.inc include/elf.inc include/func.inc include/pm.inc
 	$(ASM) -o build/$@ $<
 
 kernel : $(OBJS)

@@ -617,7 +617,7 @@ private_colormap: enabled=0
 # The optional parameter 'write_protected' can be used to control the media
 # write protect switch. By default it is turned off.
 #=======================================================================
-floppya: 1_44=a.img, status=inserted
+#floppya: 1_44=a.img, status=inserted
 #floppya: image=../1.44, status=inserted
 #floppya: 1_44=/dev/fd0H1440, status=inserted
 #floppya: 1_2=../1_2, status=inserted
@@ -706,7 +706,7 @@ floppya: 1_44=a.img, status=inserted
 #=======================================================================
 #ata0-master: type=disk, mode=flat, path="30M.sample"
 #ata0-master: type=disk, mode=flat, path="30M.sample", cylinders=615, heads=6, spt=17
-#ata0-master: type=disk, mode=flat, path="c.img", cylinders=0 # autodetect
+#ata0-master: type=disk, mode=flat, path="c1.img", cylinders=0 # autodetect
 #ata0-slave: type=disk, mode=vvfat, path=/bochs/images/vvfat, journal=vvfat.redolog
 #ata0-slave: type=cdrom, path=D:, status=inserted
 #ata0-slave: type=cdrom, path=/dev/cdrom, status=inserted
@@ -725,7 +725,7 @@ floppya: 1_44=a.img, status=inserted
 #   boot: cdrom, floppy, disk
 #=======================================================================
 #boot: floppy
-boot: floppy
+boot: floppy, disk
 
 #=======================================================================
 # FLOPPY_BOOTSIG_CHECK: disabled=[0|1]
@@ -1174,7 +1174,7 @@ parport1: enabled=1, file="parport.out"
 # romimage: file=:bios:BIOS-bochs-latest, address=0xf0000
 # floppya: 1_44=[fd:], status=inserted
 #=======================================================================
-floppya: 1_44=a.img
+#floppya: 1_44=a.img, status=inserted
 #floppya: 1_44=dankos.img
 
 #=======================================================================
@@ -1191,5 +1191,6 @@ floppya: 1_44=a.img
 #megs: 16
 #megs: 8
 
-ata0-master: type=disk, path="c.img", mode=flat
+#ata0-master: type=disk, path="c.img", mode=flat
 #ata1-master: type=disk, path="d.img", mode=flat
+ata0-master: type=disk, path="c1.img", mode=flat

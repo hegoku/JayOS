@@ -9,7 +9,7 @@ ROOT_DIRECTORY_ENTRY_FSTCLUS_OFFSET equ 0x1A ;根目录条目 存放开始簇号
 ROOT_DIRECTORY_ENTRY_FILESIZE_OFFSET equ 0x1C ;根目录条目 存放文件大小的偏离位置
 
 BS_OEMName db 'JACK    ' ;OEM
-BPB_BytsPerSec dw 512 ;梅子姐扇区数
+BPB_BytsPerSec dw 512 ;每扇区字节数
 BPB_SecPerClus db 1 ;每簇多少扇区
 BPB_RsvdSecCnt dw 1 ;Boot记录占用多少扇区
 BPB_NumFATs db 2 ;共有多少FAT表
