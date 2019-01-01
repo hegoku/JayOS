@@ -12,7 +12,7 @@ inline void exit(int status)
     sys_call_1_param(SYS_CALL_EXIT, status);
 }
 
-inline pid_t fork(void)
+inline pid_t fork()
 {
     return sys_call_0_param(SYS_CALL_FORK);
 }

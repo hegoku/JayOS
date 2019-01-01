@@ -62,7 +62,7 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
                     get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j] & ~PG_RWW;
                     get_pt_entry_v_addr(pd->entry[i])->entry[j] &= ~PG_RWW;
                     mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].count++;
-                    mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].pyhsics_addr |= MP_OCW;
+                    mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].pyhsics_addr |= MP_COW;
                     //((struct PageTable*)((int)pd->entry[i] & 0xfffff000))
                     // printk(":%x:", get_entry_address(pd->entry[i])->entry[j]);
                     // (*res)->entry[i]->entry[j] = (unsigned int)kzmalloc(1024*4);
@@ -78,7 +78,6 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
         {
             (*res)->entry[i] = 0;
         }
-        invalidate();
     }
     for (i = 768; i < 1024; i++)
     {
@@ -87,6 +86,7 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
         //     get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j];
         // }
     }
+    invalidate();
 }
 
 void init_process_page(struct PageDir **res)
@@ -149,28 +149,61 @@ void free_page(PG_P_ADDR pyhsics_addr)
     // mem_map[pyhsics_addr].count--;
 }
 
+// void do_wp_page(unsigned int error_code, unsigned int address)
+// {
+//     int index1 = address >> 22;
+//     int index2 = address >> 12 & 0x03FF;
+//     unsigned int old_page, new_page;
+//     old_page = 0xfffff000 & get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2];
+//     new_page = get_free_page();
+//     get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
+//     printk("do_wap_page pid(%d): %x %x %x %x eip:%x esp:%x\n", current_process->pid, address, old_page, new_page, old_page >> 12, current_process->regs.eip, current_process->regs.esp);
+//     // while (1)
+//     // {
+//     // }
+//     invalidate();
+//     // memset((void *)__va(old_page), 2, 1024);
+//     memcpy((void *)__va(new_page), (void *)__va(old_page), 1024*4);
+//     mem_map[new_page >> 12].count++;
+//     mem_map[old_page >> 12].count--;
+//     if (mem_map[old_page >> 12].count==0) {
+//         free_page(old_page);
+//     }
+//     if (current_process->pid==2) {
+//         while(1){}
+//     }
+//     // __asm__("cld ; rep ; movsl" ::"S"(__va(old_page)), "D"(__va(new_page)), "c"(1024)
+//     //         : "cx", "di", "si");
+// }
+
 void do_wp_page(unsigned int error_code, unsigned int address)
 {
     int index1 = address >> 22;
     int index2 = address >> 12 & 0x03FF;
     unsigned int old_page, new_page;
     old_page = 0xfffff000 & get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2];
-    new_page = get_free_page();
-    get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
-    printk("do_wap_page pid(%d): %x %x %x %x\n", current_process->pid, address, old_page, new_page, old_page >> 12);
-    // while (1)
-    // {
-    // }
-    invalidate();
-    // memset((void *)__va(old_page), 2, 1024);
-    memcpy((void *)__va(new_page), (void *)__va(old_page), 1024*4);
-    mem_map[new_page >> 12].count++;
-    mem_map[old_page >> 12].count--;
-    if (mem_map[old_page >> 12].count==0) {
-        free_page(old_page);
+    if (mem_map[old_page >> 12].count==1) {
+        get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = old_page | PG_P | PG_RWW | PG_USU;
+        mem_map[old_page >> 12].pyhsics_addr &= 0xfffff000;
+        mem_map[old_page >> 12].pyhsics_addr |= MP_USE;
+        new_page = old_page;
     }
-    // __asm__("cld ; rep ; movsl" ::"S"(__va(old_page)), "D"(__va(new_page)), "c"(1024)
-    //         : "cx", "di", "si");
+    else
+    {
+        new_page = get_free_page();
+        get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
+        memcpy((void *)__va(new_page), (void *)__va(old_page), 1024 * 4);
+        mem_map[new_page >> 12].count++;
+        mem_map[old_page >> 12].count--;
+    }
+
+    printk("do_wap_page pid(%d): addr:%x old:%x new:%x %x eip:%x esp:%x\n", current_process->pid, address, old_page, new_page, old_page >> 12, current_process->regs.eip, current_process->regs.esp);
+
+    invalidate();
+
+    if (current_process->pid==2) {
+        // while(1){}
+    }
 }
 
 void clear_page_tables(struct PageDir *pd)
@@ -183,4 +216,25 @@ void clear_page_tables(struct PageDir *pd)
         }
     }
     invalidate();
+}
+
+
+void do_no_page(unsigned int error_code, unsigned int address)
+{
+    int index1 = address >> 22;
+    int index2 = address >> 12 & 0x03FF;
+    unsigned int new_page;
+
+    new_page = get_free_page();
+    current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
+    get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = new_page | PG_P | PG_RWW | PG_USU;
+    mem_map[new_page >> 12].count++;
+
+    printk("do_no_page pid(%d): addr:%x new:%x eip:%x esp:%x\n", current_process->pid, address, new_page, current_process->regs.eip, current_process->regs.esp);
+
+    invalidate();
+
+    // if (current_process->pid==2) {
+        // while(1){}
+    // }
 }

@@ -257,99 +257,132 @@ void init()
     (void) open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
-    printf("parent is running, pid: %d\n", getpid());
     int i, pid;
-    for (int j = 0; j < 4; j++)
+    pid = fork();
+    char buf[1024];
+    if (pid != 0)
     {
+        printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
+    } else {
+        printf("childis running %d\n", getpid());
         pid = fork();
-        if (pid != 0)
-        {
-            printf("parent is running,child pid: %d %d %d %d\n", pid, j, getpid(), getppid());
-        } else {
-            pid = getpid();
-            // execve("/root/HELLO1" ,NULL, NULL);
-            printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
-            while(1){
-                // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
-                delay(100);
-                if (pid == 2)
-                {
-                    // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
-                    exit(1);
-                }
-            }
+        if (pid) {
+            printf("chchchchh %d\n", pid);
         }
-    }
-    while(pid=waitpid(-1, &i, 0)) {
-        // if (pid>0) {
-            printf("child: %d exit with status: %d\n", pid, i);
-        // }
+        else
+        {
+            printf("ggggggg %d\n", getpid());
+        }
+        while(1){}
+        execve("/root/SH", NULL, NULL);
     }
     while(1){}
-    pid = fork();
-    if (pid!=0)
-    {
-        printf("parent is running, child pid: %d\n", pid);
-        char a[513];
-        int ff = open("/root/d.txt", O_RDWR);
-        memset(a, 0, 513);
-        while(1){
-            // printf("p:%d ", pid);
-            delay(1);
-            lseek(ff, 5, SEEK_SET);
-            printf("0 ");
-            delay(1);
-            // int aaa = read(ff, a, 2);
-            // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
+    while(pid=waitpid(-1, &i, 0)) {
+        if (pid>0) {
+            printf("child: %d exit with status: %d\n", pid, i);
         }
-    } else {
-        pid = getpid();
-        printf("child is running, pid: %d\n", pid);
-        // while (1)
-        // {
-        //     printf("c:%d ", pid);
-        //     delay(1);
-        //     pause();
-        // }
-        execve("/root/HELLO1" ,NULL, NULL);
-        // while(1){}
-        // while(1){
-        //     printf("child is running, pid: 1\n", pid);
-        //     delay(1);
-        // }
-        char a[513];
-        int ff = open("/root/d.txt", O_RDWR);
-        memset(a, 0, 513);
-        printf("%d\n", ff);
-        int aaa=read(ff, a, 2);
-        printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
-        close(ff);
-
-        ff = open("/root/b/c.txt", O_RDWR);
-        memset(a, 0, 513);
-        aaa=read(ff, a, 2);
-        printf("c.txt: %d\n%s\n====\n", aaa, a);
-        while(1){
-            lseek(ff, 0, SEEK_SET);
-            // aaa=read(ff, a, 2);
-        // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
-        delay(1);
-            // int ff = open("/root/d.txt", O_RDWR);
-            // char *a[512];
-            // memset(a, 0, 513);
-            // int aaa=read(ff, a, 2);
-            // printf("%d\n%s\n", aaa, a);
-            // close(ff);
-        }
-    }
-
-    while(1) {
-        int i;
-        pid_t child;
-        child=waitpid(-1, &i, 0);
-        // printf("Child (%d) exited with status: %d\n", child, i);
     }
 }
+
+// void init()
+// {
+//     mount("/dev/hd1", "/root", "fat12");
+//     (void) open("/dev/tty0", O_RDWR);
+//     (void) dup(0);
+//     (void) dup(0);
+//     printf("parent is running, pid: %d\n", getpid());
+//     int i, pid;
+//     for (int j = 0; j < 4; j++)
+//     {
+//         pid = fork();
+//         if (pid != 0)
+//         {
+//             printf("parent is running,child pid: %d %d %d %d\n", pid, j, getpid(), getppid());
+//         } else {
+//             pid = getpid();
+//             execve("/root/HELLO1" ,NULL, NULL);
+//             printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+//             while(1){
+//                 // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+//                 delay(1);
+//                 if (pid == 2)
+//                 {
+//                     // printf("child is running, pid: %d %d, parent_pid:%d\n", pid, j, getppid());
+//                     exit(1);
+//                 }
+//             }
+//         }
+//     }
+//     while(pid=waitpid(-1, &i, 0)) {
+//         // if (pid>0) {
+//             printf("child: %d exit with status: %d\n", pid, i);
+//         // }
+//     }
+//     while(1){}
+//     pid = fork();
+//     if (pid!=0)
+//     {
+//         printf("parent is running, child pid: %d\n", pid);
+//         char a[513];
+//         int ff = open("/root/d.txt", O_RDWR);
+//         memset(a, 0, 513);
+//         while(1){
+//             // printf("p:%d ", pid);
+//             delay(1);
+//             lseek(ff, 5, SEEK_SET);
+//             printf("0 ");
+//             delay(1);
+//             // int aaa = read(ff, a, 2);
+//             // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", 0, aaa, a);
+//         }
+//     } else {
+//         pid = getpid();
+//         printf("child is running, pid: %d\n", pid);
+//         // while (1)
+//         // {
+//         //     printf("c:%d ", pid);
+//         //     delay(1);
+//         //     pause();
+//         // }
+//         execve("/root/HELLO1" ,NULL, NULL);
+//         // while(1){}
+//         // while(1){
+//         //     printf("child is running, pid: 1\n", pid);
+//         //     delay(1);
+//         // }
+//         char a[513];
+//         int ff = open("/root/d.txt", O_RDWR);
+//         memset(a, 0, 513);
+//         printf("%d\n", ff);
+//         int aaa=read(ff, a, 2);
+//         printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
+//         close(ff);
+
+//         ff = open("/root/b/c.txt", O_RDWR);
+//         memset(a, 0, 513);
+//         aaa=read(ff, a, 2);
+//         printf("c.txt: %d\n%s\n====\n", aaa, a);
+//         while(1){
+//             lseek(ff, 0, SEEK_SET);
+//             // aaa=read(ff, a, 2);
+//         // printf("(pid:%d) read_len:%d\ncontent:%s\n===\n", pid, aaa, a);
+//         delay(1);
+//             // int ff = open("/root/d.txt", O_RDWR);
+//             // char *a[512];
+//             // memset(a, 0, 513);
+//             // int aaa=read(ff, a, 2);
+//             // printf("%d\n%s\n", aaa, a);
+//             // close(ff);
+//         }
+//     }
+
+//     while(1) {
+//         int i;
+//         pid_t child;
+//         child=waitpid(-1, &i, 0);
+//         // printf("Child (%d) exited with status: %d\n", child, i);
+//     }
+// }
 
 void TestA()
 {
@@ -583,4 +616,13 @@ void init_fork()
 
     current_process->kernel_regs.esp_addr=get_free_page();
     current_process->kernel_regs.esp = current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
+
+    // if (current_process->page_dir->entry[511]==0) {
+    //     current_process->page_dir->entry[511] = create_table(PG_P | PG_RWW | PG_USU);
+    // }
+    // if (get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j]!= 0) {
+    // }
+    current_process->page_dir->entry[511] = create_table(PG_P | PG_RWW | PG_USU);
+    get_pt_entry_v_addr(current_process->page_dir->entry[511])->entry[1023] = get_free_page() | PG_P | PG_RWW | PG_USU;
+    mem_map[(get_pt_entry_v_addr(current_process->page_dir->entry[511])->entry[1023] & 0xfffff000)>>12].count++;
 }

@@ -148,23 +148,27 @@ repeat:
         }
         tty->inbuf_count--;
         // DispStr(output);
-        console_out_char(&(tty->console), ch);
         switch (ch)
         {
         case '\n':
+            console_out_char(&(tty->console), ch);
             return nbyte;
             break;
         case '\b':
-            buf[--nbyte] = '\0';
+            if (nbyte>0) {
+                buf[--nbyte] = '\0';
+                console_out_char(&(tty->console), ch);
+            }
             break;
         default:
             buf[nbyte++] = ch;
             buf[nbyte] = '\0';
+            console_out_char(&(tty->console), ch);
             break;
         }
     }
-    sys_alarm(1);
-    schedule();
+    // sys_alarm(1);
+    // schedule();
     goto repeat;
     return -1;
 }

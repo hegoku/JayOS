@@ -50,9 +50,9 @@ typedef struct s_proc {
     unsigned int status;
     unsigned int signal;
     KERNEL_FRAME kernel_regs;
-    struct PageDir *page_dir;
-
     unsigned int pid;
+
+
     unsigned int parent_pid;
     char name[256];
     unsigned char is_free;
@@ -63,6 +63,7 @@ typedef struct s_proc {
     void *sig_fn[32];
     unsigned long base_addr;
     unsigned int alarm;
+    struct PageDir *page_dir;
 } PROCESS;
 
 PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry);

@@ -28,14 +28,14 @@ sys_call_0_param:
     push ecx
     push edx
 	mov	eax, [esi + 8]	; system call table index, the index of sys_call_table[]
-	mov	ebx, [esi + 12]	; not used
-	mov	ecx, [esi + 16]	; not used
+	mov	ebx, 0	; not used
+	mov	ecx, 0	; not used
 	mov	edx, 0	; not used
     int INT_VECTOR_SYS_CALL
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
 
@@ -53,7 +53,7 @@ sys_call_1_param:
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
 
@@ -71,7 +71,7 @@ sys_call_2_param:
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
 
@@ -89,6 +89,6 @@ sys_call_3_param:
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret

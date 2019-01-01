@@ -11,7 +11,7 @@
 int get_ticks(); //临时
 
 void exit(int status);
-pid_t fork(void);
+pid_t fork();
 ssize_t read(int fd, const void *buf, size_t nbytes);
 ssize_t write(int fd, const void *buf, size_t nbytes);
 int open(const char *path, int flags, ...);

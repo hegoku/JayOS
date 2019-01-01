@@ -88,8 +88,7 @@ int sys_open(const char __user *path, int flags, ...)
     if (p_inode->f_op->open) {
         p_inode->f_op->open(p_inode, &f_desc_table[i]);
     }
-    p_inode->used_count++;
-    
+    p_inode->used_count++;    
     // kfree(filename, 256);
 
     // if (p_inode->mode==FILE_MODE_CHR) {
@@ -551,6 +550,7 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
 {
     struct dir_entry *dir, *mid_dir;
     const char *thisname;
+    const char *tmp_name = pathname;
     int len, error;
     char c;
     nd->dir = NULL;
@@ -561,21 +561,24 @@ static int get_parent_dir_entry(const char *pathname, struct dir_entry *base, st
     if (pathname[0] == '/')
     {
         base = current_process->root;
+        tmp_name++;
     }
-    pathname++;
+    
     dir = base;
     // printk("%s %x %s %x", pathname, base, current_process->root->name, *(char*)(0xc0300efc));
 
     while (1)
     {
-        thisname = pathname;
-        for (len = 0; (c = *(pathname++)) && (c != '/'); len++)
+        thisname = tmp_name;
+
+        for (len = 0; (c = *(tmp_name++)) && (c != '/'); len++)
         {
         }
 
         if (!c) {
             break;
         }
+            
         error = lookup(dir, thisname, len, &mid_dir);
         if (error)
         {

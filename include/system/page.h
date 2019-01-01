@@ -19,7 +19,7 @@
 #define PG_USU		4	// U/S 属性位值, 用户级
 
 #define MP_USE 1 //被使用
-#define MP_OCW 2
+#define MP_COW 2
 
 struct PageDir{
     unsigned int entry[1024];
@@ -65,4 +65,5 @@ void free_page(unsigned int pyhsics_addr);
 void clear_page_tables(struct PageDir *pd);
 
 void do_wp_page(unsigned int error_code,unsigned int address);
+void do_no_page(unsigned int error_code, unsigned int address);
 #endif

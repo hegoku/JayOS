@@ -20,6 +20,8 @@
 
 #define PROC_IMAGE_SIZE_DEFAULT 128 * 1024 //一个进程占用128KB内存
 #define PROCS_BASE 0x250000 //用户进程起始地址 1MB+128KB
+#define PROC_ORIGIN_STACK 0x400
+#define PROC_STACK_TOP 0x80000000
 
 #define	reassembly(high, high_shift, mid, mid_shift, low)	\
 	(((high) << (high_shift)) +				\
@@ -47,7 +49,8 @@ PROCESS create_process(DESCRIPTOR *gdt, PROCESS *p, unsigned int process_entry)
     p->regs.gs = (GDT_SEL_VIDEO & SA_RPL_MASK) | SA_RPL3;
     p->regs.eip = process_entry;
     // p->regs.esp = TOP_OF_USER_STACK-0x400*p->pid;
-    p->regs.esp = PROC_IMAGE_SIZE_DEFAULT-1;
+    // p->regs.esp = PROC_IMAGE_SIZE_DEFAULT-1;
+    p->regs.esp = PROC_STACK_TOP;
     p->regs.eflags = 0x3202;
 
     p->base_addr = 0;
@@ -81,18 +84,19 @@ pid_t sys_fork()
 	process_table[pid].ldt_sel = my_idt_sel;
 	// process_table[pid].page_dir = my_cr3;
 	process_table[pid].pid = pid;
-	sprintf(process_table[pid].name, "%s_%d", process_table[current_process->pid].name, pid);
+	sprintf(process_table[pid].name, "%s_%d", current_process->name, pid);
     process_table[pid].parent_pid = current_process->pid;
 	process_table[pid].regs.eax = 0;
 	process_table[pid].status = TASK_RUNNING;
     if (my_cr3 == NULL)
     {
         process_table[pid].page_dir = create_dir();
-        printk("c:%x p:%x\n", process_table[pid].page_dir, current_process->page_dir);
+        printk("new cr3:%x parent_dir:%x\n", process_table[pid].page_dir, current_process->page_dir);
     }
     else
     {
         process_table[pid].page_dir = my_cr3;
+        printk("old cr3:%x parent_dir:%x\n", process_table[pid].page_dir, current_process->page_dir);
     }
 
     /* duplicate the process: T, D & S */
@@ -166,6 +170,8 @@ pid_t sys_fork()
     process_table[pid].kernel_regs.esp_addr = get_free_page();
     process_table[pid].kernel_regs.esp = process_table[pid].kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
 
+    printk("fork pid(%d): %x %x eip:%x esp:%x\n", current_process->pid, process_table[pid].kernel_regs.esp_addr, process_table[pid].kernel_regs.esp, current_process->regs.eip, current_process->regs.esp);
+    
     return pid;
 }
 
@@ -270,7 +276,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     }
 
     clear_page_tables(current_process->page_dir);
-    // printk("%s %x %x\n", filename, program, current_process->page_dir);
+    printk("%s %x %x\n", filename, program, current_process->page_dir);
 
     struct elf32_hdr *elf_hdr = (struct elf32_hdr *)program;
     for (int i = 0; i < elf_hdr->e_phnum; i++) {
@@ -281,7 +287,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
             int page_count = (phdr->p_memsz + PAGE_SIZE -1) >> PAGE_SHIFT;
             int left_bytes = phdr->p_filesz;
             int offset = 0;
-            printk("%d %d\n", page_count, phdr->p_memsz);
+            // printk("%d %d\n", page_count, phdr->p_memsz);
             current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
             while (page_count)
             {
@@ -311,10 +317,39 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
             printk("\ninterp:%s\n", elf_interpreter);while(1){}
         }
     }
-    printk("e:%x\n", elf_hdr->e_entry);
-    process_table[current_process->pid].regs.eip = elf_hdr->e_entry;
-    process_table[current_process->pid].regs.esp = PROC_IMAGE_SIZE_DEFAULT - 1;
-    strcpy(process_table[current_process->pid].name, (char*)filename);
+    // printk("e:%x\n", elf_hdr->e_entry);
+
+    //处理参数
+    // char **p = argv;
+    // char arg_stack[1024];
+    // int stack_len = 0;
+    // while(*p++) {
+    //     stack_len += sizeof(char *);
+    // }
+    // *((int*)(&arg_stack[stack_len]))=NULL;
+    // stack_len += sizeof(char *);
+    // char **q = (char **)arg_stack;
+    // for (p = argv; *p != 0;p++) {
+    //     *q++ = &arg_stack[stack_len];
+    //     strcpy(&arg_stack[stack_len], *p);
+    //     stack_len += strlen(*p);
+    //     arg_stack[stack_len] = 0;
+    //     stack_len++;
+    // }
+    // unsigned char *orig_stack = (unsigned char *)(PROC_IMAGE_SIZE_DEFAULT - PROC_ORIGIN_STACK);
+    // int argc = 0;
+    // if (stack_len) {
+        
+    // }
+
+    current_process->page_dir->entry[511] = create_table(PG_P | PG_RWW | PG_USU);
+    get_pt_entry_v_addr(current_process->page_dir->entry[511])->entry[1023] = get_free_page() | PG_P | PG_RWW | PG_USU;
+    mem_map[(get_pt_entry_v_addr(current_process->page_dir->entry[511])->entry[1023] & 0xfffff000)>>12].count++;
+
+    current_process->regs.eip = elf_hdr->e_entry;
+    current_process->regs.esp = PROC_STACK_TOP;
+    current_process->kernel_regs.esp=current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
+    strcpy(current_process->name, (char*)filename);
     kfree(program, dir->inode->size);
     invalidate();
     return 0;

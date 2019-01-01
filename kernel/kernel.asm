@@ -221,14 +221,16 @@ page_fault:
 	test eax,1			;// 测试标志P，如果不是缺页引起的异常则跳转。
 	jne .l1
 
-    push dword[esi+EFLAGSREG]
-    push dword[esi+CSREG]
-    push dword[esi+EIPREG]
+    ; push dword[esi+EFLAGSREG]
+    ; push dword[esi+CSREG]
+    ; push dword[esi+EIPREG]
+    push edx
     push eax
-    push 14		; vector_no	= 10h
-	jmp	exception
-    add esp,4*3
-	; call _do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
+    ; push 14		; vector_no	= 10h
+	; jmp	exception
+    ; add esp,4*3
+extern do_no_page
+	call do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
 	jmp .l2			
 .l1:
     push edx			;// 将该线性地址和出错码压入堆栈，作为调用函数的参数。
@@ -250,6 +252,7 @@ copr_error:
 	jmp	exception
 
 exception:
+    jmp $
 	call exception_handler
 	add	esp, 4*2	; 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS
 	hlt
@@ -479,7 +482,6 @@ ret_from_sys_call:
     jne .1
     mov eax, [current_process]
     mov eax, [eax+P_STATUS]
-    mov ebx, current_process
     cmp eax, 0
     jne schedule
 .1:
@@ -533,16 +535,17 @@ sys_call_0_param:
     push ecx
     push edx
 	mov	eax, [esi + 8]	; system call table index, the index of sys_call_table[]
-	mov	ebx, [esi + 12]	; not used
-	mov	ecx, [esi + 16]	; not used
+	mov	ebx, 0	; not used
+	mov	ecx, 0	; not used
 	mov	edx, 0	; not used
     int INT_VECTOR_SYS_CALL
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
+
 
 sys_call_1_param:
     push esi
@@ -558,7 +561,7 @@ sys_call_1_param:
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
 
@@ -576,7 +579,7 @@ sys_call_2_param:
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
 
@@ -594,7 +597,7 @@ sys_call_3_param:
     pop edx
     pop ecx
     pop ebx
-    mov esp, esi
+    ; mov esp, esi
     pop esi
     ret
 
