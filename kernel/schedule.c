@@ -57,7 +57,7 @@ void schedule()
     if (prev!=current_process) {
         // printk("%d %d %d %d|",current_process->is_free, current_process->status, current_process->pid, prev->pid);
         load_cr3(current_process->page_dir->entry);
-        switch_to(prev, current_process, prev);
+        // switch_to(prev, current_process, prev);
     }
 }
 

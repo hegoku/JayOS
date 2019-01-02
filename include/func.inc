@@ -1,7 +1,7 @@
 [SECTION .data]
 disp_pos	dd	0
 
-[SECTION .txt]
+[SECTION .text]
 
 global DispStr
 global DispColorStr

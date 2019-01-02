@@ -1,6 +1,8 @@
 #ifndef	_TTY_H_
 #define	_TTY_H_
 
+#include <system/page.h>
+
 #define DEFAULT_CHAR_COLOR 0x07
 #define TTY_NUM 3
 #define TTY_IN_BYTES 256
@@ -12,7 +14,7 @@
 #define	START_ADDR_L	0xD	/* reg index of video mem start addr (LSB) */
 #define	CURSOR_H	0xE	/* reg index of cursor position (MSB) */
 #define	CURSOR_L	0xF	/* reg index of cursor position (LSB) */
-#define	V_MEM_BASE	0xB8000	/* base of color video memory */
+#define	V_MEM_BASE	PAGE_OFFSET+0xB8000	/* base of color video memory */
 #define	V_MEM_SIZE	0x8000	/* 32K: B8000H -> BFFFFH */
 
 #define SCR_UP	1	/* scroll upward */

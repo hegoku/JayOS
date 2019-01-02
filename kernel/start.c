@@ -20,7 +20,7 @@
 #include <errno.h>
 
 TSS tss={
-    .esp0 = TOP_OF_KERNEL_STACK,
+    // .esp0 = TOP_OF_KERNEL_STACK,
 	.ss0 = GDT_SEL_KERNEL_DATA
 };
 // DESCRIPTOR ldt[2] = {
@@ -31,6 +31,7 @@ TSS tss={
 //         1
 //     }
 // };
+int is_in_ring0=1;
 extern irq_handler irq_table[];
 PROCESS process_table[PROC_NUMBER];
 PROCESS *current_process=(void*)1;
@@ -265,15 +266,15 @@ void init()
         printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
     } else {
         printf("childis running %d\n", getpid());
-        pid = fork();
-        if (pid) {
-            printf("chchchchh %d\n", pid);
-        }
-        else
-        {
-            printf("ggggggg %d\n", getpid());
-        }
-        while(1){}
+        // pid = fork();
+        // if (pid) {
+        //     printf("chchchchh %d\n", pid);
+        // }
+        // else
+        // {
+        //     printf("ggggggg %d\n", getpid());
+        // }
+        // while(1){}
         execve("/root/SH", NULL, NULL);
     }
     while(1){}
@@ -586,26 +587,26 @@ void init_fork()
     current_process->page_dir = create_dir();
     int i = 0;
     int j = 0;
-    for (i = 0; i < 768; i++)
-    {
-        if (swapper_pg_dir->entry[i]==0) {
-            current_process->page_dir->entry[i] = 0;
-            continue;
-        }
-        current_process->page_dir->entry[i] = create_table(PG_P | PG_RWW | PG_USU);
-        for (int j = 0; j < 1024; j++)
-        {
-            if (get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j]!= 0) {
-                get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
-                mem_map[(get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000)>>12].count++;
-            }
-            else
-            {
-                get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = 0;
-            }
-        }
-        current_process->page_dir->entry[i]= swapper_pg_dir->entry[i];
-    }
+    // for (i = 0; i < 768; i++)
+    // {
+    //     if (swapper_pg_dir->entry[i]==0) {
+    //         current_process->page_dir->entry[i] = 0;
+    //         continue;
+    //     }
+    //     current_process->page_dir->entry[i] = create_table(PG_P | PG_RWW | PG_USU);
+    //     for (int j = 0; j < 1024; j++)
+    //     {
+    //         if (get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j]!= 0) {
+    //             get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000 | PG_P | PG_RWW | PG_USU;
+    //             mem_map[(get_pt_entry_v_addr(swapper_pg_dir->entry[i])->entry[j] & 0xfffff000)>>12].count++;
+    //         }
+    //         else
+    //         {
+    //             get_pt_entry_v_addr(current_process->page_dir->entry[i])->entry[j] = 0;
+    //         }
+    //     }
+    //     current_process->page_dir->entry[i]= swapper_pg_dir->entry[i];
+    // }
     for (int i = 768; i < 1024; i++)
     {
         current_process->page_dir->entry[i]= swapper_pg_dir->entry[i];

@@ -59,8 +59,9 @@ void copy_page(struct PageDir *pd, struct PageDir **res)
                     // int new_page = get_free_page();
                     // get_pt_entry_v_addr((*res)->entry[i])->entry[j] = new_page | PG_P | PG_RWW | PG_USU;
                     // memcpy(__va(new_page), __va(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000), 1024 * 4);
-                    get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j] & ~PG_RWW;
+                    // get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j] & ~PG_RWW;
                     get_pt_entry_v_addr(pd->entry[i])->entry[j] &= ~PG_RWW;
+                    get_pt_entry_v_addr((*res)->entry[i])->entry[j] = get_pt_entry_v_addr(pd->entry[i])->entry[j];
                     mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].count++;
                     mem_map[(get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) >> 12].pyhsics_addr |= MP_COW;
                     //((struct PageTable*)((int)pd->entry[i] & 0xfffff000))
@@ -210,8 +211,14 @@ void clear_page_tables(struct PageDir *pd)
 {
     for (int i = 0; i < 768; i++) {
         if (pd->entry[i]!= 0) {
+            // for (int j = 0; j < 1024;j++) {
+            //     if (get_pt_entry_v_addr(pd->entry[i])->entry[j]!=0) {
+            //         free_page((int) (get_pt_entry_v_addr(pd->entry[i])->entry[j] & 0xfffff000) );
+            //         get_pt_entry_v_addr(pd->entry[i])->entry[j]=0;
+            //     }
+            // }
             free_page((int)get_pt_entry_p_addr(pd->entry[i]));
-            // kfree(get_entry_address(pd->entry[i]), sizeof(struct PageTable));
+            // kfree(get_pt_entry_p_addr(pd->entry[i]), sizeof(struct PageTable));
             // pd->entry[i] = 0;
         }
     }

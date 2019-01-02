@@ -9,9 +9,9 @@
 // #define GDT_SIZE 128
 // #define IDT_SIZE 256
 
-#define TOP_OF_USER_STACK 0x6C00
+// #define TOP_OF_USER_STACK 0x6C00
 // #define TOP_OF_KERNEL_STACK 0x7C00
-#define TOP_OF_KERNEL_STACK 0x7C00
+// #define TOP_OF_KERNEL_STACK 0x7C00
 #define BIOS_ADDR 0x7E00 //bios参数地址
 
 #define GDT_SEL_KERNEL_CODE (0x8|SA_RPL0) //因为loader的 GDT_SEL_CODE 选择子为 8
@@ -33,5 +33,7 @@ extern sys_call_handler sys_call_table[];
 
 extern PROCESS *current_process;
 extern PROCESS process_table[];
+
+extern int is_in_ring0;
 
 #endif

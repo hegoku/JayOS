@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "kernel.h"
 #include <system/dev.h>
+#include <string.h>
 
 void disp_int(int input)
 {

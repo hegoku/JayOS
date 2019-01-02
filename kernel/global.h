@@ -17,7 +17,7 @@ void disp_int(int input);
 // char *itoa(char *str, int num);
 int printk(const char *fmt, ...);
 
-int is_in_ring0;
+extern int is_in_ring0;
 
 int printk(const char * format, ...);
 

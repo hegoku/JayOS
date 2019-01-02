@@ -276,7 +276,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     }
 
     clear_page_tables(current_process->page_dir);
-    printk("%s %x %x\n", filename, program, current_process->page_dir);
+    printk("exec_clear_t:%s %x %x\n", filename, program, current_process->page_dir);
 
     struct elf32_hdr *elf_hdr = (struct elf32_hdr *)program;
     for (int i = 0; i < elf_hdr->e_phnum; i++) {
@@ -348,7 +348,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
 
     current_process->regs.eip = elf_hdr->e_entry;
     current_process->regs.esp = PROC_STACK_TOP;
-    current_process->kernel_regs.esp=current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
+    // current_process->kernel_regs.esp=current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
     strcpy(current_process->name, (char*)filename);
     kfree(program, dir->inode->size);
     invalidate();

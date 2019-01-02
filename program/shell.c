@@ -23,25 +23,17 @@ int main()
         if (fd==-1) {
             printf("%s: command not exist\n", input);
         } else {
-            printf("sh_child:%d\n", getpid());
-            while(1){}
             int pid = fork();
-            // __asm__(
-            //     "1:jmpl $2f\n\t"
-            //     "2:jmpl $1f"::
-            // );
             if (pid != 0)
             {
                 printf("sh_child:%d\n", pid);
-                while(1){}
                 int s;
                 waitpid(-1, &s, 0);
             } else {
                 // printf("2131");
-                while(1){}
-                printf("%x\n", input);
+                execve("/root/HELLO1", 0, 0);
+                // printf("%x\n", input);
                 exit(1);
-                // execve("/root/HELLO1", 0, 0);
             }
         }
         

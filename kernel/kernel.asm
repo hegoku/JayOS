@@ -1,19 +1,15 @@
-; 500H     -------------
-;          |user stack | 25.75K
-; 6C00H    -------------
-;          |kernel stack| 4k
-; 7C00H    ------------
-;          |   boot   | 512
-; 7E00H    ------------
-;          |  KERNEL  | 64K
-; 17E00H   ------------
-;
+bits 32
+
+[SECTION .bss]
+StackSpace		resb	4 * 1024
+StackTop:		; 栈顶
+
 [section .text]
 
 global _start
 
 ; TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
-TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
+; TOP_OF_KERNEL_STACK equ 0x7C00 ;内核栈顶
 ; TOP_OF_KERNEL_STACK equ 0x90000 ;内核栈顶
 TOP_OF_USER_STACK equ 0x6C00 ;用户栈顶
 BASE_OF_KERNEL_STACK equ 6C00H ;kernel栈基地址
@@ -46,7 +42,7 @@ global gdt
 global gdt_ptr
 global idt
 global idt_ptr
-global page_dir_ptr
+; global page_dir_ptr
 
 global restart
 ;默认中断向量
@@ -102,11 +98,10 @@ IdtLen equ $-idt
 idt_ptr dw IdtLen-1
 idt_ptr_base dd idt
 
-page_dir_ptr dw 0
+; page_dir_ptr dw 0
 
-[BITS 32]
 _start:
-    mov esp, TOP_OF_KERNEL_STACK
+    mov esp, StackTop
 	call cstart
     lgdt [gdt_ptr]
     lidt [idt_ptr]
@@ -221,16 +216,16 @@ page_fault:
 	test eax,1			;// 测试标志P，如果不是缺页引起的异常则跳转。
 	jne .l1
 
-    ; push dword[esi+EFLAGSREG]
-    ; push dword[esi+CSREG]
-    ; push dword[esi+EIPREG]
-    push edx
+    push dword[esi+EFLAGSREG]
+    push dword[esi+CSREG]
+    push dword[esi+EIPREG]
+    ; push edx
     push eax
-    ; push 14		; vector_no	= 10h
-	; jmp	exception
-    ; add esp,4*3
-extern do_no_page
-	call do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
+    push 14		; vector_no	= 10h
+	jmp	exception
+    add esp,4*3
+; extern do_no_page
+	; call do_no_page	;// 调用缺页处理函数（mm/memory.c,365 行）。
 	jmp .l2			
 .l1:
     push edx			;// 将该线性地址和出错码压入堆栈，作为调用函数的参数。
@@ -244,7 +239,7 @@ extern do_no_page
 	; pop ecx
 	; pop eax
 	; iretd
-    cli
+    ; cli
     ret
 copr_error:
 	push	0xFFFFFFFF	; no err code
@@ -252,7 +247,6 @@ copr_error:
 	jmp	exception
 
 exception:
-    jmp $
 	call exception_handler
 	add	esp, 4*2	; 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS
 	hlt
@@ -309,7 +303,8 @@ hwint00:		; Interrupt routine for irq 0 (the clock).
 	call [irq_table]
 	add	esp, 4
 
-    jmp ret_from_sys_call
+    ; cli
+    ; jmp ret_from_sys_call
 .1:
 	ret
     ; sub esp,4
@@ -472,10 +467,10 @@ sys_call:
     pop esi
     mov [esi+EAXREG-P_STACKBASE], eax ;保存 [sys_call_table+4*eax]  函数的返回值到进程表的eax寄存器以便获取
 
+    cli
     jmp ret_from_sys_call
 .1:
-    cli
-	ret
+    ret
 
 ret_from_sys_call:
     cmp dword[is_in_ring0], 0 ;如果在内核态就不用判断进程是否在TASK_RUNNING状态
