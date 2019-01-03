@@ -165,10 +165,9 @@ pid_t sys_fork()
             process_table[pid].file_table[i]->used_count++;
         }
     }
-
     process_table[pid].kernel_regs.eip = (unsigned int)restart;
-    process_table[pid].kernel_regs.esp_addr = get_free_page();
-    process_table[pid].kernel_regs.esp = process_table[pid].kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
+    process_table[pid].kernel_regs.esp_addr = __va(get_free_page());
+    process_table[pid].kernel_regs.esp = __pa(process_table[pid].kernel_regs.esp_addr) + 1024 * 4;
 
     printk("fork pid(%d): %x %x eip:%x esp:%x\n", current_process->pid, process_table[pid].kernel_regs.esp_addr, process_table[pid].kernel_regs.esp, current_process->regs.eip, current_process->regs.esp);
     
@@ -194,7 +193,7 @@ void sys_exit(int status)
     clear_page_tables(current_process->page_dir);
     current_process->status = TASK_ZOMBIE;
     process_table[current_process->parent_pid].status = TASK_RUNNING;
-    free_page(current_process->kernel_regs.esp_addr);
+    free_page(__pa(current_process->kernel_regs.esp_addr));
     process_table[current_process->parent_pid].signal |= (1 << (SIGCHLD - 1));
     // send_sig(SIGCHLD, &process_table[current_process->parent_pid]);
 }

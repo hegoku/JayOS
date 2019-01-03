@@ -509,6 +509,9 @@ save:
 
 restart:
     mov	esp, [current_process]
+    mov eax, [esp+P_K_ESP_ADDR]
+    add eax, 1024*4
+    mov dword[esp+P_K_ESP], eax ;重新设置进程内核态栈顶, 否则switch_to要堆栈溢出
 	lldt [esp + P_LDT_SEL]
 	lea	eax, [esp + P_STACKTOP]
 	mov	dword [tss + TSS3_S_SP0], eax

@@ -349,6 +349,8 @@ P_LDT		equ	P_LDT_SEL	+ 4
 P_STATUS    equ P_LDT       + 16
 P_SIGNAL    equ P_STATUS    + 4
 P_K_ESP     equ P_SIGNAL    + 4
-P_PID       equ P_K_ESP     + 12
+P_K_ESP_ADDR equ P_K_ESP + 4
+P_PID       equ P_K_ESP_ADDR     + 8
+
 
 TSS3_S_SP0	equ	4

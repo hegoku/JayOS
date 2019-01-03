@@ -266,18 +266,18 @@ void init()
         printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
     } else {
         printf("childis running %d\n", getpid());
-        // pid = fork();
-        // if (pid) {
-        //     printf("chchchchh %d\n", pid);
-        // }
-        // else
-        // {
-        //     printf("ggggggg %d\n", getpid());
-        // }
-        // while(1){}
+        pid = fork();
+        if (pid) {
+            printf("chchchchh %d\n", pid);
+        }
+        else
+        {
+            printf("ggggggg %d\n", getpid());
+            exit(2);
+        }
         execve("/root/SH", NULL, NULL);
+        exit(4);
     }
-    while(1){}
     while(pid=waitpid(-1, &i, 0)) {
         if (pid>0) {
             printf("child: %d exit with status: %d\n", pid, i);
@@ -615,8 +615,8 @@ void init_fork()
         // }
     }
 
-    current_process->kernel_regs.esp_addr=get_free_page();
-    current_process->kernel_regs.esp = current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
+    current_process->kernel_regs.esp_addr=__va(get_free_page());
+    current_process->kernel_regs.esp = __pa(current_process->kernel_regs.esp_addr) + 1024 * 4;
 
     // if (current_process->page_dir->entry[511]==0) {
     //     current_process->page_dir->entry[511] = create_table(PG_P | PG_RWW | PG_USU);

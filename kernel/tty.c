@@ -2,6 +2,7 @@
 #include <system/dev.h>
 #include <system/fs.h>
 #include <system/schedule.h>
+#include <system/page.h>
 #include "global.h"
 #include "kernel.h"
 #include "keyboard.h"
@@ -195,7 +196,7 @@ unsigned int tty_write(int mi_dev, char* buf, int len)
 
 static void console_out_char(CONSOLE* console, char ch)
 {
-    unsigned char *p_vmem = (unsigned char *)(V_MEM_BASE + console->cursor * 2);
+    unsigned char *p_vmem = (unsigned char *)(__va(V_MEM_BASE) + console->cursor * 2);
     switch (ch) {
         case '\n':
             if (console->cursor < console->original_addr +

@@ -30,10 +30,10 @@ buildimg:
 	cp build/kernel /Volumes/JayOS/kernel
 	hdiutil detach /Volumes/JayOS/
 	dd if=build/hdboot.bin of=c1.img bs=1 count=448 conv=notrunc  seek=5243454 skip=62
-	hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
-	cp build/hdloader /Volumes/NO\ NAME/loader
-	cp build/kernel /Volumes/NO\ NAME/kernel
-	hdiutil detach /Volumes/NO\ NAME/
+	#hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
+	#cp build/hdloader /Volumes/NO\ NAME/loader
+	#cp build/kernel /Volumes/NO\ NAME/kernel
+	#hdiutil detach /Volumes/NO\ NAME/
 
 boot.bin : boot/boot.asm include/fat12hdr.inc
 	$(ASM)  -o build/$@ $<
