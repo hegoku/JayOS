@@ -56,13 +56,15 @@ start:
     mov es, ax
     mov ss, ax
     mov sp, BASE_OF_STACK
-    mov byte[disk_address_packer], 0x10
-    mov byte[disk_address_packer+2], 0x1 
+    mov dword[disk_address_packer], 0x00010010
+    mov dword[disk_address_packer+4], 0x00004000
+    ; mov byte[disk_address_packer+2], 0x1 
     ; call ClearScreen
     ;读取fat16的super block
     mov dword[disk_address_packer+8], ROOT_BASE ;要读的扇区号
-    mov word[disk_address_packer+4], 0x4000
-    mov word[disk_address_packer+6], SELF_ES
+    mov dword[disk_address_packer+12], 0
+    ; mov word[disk_address_packer+4], 0x4000
+    ; mov word[disk_address_packer+6], SELF_ES
     call ReadSector
     ; call ReadBoot
     ; call FindLoader

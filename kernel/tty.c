@@ -273,3 +273,18 @@ void scroll_screen(CONSOLE* p_con, int direction)
 	set_console_start_addr(p_con->current_start_addr);
 	console_set_cursor(p_con->cursor);
 }
+
+void clear_screen(TTY *tty)
+{
+    unsigned char *p_vmem;
+    for (int i = tty->console.original_addr; i < tty->console.v_mem_limit/2;i++) {
+        p_vmem = (unsigned char *)(__va(V_MEM_BASE) + i * 2);
+        *p_vmem++ = '\0';
+        *p_vmem++ = DEFAULT_CHAR_COLOR;
+    }
+
+    tty->console.current_start_addr = tty->console.original_addr;
+    tty->console.cursor = tty->console.current_start_addr;
+    set_console_start_addr(tty->console.current_start_addr);
+    console_set_cursor(tty->console.cursor);    
+}

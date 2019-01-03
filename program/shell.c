@@ -14,7 +14,7 @@ int main()
         if (strlen(input)==0) {
             continue;
         }
-        if (input[0]!='/' && (input[0]=='.' && input[1]!='/')) {
+        if (input[0]!='/' && !(input[0]=='.' && input[1]=='/')) {
             printf("%s: command not exist\n", input);
             continue;
         }
@@ -26,7 +26,7 @@ int main()
             int pid = fork();
             if (pid != 0)
             {
-                printf("sh_child:%d\n", pid);
+                // printf("sh_child:%d\n", pid);
                 int s;
                 waitpid(-1, &s, 0);
             } else {

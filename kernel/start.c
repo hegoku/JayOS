@@ -251,6 +251,7 @@ void kernel_main()
     // }
     init_fork();
     load_cr3(process_table[0].page_dir->entry);
+    clear_screen(&tty_table[0]);
     restart();
 }
 
@@ -263,14 +264,20 @@ void init()
     (void) dup(0);
     (void) dup(0);
     chroot("/root");
+    printf("================================================================================\n");
+    printf("                  -----    |\\   |   ---    \\  /       \n");
+    printf("                    |      | \\  |    |      \\/         \n");
+    printf("                    |      |  \\ |    |      /\\         \n");
+    printf("                 ----      |   \\|   ---    /  \\     Powered by Jack He   \n");
+    printf("================================================================================\n");
     int i, pid;
     pid = fork();
     char buf[1024];
     if (pid != 0)
     {
-        printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
+        // printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
     } else {
-        printf("childis running %d\n", getpid());
+        // printf("childis running %d\n", getpid());
         // pid = fork();
         // if (pid) {
         //     printf("chchchchh %d\n", pid);

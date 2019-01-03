@@ -51,6 +51,7 @@ static void flush(CONSOLE *console);
 void scroll_screen(CONSOLE *p, int direction);
 
 unsigned int tty_write(int mi_dev, char *buf, int len);
+void clear_screen(TTY *tty);
 
 extern TTY tty_table[];
 extern TTY *current_tty;
