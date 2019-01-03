@@ -126,6 +126,7 @@ int sys_mkdir(const char __user *dirname, int mode);
 int sys_mount(char __user *dev_name, char __user *dir_name, char __user *type);
 off_t sys_lseek(int fd, off_t offset, int whence);
 int sys_stat(char __user *filename, struct stat __user *statbuf);
+int sys_chroot(const char __user *dirname);
 int sys_dup(unsigned int oldfd);
 
 int get_inode_by_filename(const char *filename, struct inode **res_inode);

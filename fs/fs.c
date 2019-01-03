@@ -10,6 +10,7 @@
 #include <system/mm.h>
 #include <system/list.h>
 #include <system/process.h>
+#include <errno.h>
 
 struct file_system_type *file_system_table;
 struct file_descriptor f_desc_table[FILE_DESC_TABLE_MAX_COUNT];
@@ -516,8 +517,12 @@ int sys_mount(char __user *dev_name, char __user *dir_name, char *type)
         printk("device %s not found\n", dev_name);
         return -1;
     }
-    if (dev_dir->inode->mode!=FILE_MODE_BLK) {
-        printk("%s is not a blk dev\n", dev_name);
+    // if (dev_dir->inode->mode!=FILE_MODE_BLK) {
+    //     printk("%s is not a blk dev\n", dev_name);
+    //     return -1;
+    // }
+    if (dev_dir->inode->mode!=FILE_MODE_DIR && dev_dir->inode->mode!=FILE_MODE_BLK) {
+        printk("%s is not a blk dev or a dir\n", dev_name);
         return -1;
     }
 
@@ -755,4 +760,17 @@ int sys_dup(unsigned int oldfd)
     current_process->file_table[oldfd]->used_count++;
 
     return fd;
+}
+
+int sys_chroot(const char __user *dirname)
+{
+    struct dir_entry *dir;
+
+	if (namei(dirname, &dir))
+		return -ENOENT;
+	if (dir->inode->mode!=FILE_MODE_DIR) {
+		return -ENOTDIR;
+	}
+	current_process->root = dir;
+	return (0);
 }

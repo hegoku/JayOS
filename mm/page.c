@@ -198,7 +198,7 @@ void do_wp_page(unsigned int error_code, unsigned int address)
         mem_map[old_page >> 12].count--;
     }
 
-    printk("do_wap_page pid(%d): addr:%x old:%x new:%x %x eip:%x esp:%x\n", current_process->pid, address, old_page, new_page, old_page >> 12, current_process->regs.eip, current_process->regs.esp);
+    // printk("do_wap_page pid(%d): addr:%x old:%x new:%x %x eip:%x esp:%x\n", current_process->pid, address, old_page, new_page, old_page >> 12, current_process->regs.eip, current_process->regs.esp);
 
     invalidate();
 

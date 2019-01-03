@@ -23,7 +23,9 @@ off_t lseek(int fd, off_t offset, int whence);
 pid_t getpid();
 int alarm(unsigned int seconds);
 int pause();
+int mkdir(const char *dirname, int mode);
 int dup(unsigned int oldfd);
+int chroot(const char *dirname);
 pid_t getppid();
 
 #endif

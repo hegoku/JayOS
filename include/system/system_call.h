@@ -17,7 +17,9 @@
 #define SYS_CALL_GETPID 20
 #define SYS_CALL_ALARM 27
 #define SYS_CALL_PAUSE 29
+#define SYS_CALL_MKDIR 39
 #define SYS_CALL_DUP 41
+#define SYS_CALL_CHROOT 61
 #define SYS_CALL_GETPPID 64
 
 typedef void *sys_call_handler;

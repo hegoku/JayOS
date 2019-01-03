@@ -49,7 +49,7 @@ sys_call_handler sys_call_table[65] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    sys_mkdir, //39
     NULL,
     sys_dup, //41
     NULL,
@@ -71,7 +71,7 @@ sys_call_handler sys_call_table[65] = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    sys_chroot, //61
     NULL,
     NULL,
     sys_getppid //64

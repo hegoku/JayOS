@@ -91,12 +91,12 @@ pid_t sys_fork()
     if (my_cr3 == NULL)
     {
         process_table[pid].page_dir = create_dir();
-        printk("new cr3:%x parent_dir:%x\n", process_table[pid].page_dir, current_process->page_dir);
+        // printk("new cr3:%x parent_dir:%x\n", process_table[pid].page_dir, current_process->page_dir);
     }
     else
     {
         process_table[pid].page_dir = my_cr3;
-        printk("old cr3:%x parent_dir:%x\n", process_table[pid].page_dir, current_process->page_dir);
+        // printk("old cr3:%x parent_dir:%x\n", process_table[pid].page_dir, current_process->page_dir);
     }
 
     /* duplicate the process: T, D & S */
@@ -169,7 +169,7 @@ pid_t sys_fork()
     process_table[pid].kernel_regs.esp_addr = __va(get_free_page());
     process_table[pid].kernel_regs.esp = __pa(process_table[pid].kernel_regs.esp_addr) + 1024 * 4;
 
-    printk("fork pid(%d): %x %x eip:%x esp:%x\n", current_process->pid, process_table[pid].kernel_regs.esp_addr, process_table[pid].kernel_regs.esp, current_process->regs.eip, current_process->regs.esp);
+    // printk("fork pid(%d): %x %x eip:%x esp:%x\n", current_process->pid, process_table[pid].kernel_regs.esp_addr, process_table[pid].kernel_regs.esp, current_process->regs.eip, current_process->regs.esp);
     
     return pid;
 }
@@ -275,7 +275,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     }
 
     clear_page_tables(current_process->page_dir);
-    printk("exec_clear_t:%s %x %x\n", filename, program, current_process->page_dir);
+    // printk("exec_clear_t:%s %x %x\n", filename, program, current_process->page_dir);
 
     struct elf32_hdr *elf_hdr = (struct elf32_hdr *)program;
     for (int i = 0; i < elf_hdr->e_phnum; i++) {

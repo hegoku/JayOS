@@ -12,7 +12,7 @@ TARGET		= boot.bin loader kernel k1 hdboot.bin hdloader
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
 				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o build/schedule.o \
-				build/errno.o
+				build/errno.o build/devfs.o
 
 all : clean everything image
 
@@ -30,10 +30,10 @@ buildimg:
 	cp build/kernel /Volumes/JayOS/kernel
 	hdiutil detach /Volumes/JayOS/
 	dd if=build/hdboot.bin of=c1.img bs=1 count=448 conv=notrunc  seek=5243454 skip=62
-	#hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
-	#cp build/hdloader /Volumes/NO\ NAME/loader
-	#cp build/kernel /Volumes/NO\ NAME/kernel
-	#hdiutil detach /Volumes/NO\ NAME/
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
+	cp build/hdloader /Volumes/NO\ NAME/loader
+	cp build/kernel /Volumes/NO\ NAME/kernel
+	hdiutil detach /Volumes/NO\ NAME/
 
 boot.bin : boot/boot.asm include/fat12hdr.inc
 	$(ASM)  -o build/$@ $<
@@ -147,4 +147,7 @@ build/schedule.o: kernel/schedule.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/errno.o: lib/errno.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/devfs.o: fs/devfs/devfs.c
 	$(CC) $(CFLAGS) -o $@ $<

@@ -77,9 +77,19 @@ inline int pause()
     return sys_call_0_param(SYS_CALL_PAUSE);
 }
 
+inline int mkdir(const char *dirname, int mode)
+{
+    return sys_call_2_param(SYS_CALL_MKDIR, dirname, mode);
+}
+
 inline int dup(unsigned int oldfd)
 {
     return sys_call_2_param(SYS_CALL_DUP, oldfd);
+}
+
+inline int chroot(const char * dirname)
+{
+    return sys_call_1_param(SYS_CALL_CHROOT, dirname);
 }
 
 inline pid_t getppid()

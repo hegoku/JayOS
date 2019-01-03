@@ -15,6 +15,7 @@
 #include <system/rootfs.h>
 #include "../fs/ext2/ext2.h"
 #include "../fs/fat/fat.h"
+#include "../fs/devfs/devfs.h"
 #include "system/mm.h"
 #include <system/schedule.h>
 #include <errno.h>
@@ -178,6 +179,7 @@ void kernel_main()
 
     init_rootfs();
     init_fat12();
+    init_devfs();
     mount_root();
 
     init_tty();
@@ -255,9 +257,12 @@ void kernel_main()
 void init()
 {
     mount("/dev/hd1", "/root", "fat12");
-    (void) open("/dev/tty0", O_RDWR);
+    // sys_mkdir("/root/dev", 1);
+    // mount("/dev", "/root/dev", "devfs");
+    (void)open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
+    chroot("/root");
     int i, pid;
     pid = fork();
     char buf[1024];
@@ -266,17 +271,17 @@ void init()
         printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
     } else {
         printf("childis running %d\n", getpid());
-        pid = fork();
-        if (pid) {
-            printf("chchchchh %d\n", pid);
-        }
-        else
-        {
-            printf("ggggggg %d\n", getpid());
-            exit(2);
-        }
-        execve("/root/SH", NULL, NULL);
-        exit(4);
+        // pid = fork();
+        // if (pid) {
+        //     printf("chchchchh %d\n", pid);
+        // }
+        // else
+        // {
+        //     printf("ggggggg %d\n", getpid());
+        //     exit(2);
+        // }
+        execve("/SH", NULL, NULL);
+        // exit(4);
     }
     while(pid=waitpid(-1, &i, 0)) {
         if (pid>0) {

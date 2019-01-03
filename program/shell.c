@@ -14,7 +14,7 @@ int main()
         if (strlen(input)==0) {
             continue;
         }
-        if (input[0]!='/' || (input[0]=='.' && input[1]!='/')) {
+        if (input[0]!='/' && (input[0]=='.' && input[1]!='/')) {
             printf("%s: command not exist\n", input);
             continue;
         }
@@ -31,7 +31,7 @@ int main()
                 waitpid(-1, &s, 0);
             } else {
                 // printf("2131");
-                execve("/root/HELLO1", 0, 0);
+                execve(input, 0, 0);
                 // printf("%x\n", input);
                 exit(1);
             }
