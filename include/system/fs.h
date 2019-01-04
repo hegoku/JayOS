@@ -72,11 +72,20 @@ struct file_descriptor{
     struct file_operation *op;
 };
 
+struct linux_dirent{
+    unsigned long inode_num;                 /* inode number */
+    off_t d_off;                /* offset to next dirent */
+    unsigned short d_reclen;    /* length of this dirent */
+    char name [256];   /* filename (null-terminated) */
+
+    char type;
+};
+
 struct file_operation{
     int (*lseek) (struct file_descriptor *fd, off_t, int);
 	int (*read) (struct file_descriptor *fd, char *buf, int);
 	int (*write) (struct file_descriptor *fd, char *buf, int);
-	// int (*readdir) (struct inode *inode, struct file_descriptor *fd, struct dirent *, int);
+	int (*readdir) (struct inode *inode, struct file_descriptor *fd, struct linux_dirent *, int);
 	// int (*select) (struct inode *inode, struct file *, int, select_table *);
 	int (*ioctl) (struct inode *inode, struct file_descriptor *fd, unsigned int, unsigned long);
 	// int (*mmap) (struct inode *inode, struct file_descriptor *fd, unsigned long, size_t, int, unsigned long);
@@ -108,9 +117,10 @@ struct nameidata {
     int last_len;
 };
 
-struct stat{
+struct s_stat{
     int dev_num;     /* ID of device containing file */
     unsigned long inode_num;     /* inode number */
+    unsigned short mode;
     ssize_t size;
 };
 
@@ -123,11 +133,13 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte);
 int sys_read(int fd, char __user *buf, unsigned int nbyte);
 int sys_close(int fd);
 int sys_mkdir(const char __user *dirname, int mode);
+int sys_chdir(const char __user *dirname);
 int sys_mount(char __user *dev_name, char __user *dir_name, char __user *type);
 off_t sys_lseek(int fd, off_t offset, int whence);
-int sys_stat(char __user *filename, struct stat __user *statbuf);
+int sys_stat(char __user *filename, struct s_stat __user *statbuf);
 int sys_chroot(const char __user *dirname);
 int sys_dup(unsigned int oldfd);
+int sys_getdents(unsigned int fd, struct linux_dirent __user *dirent, unsigned int count);
 
 int get_inode_by_filename(const char *filename, struct inode **res_inode);
 

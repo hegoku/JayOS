@@ -13,6 +13,7 @@
 static struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num);
 static int f_op_write(struct file_descriptor *fd, char *buf, int nbyte);
 static int f_op_read(struct file_descriptor *fd, char *buf, int nbyte);
+static int f_op_readdir(struct inode *inode, struct file_descriptor *fd, struct linux_dirent *, int count);
 static int fat12_lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir);
 static int getStringFromDate(char *dest, char *src, int len);
 static int setLongNameToArray(struct fat12_long_name *long_name_buf, struct fat12_root_dir_entry *root_dir_entry, char *res);
@@ -31,7 +32,7 @@ struct file_operation fat12_f_op={
     NULL,
     f_op_read,
     NULL,
-    // 0,
+    f_op_readdir,
     // 0,
     NULL,
     // 0,
@@ -818,4 +819,120 @@ int find_dir_from_fat12_root_dir_entry(struct fat12_root_dir_entry *root_dir_ent
     kfree(tmp1, 9);
     kfree(filename, 256);
     return 0;
+}
+
+int f_op_readdir(struct inode *inode, struct file_descriptor *fd, struct linux_dirent *dir, int count)
+{
+    char *filename=kzmalloc(256);
+    char *tmp1=kzmalloc(9);
+    char *tmp2 = kzmalloc(4);
+    struct fat12_long_name *long_name_buf=kzmalloc(sizeof(struct fat12_long_name));
+    struct fat12_root_dir_entry *buf=kzmalloc(sizeof(struct fat12_root_dir_entry));
+    struct linux_dirent *tmpdir = dir;
+    int readbytes = 0;
+
+   
+    // while (fd->pos<inode->size && readbytes<count)
+    while (readbytes<count)
+    {
+        dev_table[MAJOR(inode->dev_num)].request_fn(inode->dev_num, 0, (char*)buf, fd->pos+inode->start_pos, sizeof(struct fat12_root_dir_entry));
+        fd->pos += sizeof(struct fat12_root_dir_entry);
+        readbytes+=sizeof(struct fat12_root_dir_entry);
+        memset(filename, 0, sizeof(256));
+        if (buf->dir_attr==0 || buf->dir_attr==0x80 || buf->dir_name[0]==FILE_NAME_DOT || buf->dir_name[0]==FILE_NAME_DEL) {
+            continue;
+        }
+
+        if ((buf->dir_attr & FILE_ATTR_LONG_NAME_MASK) == FILE_ATTR_LONG_NAME_MASK)
+        {
+            /*若长文件名长度小于等于13个字，则长文件名仅占用一个长文件名目录项，并且第一个字节为“A”（第6位是“1”），表明该目录项既是第一个又是最后一个
+            例如，文件名为“Forest.bmp”的长文件名目录项和对应的短文件名目录项为：
+            （长文件名目录项）：
+            41 46 00 6F 00 72 00 65-00 73 00 0F 00 91 74 00 AF.o.r.e.s....t.
+            2E 00 62 00 6D 00 70 00-00 00 00 00 FF FF FF FF ..b.m.p........
+            （短文件名目录项）：
+            46 4F 52 45 53 54 20 20-42 4D 50 20 00 00 00 00 FOREST BMP...
+            00 00 CA 20 00 00 40 4E-88 1F 10 24 62 02 01 00 ... ..@N...$b...
+            用DIR命令列表显示为：
+            FOREST BMP 66,146 12-08-95 9:50 Forest.bmp
+            若长文件名长度大于13个字符，则长文件名占用多个长文件名目录项。第一个目录项的序号为ASCII码01，第二项的序号为ASCII码02，......，最后一项的序号采用公式CHR(X-1+字母“A”的ASCII码）确定（一定是个英文字母）。
+            其中X表示长文件名占用的目录项数，其计算方法如下：
+            L=长文件名/13
+            若L是整数，则X=L;若L不是整数，则X=（取L的整数部分+1）
+            例如，文件名为“123456789abcdefghijk.txt”的长文件名目录项和对应的短文件名目录项为：
+            （长文件名目录项2）：
+            42 65 00 66 00 67 00 68-00 69 00 0F 00 2A 6A 00 Be.f.g.h.i...*j.
+            6B 00 2E 00 74 00 78 00-74 00 00 00 00 00 FF FF k...t.x.t.....
+            （长文件名目录项1）：
+            01 31 00 32 00 33 00 34-00 35 00 0F 00 2A 36 00 .1.2.3.4.5...*6.
+            37 00 38 00 39 00 61 00-62 00 00 00 63 00 64 00 7.8.9.a.b...c.d.
+            （短文件名目录项）：
+            31 32 33 34 35 36 7E 31-54 58 54 20 00 6C 69 60 123456～1TXT.li`
+            A6 2A A6 2A 00 00 50 60-A6 2A 02 00 9C 00 00 00 .*.*..P`.*....
+            用DIR命令列表显示为：
+            123456～1 TXT 156 05-06-01 12:02 123456789abcdefghijk.txt
+            在查看长文件名的目录项的时候，应按照图6-11所示的说明，注意观察长文件名每个目录项中的第一个字节。例如，上述“（长文件名目录项2）”中的“42”，表示该项为第2项，且为最后一个目录项。
+            */
+            int x = buf->dir_name[0] - 'A' + 1;
+            int y = x;
+            char name_tmp[x][14];
+
+            while (y)
+            {
+                setLongNameToArray(long_name_buf, buf, name_tmp[y - 1]);
+                y--;
+                dev_table[MAJOR(inode->dev_num)].request_fn(inode->dev_num, 0, (char*)buf, fd->pos, sizeof(struct fat12_root_dir_entry));
+                fd->pos += sizeof(struct fat12_root_dir_entry);
+                readbytes+=sizeof(struct fat12_root_dir_entry);
+                if (readbytes>count) {
+                    goto a;
+                }
+            }
+            char *name_p;
+            name_p = filename;
+           
+            for (int j =0; j <x; j++)
+            {
+                sprintf(name_p, "%s", name_tmp[j]);
+                name_p += 13;
+            }
+        }
+        else
+        {
+            memset(tmp1, 0, 9);
+            getStringFromDate(tmp1, buf->dir_name, 8);
+            memset(tmp2, 0, 4);
+            int a=getStringFromDate(tmp2, buf->ext_name, 3);
+            if ((buf->dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+            {
+                if (a==0) { //没有扩展名
+                    sprintf(filename, "%s", tmp1);
+                } else {
+                    sprintf(filename, "%s.%s", tmp1, tmp2);
+                }
+            } else if ((buf->dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+                sprintf(filename, "%s", tmp1, tmp2);
+            }
+        }
+
+        tmpdir->inode_num = 0;
+        tmpdir->d_reclen = sizeof(struct linux_dirent);
+        tmpdir->d_off = (int)tmpdir+sizeof(struct linux_dirent);
+        sprintf(tmpdir->name, "%s", filename);
+        printk("1111%s %x\n", filename, filename);while(1){}
+        if ((buf->dir_attr & FILE_ATTR_FILE_MASK) == FILE_ATTR_FILE_MASK)
+        {
+            tmpdir->type= FILE_MODE_REG;
+        } else if ((buf->dir_attr & FILE_ATTR_DIR_MASK) == FILE_ATTR_DIR_MASK) {
+            tmpdir->type=FILE_MODE_DIR;
+        }
+        tmpdir+=sizeof(struct linux_dirent);
+    }
+a:
+    kfree(long_name_buf, sizeof(struct fat12_long_name));
+    kfree(tmp2, 4);
+    kfree(tmp1, 9);
+    kfree(filename, 256);
+    kfree(buf, sizeof(struct fat12_root_dir_entry));
+    return readbytes;
 }

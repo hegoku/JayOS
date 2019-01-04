@@ -10,7 +10,11 @@ bin/bin/i386-elf-ld -o program/hello1 program/hello1.o program/start.o program/l
 bin/bin/i386-elf-gcc -I include/ -c -fno-builtin -Wall -o program/shell.o program/shell.c
 bin/bin/i386-elf-ld -o program/shell program/shell.o program/start.o program/libjnix.a 
 
+bin/bin/i386-elf-gcc -I include/ -c -fno-builtin -Wall -o program/ls.o program/ls.c
+bin/bin/i386-elf-ld -o program/ls program/ls.o program/start.o program/libjnix.a 
+
 hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
 cp program/hello1 /Volumes/NO\ NAME/
 cp program/shell /Volumes/NO\ NAME/sh
+cp program/ls /Volumes/NO\ NAME/ls
 hdiutil detach /Volumes/NO\ NAME/

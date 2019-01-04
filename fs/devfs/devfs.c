@@ -24,7 +24,7 @@ struct file_operation dev_f_op={
     NULL,
     f_op_read,
     NULL,
-    // 0,
+    NULL,
     // 0,
     NULL,
     // 0,

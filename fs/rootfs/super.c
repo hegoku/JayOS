@@ -20,7 +20,7 @@ struct file_operation rootfs_f_op={
     NULL,
     f_op_read,
     f_op_write,
-    // 0,
+    NULL,
     // 0,
     NULL,
     // 0,

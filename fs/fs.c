@@ -94,7 +94,6 @@ int sys_open(const char __user *path, int flags, ...)
 
     // if (p_inode->mode==FILE_MODE_CHR) {
     // }
-
     return fd;
 }
 
@@ -699,7 +698,7 @@ static int lookup_fs(const char *name, struct file_system_type **fs_type)
     return -1;
 }
 
-int sys_stat(char __user *filename, struct stat __user *statbuf)
+int sys_stat(char __user *filename, struct s_stat __user *statbuf)
 {
     struct dir_entry *dir;
     // char *kfilename=kzmalloc(256);
@@ -710,10 +709,10 @@ int sys_stat(char __user *filename, struct stat __user *statbuf)
         return -1;
     }
 
-    struct stat *kstat=kzmalloc(sizeof(struct stat));
-    kstat->dev_num = dir->dev_num;
-    kstat->inode_num = dir->inode->num;
-    kstat->size = dir->inode->size;
+    statbuf->dev_num = dir->dev_num;
+    statbuf->inode_num = dir->inode->num;
+    statbuf->size = dir->inode->size;
+    statbuf->mode = dir->inode->mode;
 
     // copy_to_user(statbuf, kstat, sizeof(struct stat));
     // kfree(kstat, sizeof(struct stat));
@@ -773,4 +772,47 @@ int sys_chroot(const char __user *dirname)
 	}
 	current_process->root = dir;
 	return (0);
+}
+
+int sys_chdir(const char __user *dirname)
+{
+    struct dir_entry *dir;
+
+	if (namei(dirname, &dir))
+		return -ENOENT;
+	if (dir->inode->mode!=FILE_MODE_DIR) {
+		return -ENOTDIR;
+	}
+	current_process->pwd = dir;
+	return (0);
+}
+
+int sys_getdents(unsigned int fd, struct linux_dirent __user *dirent, unsigned int count)
+{
+    struct file_descriptor *file;
+    int tmp;
+
+    if (fd >= PROC_FILES_MAX_COUNT || (file=current_process->file_table[fd]) == 0)
+    {
+        printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
+        return -1;
+    }
+    if (file->inode==NULL) {
+        printk("File not exist (fd: %d)\n", fd);
+        return -1;
+    }
+
+    if (file->inode->mode!=FILE_MODE_DIR) {
+        printk("fs: %d not a dir\n", fd);
+        return -1;
+    }
+
+    if (file->op->readdir)
+    {
+        return file->op->readdir(file->inode, file, dirent, count);
+    }
+    return 0;
+
+    // if (namei(dirname, &dir))
+	// 	return -ENOENT;
 }

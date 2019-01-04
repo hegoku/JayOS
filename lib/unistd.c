@@ -47,12 +47,17 @@ inline int execve(const char *filename, const char *argv[], const char *envp[])
     return sys_call_3_param(SYS_CALL_EXECVE, filename, argv, envp);
 }
 
+inline int chdir(const char *dirname)
+{
+    return sys_call_1_param(SYS_CALL_CHDIR, dirname);
+}
+
 inline int mount(char *dev_name, char *dir_name, char *type)
 {
     return sys_call_3_param(SYS_CALL_MOUNT, dev_name, dir_name, type);
 }
 
-inline int stat(char *filename, struct stat *statbuf)
+inline int stat(char *filename, struct s_stat *statbuf)
 {
     return sys_call_2_param(SYS_CALL_STAT, filename, statbuf);
 }
@@ -95,6 +100,11 @@ inline int chroot(const char * dirname)
 inline pid_t getppid()
 {
     return sys_call_0_param(SYS_CALL_GETPPID);
+}
+
+int getdents(unsigned int fd, struct linux_dirent *dirent, unsigned int count)
+{
+    return sys_call_3_param(SYS_CALL_GETDENTS, fd, dirent, count);
 }
 
 //临时

@@ -9,7 +9,7 @@
 
 static int sys_get_ticks();
 
-sys_call_handler sys_call_table[65] = {
+sys_call_handler sys_call_table[142] = {
     sys_get_ticks,
     sys_exit,
     sys_fork,
@@ -21,8 +21,8 @@ sys_call_handler sys_call_table[65] = {
     NULL,
     NULL,
     NULL,
-    sys_execve,
-    NULL,
+    sys_execve, //11
+    sys_chdir, //12
     NULL,
     NULL,
     sys_mount, //15
@@ -74,7 +74,84 @@ sys_call_handler sys_call_table[65] = {
     sys_chroot, //61
     NULL,
     NULL,
-    sys_getppid //64
+    sys_getppid, //64
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL, //100
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL, //120
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL, //130
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    sys_getdents //141
 };
 
 // void init_system_call(sys_call_handler sys_call_table[])

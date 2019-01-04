@@ -11,6 +11,7 @@
 #define SYS_CALL_CLOSE 6
 #define SYS_CALL_WAITPID 7
 #define SYS_CALL_EXECVE 11
+#define SYS_CALL_CHDIR 12
 #define SYS_CALL_MOUNT 15
 #define SYS_CALL_STAT 18
 #define SYS_CALL_LSEEK 19
@@ -21,6 +22,7 @@
 #define SYS_CALL_DUP 41
 #define SYS_CALL_CHROOT 61
 #define SYS_CALL_GETPPID 64
+#define SYS_CALL_GETDENTS 141
 
 typedef void *sys_call_handler;
 
