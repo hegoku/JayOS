@@ -192,7 +192,6 @@ int sys_write(int fd, const char __user *buf, unsigned int nbyte)
     int res = -1;
 
     // printk("a: %d %x\b", nbyte, buf);
-
     if (fd >= PROC_FILES_MAX_COUNT || (file = current_process->file_table[fd]) == 0)
     {
         printk("fd: %d not exist (PID: %d)\n", fd, current_process->pid);
@@ -667,9 +666,9 @@ static int _namei(const char * pathname, struct dir_entry * base, struct dir_ent
     *dir = NULL;
 
     error = get_parent_dir_entry(pathname, base, &nd);
-	if (error)
+    if (error)
 		return error;
-	error = lookup(nd.dir , nd.last_name, nd.last_len , dir);
+    error = lookup(nd.dir, nd.last_name, nd.last_len, dir);
     if (error)
     {
         return error;

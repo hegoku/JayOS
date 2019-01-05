@@ -247,8 +247,8 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     // char *kfilename=kzmalloc(256);
     int res;
     // strncpy_from_user(kfilename, filename);
-
-    if (namei(filename, &dir)) {
+    if (namei(filename, &dir))
+    {
         printk("%s not exist\n", filename);
         return -1;
     }
@@ -257,6 +257,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         printk("%s not a regular file\n", filename);
         return -1;
     }
+
 
     char *program = kzmalloc(dir->inode->size);
     struct file_descriptor *file = kzmalloc(sizeof(struct file_descriptor));
@@ -286,8 +287,30 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
             int page_count = (phdr->p_memsz + PAGE_SIZE -1) >> PAGE_SHIFT;
             int left_bytes = phdr->p_filesz;
             int offset = 0;
-            // printk("%d %d\n", page_count, phdr->p_memsz);
+            // printk("%d memsize:%d filesize:%d off:%x vad:%x\n", page_count, phdr->p_memsz, phdr->p_filesz, phdr->p_offset, phdr->p_vaddr);
             current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
+            // while (page_count)
+            // {
+            //     if (index2>=1024) {
+            //         index2 = 0;
+            //         index1++;
+            //         current_process->page_dir->entry[index1] = create_table(PG_P | PG_RWW | PG_USU);
+            //     }
+            //     // printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
+            //     get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = get_free_page() | PG_P | PG_RWW | PG_USU;
+            //     printk("%x %x %x\n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2], phdr->p_flags);
+            //     if (left_bytes) {
+            //         int b = fmin(left_bytes, PAGE_SIZE);
+            //         memcpy((void *)(phdr->p_vaddr+offset), (void *)(program + phdr->p_offset+offset), b);
+            //         if ((phdr->p_flags & PF_X) || !(phdr->p_flags & PF_W)) {
+            //             get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] &= ~PG_RWR;
+            //         }
+            //         offset += b;
+            //         left_bytes -= b;
+            //     }
+            //     index2++;
+            //     page_count--;
+            // }
             while (page_count)
             {
                 if (index2>=1024) {
@@ -298,18 +321,10 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
                 // printk("%x %x %d %x %x %x\n", phdr->p_vaddr, program+phdr->p_offset, phdr->p_filesz, index1, index2, current_process->page_dir->entry[index1]);
                 get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] = get_free_page() | PG_P | PG_RWW | PG_USU;
                 // printk("%x %x %x\n", get_pt_entry_v_addr(current_process->page_dir->entry[index1]), get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2], phdr->p_flags);
-                if (left_bytes) {
-                    int b = fmin(left_bytes, PAGE_SIZE);
-                    memcpy((void *)(phdr->p_vaddr+offset), (void *)(program + phdr->p_offset+offset), b);
-                    if ((phdr->p_flags & PF_X) || !(phdr->p_flags & PF_W)) {
-                        get_pt_entry_v_addr(current_process->page_dir->entry[index1])->entry[index2] &= ~PG_RWR;
-                    }
-                    offset += b;
-                    left_bytes -= b;
-                }
                 index2++;
                 page_count--;
             }
+            memcpy((void *)(phdr->p_vaddr), (void *)(program + phdr->p_offset+offset), phdr->p_filesz);
         } else if(phdr->p_type==PT_INTERP){
             char *elf_interpreter = kzmalloc(phdr->p_filesz);
             memcpy((void*)elf_interpreter, (void *)(program + phdr->p_offset), phdr->p_filesz);
@@ -317,6 +332,9 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         }
     }
     // printk("e:%x\n", elf_hdr->e_entry);
+    if (current_process->pid==2) {
+        // while(1){}
+    }
 
     //处理参数
     // char **p = argv;
@@ -349,6 +367,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     current_process->regs.esp = PROC_STACK_TOP;
     // current_process->kernel_regs.esp=current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
     strcpy(current_process->name, (char*)filename);
+    
     kfree(program, dir->inode->size);
     invalidate();
     return 0;

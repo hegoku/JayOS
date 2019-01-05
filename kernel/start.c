@@ -7,8 +7,8 @@
 #include <system/process.h>
 #include "system/desc.h"
 #include "kernel.h"
-#include "unistd.h"
-#include "stdio.h"
+#include <unistd.h>
+#include <stdio.h>
 #include <system/system_call.h>
 #include <string.h>
 #include <fcntl.h>
@@ -19,6 +19,7 @@
 #include "system/mm.h"
 #include <system/schedule.h>
 #include <errno.h>
+#include <assert.h>
 
 TSS tss={
     // .esp0 = TOP_OF_KERNEL_STACK,
@@ -260,7 +261,7 @@ void init()
     mount("/dev/hd1", "/root", "fat12");
     // sys_mkdir("/root/dev", 1);
     // mount("/dev", "/root/dev", "devfs");
-    (void)open("/dev/tty0", O_RDWR);
+    (void) open("/dev/tty0", O_RDWR);
     (void) dup(0);
     (void) dup(0);
     chroot("/root");
@@ -276,9 +277,9 @@ void init()
     char buf[1024];
     if (pid != 0)
     {
-        // printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
+        printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
     } else {
-        // printf("childis running %d\n", getpid());
+        printf("childis running %d\n", getpid());
         // pid = fork();
         // if (pid) {
         //     printf("chchchchh %d\n", pid);

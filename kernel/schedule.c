@@ -18,13 +18,16 @@ void timer_init()
 
 void schedule()
 {
+    // printk("@");
     if (is_in_ring0 != 0)
     {
+    // printk("#");
         // a[0]='1';
         // // i=sprintf(buf, "!");
         // tty_write(&tty, a, 1);
         return;
     }
+    // printk("!");
     
     // disp_int((int)current_process);
     PROCESS *prev = current_process;
@@ -99,7 +102,7 @@ repeat:	current_process->status = TASK_INTERRUPTIBLE;
 void wake_up(PROCESS **p)
 {
 	if (p && *p) {
-		(**p).status=0;
+		(**p).status=TASK_RUNNING;
 		*p=NULL;
 	}
 }

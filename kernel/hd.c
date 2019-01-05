@@ -8,6 +8,7 @@
 #include <system/process.h>
 #include <system/dev.h>
 #include <system/fs.h>
+#include <system/schedule.h>
 
 #define MAJOR_NR 3
 
@@ -128,12 +129,14 @@ static void interrupt_wait(PROCESS *p)
 
 void hd_handler(int irq)
 {
-    if (dev_table[MAJOR_NR].current_request==NULL) {
+    if (dev_table[MAJOR_NR].current_request == NULL)
+    {
         printk("no hd request\n");
         return;
     }
     // printk("hd iqr %x\n", hd_callback);
-    hd_callback();
+    ((struct blk_request*)(dev_table[MAJOR_NR].current_request))->hd_callback();
+    // hd_callback();
     // printk("hd iqr end\n");
 }
 
@@ -152,10 +155,12 @@ void do_hd_request()
     if (current->cmd == 0) //0=read 1=write
     {
         cmd.command = ATA_READ;
-        hd_callback = do_read;
+        current->hd_callback = do_read;
+        // hd_callback = do_read;
     } else if (current->cmd==1) {
         cmd.command = ATA_WRITE;
-        hd_callback = do_write;
+        current->hd_callback = do_write;
+        // hd_callback = do_write;
     } else {
         printk("unknow hd-command\n");
         return;
@@ -284,6 +289,10 @@ int do_request(int dev_num, int cmd, unsigned char* buf, unsigned long sector, u
 */
 int do_request1(int dev_num, int cmd, unsigned char* buf, unsigned long pos, unsigned long bytes)
 {
+    unsigned char al;
+    unsigned short c = 0xa1;
+    __asm__("movb %0, %%dl\n\tinb %%dx, %%al"
+            : "=a"(al):"m" (c):"memory");
     int mi_dev = MINOR(dev_num);
     int drive = GET_DRIVER_INDEX_BYMINOR(mi_dev);
     unsigned long start_sector = pos / SECTOR_SIZE; //从开始字节数转成开始扇区数

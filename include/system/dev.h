@@ -34,6 +34,7 @@ struct blk_request
     char *buffer;             // 数据缓冲区。
     struct s_proc *waiting;	// 任务等待操作执行完成的地方。
     char *bh;	// 缓冲区头指针
+    void(*hd_callback)();
     struct blk_request *next;		// 指向下一请求项。
 };
 

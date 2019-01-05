@@ -2,6 +2,6 @@
 freedos-img/
 linux-img/
 bochsout.txt
-dankos.img
 *.DS_Store
 *.img
+*.vdi

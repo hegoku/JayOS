@@ -298,27 +298,28 @@ FindKernelFileName:
 BootKernel:
     sub di, 11 ;因为找Kernel的时候执行了11次 inc di，所以为了复位kernel所在的根目录条目，减去11
     add di, ROOT_DIRECTORY_ENTRY_FSTCLUS_OFFSET ;找到开始簇号, 占用2个字节
-    xor ecx, ecx
     xor eax, eax
 
     mov bp, BASE_OF_KERNEL_FILE
 
     mov ds, ax
-    mov cx, word[es:di] ;将开始簇号存入cx
+    ; mov cx, word[es:di] ;将开始簇号存入cx
 
     mov eax, dword[RootDirSectorCount1]
     add eax, dword[ROOT_DIR_START_SECTOR]
     mov dword[DataStartSector], eax
 
     mov bx, 0
-    mov eax, ecx
+    xor eax, eax
+    mov ax, word[es:di] ;将开始簇号存入cx
+    ; push cx
     
     .Loading:
-        push cx
+        push ax
         sub eax, 2
         mul byte[0x4000+13]
         add eax, dword[DataStartSector] ;某簇对应的数据在哪个扇区
-        movzx cx, byte[0x4000+13]
+        movzx cx, byte[0x4000+13] ;一个簇占用多少扇区
 .1:     
         mov dword[disk_address_packer+8], eax ;要读的扇区号
         mov word[disk_address_packer+4], bx
@@ -337,15 +338,17 @@ BootKernel:
         xor eax, eax
         pop ax
         call GetFATEntry
-        cmp ax, 0FFFh
-        mov cx, ax
-        jz InitProtectedModel
+        ; cmp ax, 0FFFh
+        ; push ax
+        ; mov cx, ax
+        cmp ax, 0x0FF8 ;是否最后一个簇
+        ; jz InitProtectedModel
+        ; pop cx
+        jae InitProtectedModel
         jmp .Loading
 .2:
     add bp, 0x1000
     jmp .3
-.4:
-    jmp $
 
 GetFATEntry:
     push es
@@ -396,8 +399,35 @@ DispKernelNotFound:
     mov es, ax
     mov ax, KernelNotFoundMsg
     call DispStrRM
-    call KillFloppyMotor
     jmp $
+
+DispKernelLoaded:
+    push ax
+    push ds
+    push es
+    mov ax, SELF_CS
+    mov ds, ax
+    mov es, ax
+    mov ax, KernelLoadedMsg
+    call DispStrRM
+    pop ax
+    pop ds
+    pop es
+    ret
+
+DispPagingDone:
+    push ax
+    push ds
+    push es
+    mov ax, SELF_CS
+    mov ds, ax
+    mov es, ax
+    mov ax, PagingDonedMsg
+    call DispStrRM
+    pop ax
+    pop ds
+    pop es
+    ret
 
 DispStrRM: ;显示字符串, ax作为字符串地址
     push es
@@ -426,17 +456,11 @@ ClearScreen:
     int 10h
     ret
 
-KillFloppyMotor:
-    push dx
-    mov dx, 03F2h
-    mov al, 0
-    out dx, al
-    pop dx
-    ret
-
 InitProtectedModel:
-
+    call DispKernelLoaded
     call SetupPaging
+    call DispPagingDone
+
     mov ax, SELF_CS ;恢复段寄存器
     mov ds, ax
     mov es, ax
@@ -449,8 +473,8 @@ InitProtectedModel:
     or al, 00000010b
     out 92h, al
 
-    mov eax, Page_Dir_Base
-    mov cr3, eax
+    ; mov eax, Page_Dir_Base
+    ; mov cr3, eax
     mov eax, cr0
     or eax, 1
     or eax, 0x80000000
@@ -563,7 +587,8 @@ RootDirSectorCount1 equ RootDirEntryCount+4 ;根目录扇区数
 DataStartSector equ RootDirSectorCount1+4 ;数据区起始扇区
 KernelFileName db 'KERNEL     ' ;Kernel文件名
 KernelNotFoundMsg db 'Kernel not found'
-KernelFoundMsg db 'Kernel found    '
+KernelLoadedMsg db 'Kernel loaded   '
+PagingDonedMsg db 'Paging done     '
 bOdd equ DataStartSector + 4
 disk_address_packer equ bOdd + 1
 

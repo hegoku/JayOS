@@ -33,7 +33,13 @@ buildimg:
 	hdiutil attach -imagekey diskimage-class=CRawDiskImage c1.img
 	cp build/hdloader /Volumes/NO\ NAME/loader
 	cp build/kernel /Volumes/NO\ NAME/kernel
+	program/build.sh
 	hdiutil detach /Volumes/NO\ NAME/
+	rm -f c1.vdi
+	VBoxManage convertfromraw --format VDI c1.img c1.vdi
+	vboxmanage storageattach orange --storagectl "IDE Controller" --port 0 --device 0 --medium emptydrive
+	vboxmanage closemedium  disk c1.vdi
+	vboxmanage storageattach orange --storagectl "IDE Controller" --port 0 --device 0 --medium c1.vdi --type hdd
 
 boot.bin : boot/boot.asm include/fat12hdr.inc
 	$(ASM)  -o build/$@ $<

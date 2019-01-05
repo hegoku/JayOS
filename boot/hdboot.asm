@@ -128,7 +128,6 @@ ReadSector: ;ax传入要读取的扇区号
     mov dl, 0x80
     mov si, disk_address_packer
     int 0x13
-
     ret
 
     ; mov bl, [BPB_SecPerTrk]
@@ -190,10 +189,10 @@ FindLoaderFileName:
 BootLoader:
     sub di, 11 ;因为找Loader的时候执行了11次 inc di，所以为了复位loader所在的根目录条目，减去11
     add di, ROOT_DIRECTORY_ENTRY_FSTCLUS_OFFSET ;找到开始簇号, 占用2个字节
-    xor ecx, ecx
-    xor eax, eax
-    mov cx, word[es:di] ;将开始簇号存入cx
-    push cx
+    ; xor ecx, ecx
+    ; xor eax, eax
+    ; mov cx, word[es:di] ;将开始簇号存入cx
+    ; push cx
 
     mov eax, dword[RootDirSectorCount1]
     add eax, dword[ROOT_DIR_START_SECTOR]
@@ -220,7 +219,9 @@ BootLoader:
     ; mov eax, ecx
 
     mov bx, 0
-    mov eax, ecx
+    ; mov eax, ecx
+    xor eax, eax
+    mov ax, word[es:di] ;将开始簇号存入cx
     ; mov dword[disk_address_packer+4], OFFSET_OF_LOADER
     ; mov dword[disk_address_packer+6], BASE_OF_LOADER
     .Loading:
@@ -248,10 +249,11 @@ BootLoader:
         ; add eax, edx
         ; add ebx, [BPB_BytsPerSec]
         ; jmp .Loading
+        push ax
         sub eax, 2
         mul byte[0x4000+13]
         add eax, dword[DataStartSector] ;某簇对应的数据在哪个扇区
-        movzx cx, byte[0x4000+13]
+        movzx cx, byte[0x4000+13] ;一个簇占用多少扇区
 .1:     
         mov dword[disk_address_packer+8], eax ;要读的扇区号
         mov word[disk_address_packer+4], bx
@@ -262,14 +264,17 @@ BootLoader:
         pop eax
         inc eax
         dec cx
-        add bx, [BPB_BytsPerSec]
+        ; add bx, [BPB_BytsPerSec]
+        add bx, [0x4000+11]
         cmp cx, 0
         jne .1
 
         pop ax
         call GetFATEntry
-        cmp ax, 0FFFh
-        jz JmpToLoader
+        ; cmp ax, 0FFFh
+        ; jz JmpToLoader
+        cmp ax, 0xFF8 ;是否最后一个簇
+        jae JmpToLoader
         ; push ax
         ; mov dx, ROOT_DIR_SECTORS+SECTOR_NO_OF_ROOT_DIRECTORY-2
         ; add ax, dx
@@ -297,9 +302,10 @@ GetFATEntry:
         mov bx, word[0x4000+11]
         div bx
         push dx
-        mov bx, 0x5000
+        mov bx, 0
         ; add ax, [BPB_RsvdSecCnt]
         add ax, word[0x4000+14]
+        add ax, ROOT_BASE
         mov dword[disk_address_packer+8], eax ;要读的扇区号
         mov word[disk_address_packer+4], bx
         mov word[disk_address_packer+6], FAT_ES
@@ -315,7 +321,7 @@ GetFATEntry:
         jnz .Label_even_2
         shr ax, 4
     .Label_even_2:
-        and ax, 0FFFh
+        ; and ax, 0FFFh
 
     pop bx
     ; pop es
