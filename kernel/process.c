@@ -259,7 +259,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     }
 
 
-    char *program = kzmalloc(dir->inode->size);
+    char *program = vzmalloc(dir->inode->size);
     struct file_descriptor *file = kzmalloc(sizeof(struct file_descriptor));
     file->inode = dir->inode;
     file->op = dir->inode->f_op;
@@ -271,7 +271,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     kfree(file, sizeof(struct file_descriptor));
     if (res==0)
     {
-        kfree(program, dir->inode->size);
+        vfree(program, dir->inode->size);
         return -1;
     }
 
@@ -326,9 +326,10 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
             }
             memcpy((void *)(phdr->p_vaddr), (void *)(program + phdr->p_offset+offset), phdr->p_filesz);
         } else if(phdr->p_type==PT_INTERP){
-            char *elf_interpreter = kzmalloc(phdr->p_filesz);
+            char *elf_interpreter = vzmalloc(phdr->p_filesz);
             memcpy((void*)elf_interpreter, (void *)(program + phdr->p_offset), phdr->p_filesz);
             printk("\ninterp:%s\n", elf_interpreter);while(1){}
+            vfree(elf_interpreter, phdr->p_filesz);
         }
     }
     // printk("e:%x\n", elf_hdr->e_entry);
@@ -368,7 +369,7 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
     // current_process->kernel_regs.esp=current_process->kernel_regs.esp_addr + 1024 * 4 + PAGE_OFFSET;
     strcpy(current_process->name, (char*)filename);
     
-    kfree(program, dir->inode->size);
+    vfree(program, dir->inode->size);
     invalidate();
     return 0;
 }

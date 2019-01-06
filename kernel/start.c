@@ -277,9 +277,9 @@ void init()
     char buf[1024];
     if (pid != 0)
     {
-        printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
+        // printf("parent is running,child pid: %d %d %d %d\n", pid, getpid(), getppid());
     } else {
-        printf("childis running %d\n", getpid());
+        // printf("childis running %d\n", getpid());
         // pid = fork();
         // if (pid) {
         //     printf("chchchchh %d\n", pid);

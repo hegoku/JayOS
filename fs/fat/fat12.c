@@ -95,7 +95,7 @@ struct dir_entry *fat12_mount(struct file_system_type *fs_type, int dev_num)
     s_fs_info->root_dir_size = fat12_sb->BPB_RootEntCnt * ROOT_DIR_ENTRY_SIZE; //根目录总大小(字节)
     s_fs_info->root_dir_block_size = (s_fs_info->root_dir_size + fat12_sb->BPB_BytsPerSec - 1) / fat12_sb->BPB_BytsPerSec; //根目录占用扇区数
     s_fs_info->data_start_sector = s_fs_info->root_dir_block_size + s_fs_info->root_dir_start_sector; //数据区起始扇区
-    printk("cu_sec:%d shanqudaxiao:%d\n", s_fs_info->BPB_SecPerClus, fat12_sb->BPB_BytsPerSec);
+    // printk("cu_sec:%d shanqudaxiao:%d\n", s_fs_info->BPB_SecPerClus, fat12_sb->BPB_BytsPerSec);
 
     struct inode *new_inode=get_inode();
     new_inode->sb=sb;
@@ -156,7 +156,7 @@ int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
     {
         return 0;
     }
-    char *file_buf=kzmalloc(fd->inode->size);
+    char *file_buf=vzmalloc(fd->inode->size);
     int left_bytes = fd->inode->size;
     char *file_buf_pos = file_buf;
     for (int i=0;i<100;i++) {
@@ -173,7 +173,7 @@ int f_op_read(struct file_descriptor *fd, char *buf, int nbyte)
     file_buf_pos=file_buf+fd->pos;
     memcpy(buf, file_buf_pos, nbyte);
     fd->pos+=nbyte;
-    kfree(file_buf, fd->inode->size);
+    vfree(file_buf, fd->inode->size);
     // fd->pos += dev_table[MAJOR(fd->inode->dev_num)].request_fn(fd->inode->dev_num, 0, buf, , nbyte);
 
     // unsigned long start_block = ((fd->inode->start_pos - 2) * fat12_sb->BPB_SecPerClus+data_start_sector);
@@ -371,11 +371,11 @@ static int fat12_scan_root_dir(struct dir_entry *dir, const char *name, struct d
     *res_dir = NULL;
     struct fat12_s_fs_info *fat12_sb = (struct fat12_s_fs_info *)dir->sb->s_fs_info;
     int rde_size = sizeof(struct fat12_root_dir_entry) * fat12_sb->BPB_RootEntCnt;
-    struct fat12_root_dir_entry *root_dir_entry = kzmalloc(rde_size);
+    struct fat12_root_dir_entry *root_dir_entry = vzmalloc(rde_size);
     dev_table[MAJOR(dir->dev_num)].request_fn(dir->dev_num, 0, (char *)root_dir_entry, fat12_sb->root_dir_start, rde_size); //读根目录
 
     int is_find = find_dir_from_fat12_root_dir_entry(root_dir_entry, fat12_sb->BPB_RootEntCnt, dir, name, res_dir);
-    kfree(root_dir_entry, rde_size);
+    vfree(root_dir_entry, rde_size);
     return is_find;
 
 
@@ -526,7 +526,7 @@ int fat12_scan_dir(struct dir_entry *dir, const char *name, struct dir_entry **r
     }
 
     int total_byte = clus_num * sb->BPB_SecPerClus * sb->BPB_BytsPerSec;
-    char *file_buf = kzmalloc(total_byte);
+    char *file_buf = vzmalloc(total_byte);
     char *file_buf_pos=file_buf;
     for (i = 0; i < clus_num; i++)
     {
@@ -540,7 +540,7 @@ int fat12_scan_dir(struct dir_entry *dir, const char *name, struct dir_entry **r
 
     // }
 
-    kfree(file_buf, total_byte);
+    vfree(file_buf, total_byte);
     return is_find;
 }
 

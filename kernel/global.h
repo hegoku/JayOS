@@ -20,5 +20,5 @@ int printk(const char *fmt, ...);
 extern int is_in_ring0;
 
 int printk(const char * format, ...);
-
+void panic(const char *info);
 #endif

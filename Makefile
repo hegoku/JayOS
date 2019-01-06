@@ -12,7 +12,7 @@ TARGET		= boot.bin loader kernel k1 hdboot.bin hdloader
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
 				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o build/schedule.o \
-				build/errno.o build/devfs.o
+				build/errno.o build/devfs.o build/malloc.o
 
 all : clean everything image
 
@@ -156,4 +156,7 @@ build/errno.o: lib/errno.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 build/devfs.o: fs/devfs/devfs.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+build/malloc.o: mm/malloc.c
 	$(CC) $(CFLAGS) -o $@ $<

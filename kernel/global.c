@@ -21,3 +21,9 @@ int printk(const char * format, ...)
     tty_write(0, buf, i);
     return i;
 }
+
+void panic(const char * info)
+{
+    printk("Kernel panic: %s\n",info);
+	for(;;);
+}

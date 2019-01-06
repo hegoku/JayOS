@@ -19,8 +19,13 @@ extern unsigned long MemSize;
 
 void load_memory_size();
 void init_paging();
-void *kmalloc(int size);
-void kfree(void *ptr, int size);
-void *kzmalloc(int size);
+void *kmalloc(unsigned int size);
+void kfree(void *ptr, unsigned int size);
+void *kzmalloc(unsigned int size);
+
+
+void *vmalloc(unsigned int size);
+void vfree(void *ptr, unsigned int size);
+void *vzmalloc(unsigned int size);
 
 #endif

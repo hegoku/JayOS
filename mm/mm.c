@@ -171,7 +171,7 @@ void init_paging()
     printk("Paging completed.\n");
 }
 
-void *kmalloc(int size)
+void *vmalloc(unsigned int size)
 {
     if (size>MAX_SIZE) {
         printk("kmalloc size not greater than 128KB\n");
@@ -206,7 +206,7 @@ void *kmalloc(int size)
         mmap[j]=s1|mmap[j];
     }
     if (kernel_heap_start + start_p>kernel_heap_end) {
-        printk("kmalloc full\n");
+        printk("vmalloc full\n");
         return NULL;
     }
     // printk("%x ", kernel_heap_start+start_p);
@@ -214,10 +214,10 @@ void *kmalloc(int size)
     // return (void *)(base_heap_addr + start_p);
 }
 
-void kfree(void *ptr, int size)
+void vfree(void *ptr, unsigned int size)
 {
     // int offset = (int)ptr - base_heap_addr;
-    int offset = (int)ptr - kernel_heap_start;
+    unsigned int offset = (unsigned int)ptr - kernel_heap_start;
     // printk("%x %d\n", (int)ptr, offset);
     for (int i = offset; i < (offset+size);i++) {
         int j = i / 8;
@@ -229,9 +229,9 @@ void kfree(void *ptr, int size)
     }
 }
 
-void *kzmalloc(int size)
+void *vzmalloc(unsigned int size)
 {
-    void *a = kmalloc(size);
+    void *a = vmalloc(size);
     if (a) {
         memset(a, 0, size);
     }
