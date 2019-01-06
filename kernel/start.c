@@ -179,7 +179,7 @@ void kernel_main()
     current_process = process_table;
 
     init_rootfs();
-    init_fat12();
+    init_fat();
     init_devfs();
     mount_root();
 
@@ -258,7 +258,7 @@ void kernel_main()
 
 void init()
 {
-    mount("/dev/hd1", "/root", "fat12");
+    mount("/dev/hda3", "/root", "fat");
     // sys_mkdir("/root/dev", 1);
     // mount("/dev", "/root/dev", "devfs");
     (void) open("/dev/tty0", O_RDWR);
@@ -289,7 +289,7 @@ void init()
         //     printf("ggggggg %d\n", getpid());
         //     exit(2);
         // }
-        execve("/SH", NULL, NULL);
+        execve("/sh", NULL, NULL);
         // exit(4);
     }
     while(pid=waitpid(-1, &i, 0)) {

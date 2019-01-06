@@ -275,6 +275,11 @@ int sys_execve(const char __user *filename, const char __user *argv[], const cha
         return -1;
     }
 
+    if (!(program[0]==0x7F && program[1]=='E' && program[2]=='L' && program[3]=='F')) {
+        printk("%s is not a executable file\n", filename);
+        return -1;
+    }
+
     clear_page_tables(current_process->page_dir);
     // printk("exec_clear_t:%s %x %x\n", filename, program, current_process->page_dir);
 

@@ -1174,7 +1174,7 @@ parport1: enabled=1, file="parport.out"
 # romimage: file=:bios:BIOS-bochs-latest, address=0xf0000
 # floppya: 1_44=[fd:], status=inserted
 #=======================================================================
-#floppya: 1_44=a.img, status=inserted
+floppya: 1_44=a.img, status=inserted
 #floppya: 1_44=dankos.img
 
 #=======================================================================
@@ -1193,4 +1193,4 @@ parport1: enabled=1, file="parport.out"
 
 #ata0-master: type=disk, path="c.img", mode=flat
 #ata1-master: type=disk, path="d.img", mode=flat
-ata0-master: type=disk, path="c1.img", mode=flat
+ata0-master: type=disk, path="c.img", mode=flat

@@ -25,60 +25,93 @@ void install_dev(int major, char *name, int type, struct file_operation *f_op)
     dev_table[major].name = name;
     dev_table[major].f_op = f_op;
 
+    // struct dir_entry *dev_dir;
+    // if (namei("/dev", &dev_dir)) {
+    //     printk("/dev not found\n");
+    //     return;
+    // }
+    // struct inode *new_inode = get_inode();
+    // new_inode->sb=dev_dir->sb;
+    // new_inode->dev_num=MKDEV(major, 0);
+    // if (type==DEV_TYPE_CHR) {
+    //     new_inode->mode = FILE_MODE_CHR;
+    // } else if (type==DEV_TYPE_BLK) {
+    //     new_inode->mode = FILE_MODE_BLK;
+    // }
+    // new_inode->f_op = f_op;
+
+    // struct dir_entry *new_dir=get_dir();
+    // sprintf(new_dir->name, "%s0", name);
+    // // memcpy(new_dir->name, name, strlen(name));
+    // new_dir->dev_num=MKDEV(major, 0);
+    // new_dir->inode=new_inode;
+    // new_dir->parent=dev_dir;
+    // new_dir->sb=dev_dir->sb;
+
+    // struct list *tmp = create_list((void*)new_dir);
+    // list_add(tmp, &dev_dir->children);
+    // // tmp->value = new_dir;
+    // // tmp->next = dev_dir->children;
+    // // dev_dir->children = tmp;
+
+    // //
+    // new_inode = get_inode();
+    // new_inode->sb=dev_dir->sb;
+    // new_inode->dev_num=MKDEV(major, 2);
+    // if (type==DEV_TYPE_CHR) {
+    //     new_inode->mode = FILE_MODE_CHR;
+    // } else if (type==DEV_TYPE_BLK) {
+    //     new_inode->mode = FILE_MODE_BLK;
+    // }
+    // new_inode->f_op = f_op;
+
+    // new_dir=get_dir();
+    // sprintf(new_dir->name, "%s1", name);
+    // // memcpy(new_dir->name, name, strlen(name));
+    // new_dir->dev_num=MKDEV(major, 2);
+    // new_dir->inode=new_inode;
+    // new_dir->parent=dev_dir;
+    // new_dir->sb=dev_dir->sb;
+
+    // tmp = create_list((void*)new_dir);
+    // list_add(tmp, &dev_dir->children);
+    // tmp = create_list();
+    // tmp->value = new_dir;
+    // tmp->next = dev_dir->children;
+    // dev_dir->children = tmp;
+}
+
+void add_sub(int dev_num, char *name, unsigned int size, unsigned int start_pos)
+{
     struct dir_entry *dev_dir;
     if (namei("/dev", &dev_dir)) {
         printk("/dev not found\n");
         return;
     }
+
     struct inode *new_inode = get_inode();
     new_inode->sb=dev_dir->sb;
-    new_inode->dev_num=MKDEV(major, 0);
-    if (type==DEV_TYPE_CHR) {
+    new_inode->dev_num=dev_num;
+    if (dev_table[MAJOR(dev_num)].type==DEV_TYPE_CHR) {
         new_inode->mode = FILE_MODE_CHR;
-    } else if (type==DEV_TYPE_BLK) {
+    } else if (dev_table[MAJOR(dev_num)].type==DEV_TYPE_BLK) {
         new_inode->mode = FILE_MODE_BLK;
     }
-    new_inode->f_op = f_op;
+    new_inode->f_op =  dev_table[MAJOR(dev_num)].f_op;
+    new_inode->size = size;
+    new_inode->start_pos = start_pos;
 
     struct dir_entry *new_dir=get_dir();
-    sprintf(new_dir->name, "%s0", name);
-    // memcpy(new_dir->name, name, strlen(name));
-    new_dir->dev_num=MKDEV(major, 0);
+    sprintf(new_dir->name, name);
+    new_dir->dev_num=dev_num;
     new_dir->inode=new_inode;
     new_dir->parent=dev_dir;
     new_dir->sb=dev_dir->sb;
 
     struct list *tmp = create_list((void*)new_dir);
     list_add(tmp, &dev_dir->children);
-    // tmp->value = new_dir;
-    // tmp->next = dev_dir->children;
-    // dev_dir->children = tmp;
 
-    //
-    new_inode = get_inode();
-    new_inode->sb=dev_dir->sb;
-    new_inode->dev_num=MKDEV(major, 2);
-    if (type==DEV_TYPE_CHR) {
-        new_inode->mode = FILE_MODE_CHR;
-    } else if (type==DEV_TYPE_BLK) {
-        new_inode->mode = FILE_MODE_BLK;
-    }
-    new_inode->f_op = f_op;
-
-    new_dir=get_dir();
-    sprintf(new_dir->name, "%s1", name);
-    // memcpy(new_dir->name, name, strlen(name));
-    new_dir->dev_num=MKDEV(major, 2);
-    new_dir->inode=new_inode;
-    new_dir->parent=dev_dir;
-    new_dir->sb=dev_dir->sb;
-
-    tmp = create_list((void*)new_dir);
-    list_add(tmp, &dev_dir->children);
-    // tmp = create_list();
-    // tmp->value = new_dir;
-    // tmp->next = dev_dir->children;
-    // dev_dir->children = tmp;
+    lsdir("", dev_dir);
 }
 
 void mount_dev()

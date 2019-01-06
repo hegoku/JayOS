@@ -9,6 +9,7 @@
 #include <system/dev.h>
 #include <system/fs.h>
 #include <system/schedule.h>
+#include <system/mm.h>
 
 #define MAJOR_NR 3
 
@@ -68,9 +69,9 @@ void hd_setup()
 
     /* Get the number of drives from the BIOS data area */
 	hd_num = *(unsigned char*)(0x475);
-    printk("hd1 num: %d\n", hd_num);
+    printk("hd num: %d\n", hd_num);
 
-    
+    char *name = kzmalloc(12);
     for (i = 0; i < hd_num; i++)
     {
         hd_info[i].channel = 0;
@@ -78,7 +79,16 @@ void hd_setup()
         hd_info[i].part_num = 1;
         partition(i);
         print_hdinfo(&hd_info[i]);
+        memset(name, 0, 12);
+        sprintf(name, "hd%c", 'a' + GET_DRIVER_INDEX_BYMINOR(i));
+        add_sub(MKDEV(MAJOR_NR, i), name, 0, 0);
+        for (int j = 1; j < hd_info[i].part_num; j++) {
+            memset(name, 0, 12);
+            sprintf(name, "hd%c%d", 'a' + GET_DRIVER_INDEX_BYMINOR(i), j);
+            add_sub(MKDEV(MAJOR_NR, i*NR_SUB_PER_PART+j), name, hd_info[i].part[j].size, hd_info[i].part[j].base*SECTOR_SIZE);
+        }
     }
+    kfree(name, 12);
 }
 
 static void hd_cmd_out(struct hd_cmd* cmd)
@@ -291,12 +301,13 @@ int do_request1(int dev_num, int cmd, unsigned char* buf, unsigned long pos, uns
 {
     unsigned char al;
     unsigned short c = 0xa1;
-    __asm__("movb %0, %%dl\n\tinb %%dx, %%al"
-            : "=a"(al):"m" (c):"memory");
+    // __asm__("movb %0, %%dl\n\tinb %%dx, %%al"
+    //         : "=a"(al):"m" (c):"memory");
     int mi_dev = MINOR(dev_num);
     int drive = GET_DRIVER_INDEX_BYMINOR(mi_dev);
     unsigned long start_sector = pos / SECTOR_SIZE; //从开始字节数转成开始扇区数
     start_sector += hd_info[drive].part[GET_PART_INDEX(mi_dev)].base;
+    // printk("%d %d %x %d\n", mi_dev, drive, start_sector, GET_PART_INDEX(mi_dev));while(1){}
     return hd_rw(drive, cmd, buf, start_sector, bytes);
 }
 

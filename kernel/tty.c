@@ -40,6 +40,7 @@ void init_tty()
     
     dev_table[MAJOR_NR].f_op = &tty_f_op;
     install_dev(MAJOR_NR, "tty", DEV_TYPE_CHR, &tty_f_op);
+    add_sub(MKDEV(MAJOR_NR, 0), "tty0", 0, 0);
 }
 
 TTY tty_create(unsigned char id)

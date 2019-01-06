@@ -75,7 +75,8 @@ int sys_open(const char __user *path, int flags, ...)
     // char *filename=kzmalloc(256);
     // strncpy_from_user(filename, path);
 
-    if (get_inode_by_filename(path, &p_inode)) {
+    if (get_inode_by_filename(path, &p_inode))
+    {
         printk("file: %s not found\n", path);
         return -1;
     }
@@ -523,7 +524,7 @@ int sys_mount(char __user *dev_name, char __user *dir_name, char *type)
         printk("%s is not a blk dev or a dir\n", dev_name);
         return -1;
     }
-
+    
     if (namei(dir_name, &dir_dir))
     {
         printk("dir %s not found\n", dir_name);
@@ -814,4 +815,22 @@ int sys_getdents(unsigned int fd, struct linux_dirent __user *dirent, unsigned i
 
     // if (namei(dirname, &dir))
 	// 	return -ENOENT;
+}
+
+void lsdir(const char *path, struct dir_entry *dir)
+{
+    printk("name: %s :\n", dir->name);
+    struct list *i;
+    list_for_each(i, &dir->children) {
+        struct dir_entry *tmp = (struct dir_entry *)i->value;
+        if (tmp->inode->mode==FILE_MODE_REG) {
+            printk("    - %dB name:%s\n", tmp->inode->size, tmp->name);
+        } else if (tmp->inode->mode==FILE_MODE_DIR) {
+            printk("    D %dB name:%s\n", tmp->inode->size, tmp->name);
+        } else if (tmp->inode->mode==FILE_MODE_CHR) {
+            printk("    C %dB name:%s\n", tmp->inode->size, tmp->name);
+        } else if (tmp->inode->mode==FILE_MODE_BLK) {
+            printk("    B %dB name:%s\n", tmp->inode->size, tmp->name);
+        }
+    }
 }

@@ -29,7 +29,7 @@
 #define FILE_ATTR_UNUSED 0x80 // 没有使用
 #define FILE_ATTR_LONG_NAME_MASK 0x0F //长文件名
 
-struct fat12_super_block{
+struct fat_boot_sector{
     unsigned char BS_jmpBoot[3];
     unsigned char BS_OEMName[8];
     unsigned short BPB_BytsPerSec;
@@ -44,21 +44,55 @@ struct fat12_super_block{
     unsigned short BPB_NumHeads;
     unsigned int BPB_HiddSec;
     unsigned int BPB_TotSec32; //如果BPB_TotSec16为0，由这个表述扇区总数
-    unsigned char BS_DrvNum;
-    unsigned char BS_Reserved1;
-    unsigned char BS_BootSig;
-    unsigned int BD_VolId;
-    unsigned char BS_VolLab[11];
-    unsigned char BS_FileSysType[8];
-    unsigned char boot_code[448];
-    unsigned char end_flag[2];
+
+    union {
+        struct {
+            unsigned char BS_DrvNum;
+            unsigned char BS_Reserved1;
+            unsigned char BS_BootSig;
+            unsigned int BD_VolId;
+            unsigned char BS_VolLab[11];
+            unsigned char BS_FileSysType[8];
+            unsigned char boot_code[448];
+            unsigned char end_flag[2];
+        } __attribute__ ((packed)) fat16;
+
+        struct {
+			/* only used by FAT32 */
+			unsigned int	BPB_FATz32;		/* sectors/FAT */
+			unsigned short	flags;		/* bit 8: fat mirroring,
+						   low 4: active fat */
+			unsigned char	version[2];	/* major, minor filesystem
+						   version */
+			unsigned int	root_cluster;	/* first cluster in
+						   root directory */
+			unsigned short	info_sector;	/* filesystem info sector */
+			unsigned short	backup_boot;	/* backup boot sector */
+			unsigned short	reserved2[6];	/* Unused */
+			/* Extended BPB Fields for FAT32 */
+			unsigned char	drive_number;   /* Physical drive number */
+			unsigned char    state;       	/* undocumented, but used
+						   for mount state. */
+			unsigned char	signature;  /* extended boot signature */
+			unsigned char	vol_id[4];	/* volume ID */
+			unsigned char	vol_label[11];	/* volume label */
+			unsigned char	BS_FileSysType[8];		/* file system type */
+			/* other fields are not added here */
+		} __attribute__ ((packed)) fat32;
+    };
+
 } __attribute__ ((packed)) ;
 
-struct fat12_root_dir_entry{
+struct fat_root_dir_entry{
     unsigned char dir_name[8];
     unsigned char ext_name[3];
     unsigned char dir_attr;
-    unsigned char reserved1[10];
+    unsigned char    lcase;		/* Case for base and extension */
+	unsigned char	ctime_cs;	/* Creation time, centiseconds (0-199) */
+	unsigned short	ctime;		/* Creation time */
+	unsigned short	cdate;		/* Creation date */
+	unsigned short	adate;		/* Last access date */
+	unsigned short	starthi;	/* High 16 bits of cluster in FAT32 */
     unsigned short write_time;
     unsigned short write_date;
     unsigned short fst_clus;
@@ -85,7 +119,7 @@ struct fat12_long_name{
     unsigned short c13;
 } __attribute__((packed));
 
-struct fat12_s_fs_info{
+struct fat_s_fs_info{
     int BPB_SecPerClus;
     int BPB_RsvdSecCnt;
     int BPB_BytsPerSec;
@@ -97,13 +131,17 @@ struct fat12_s_fs_info{
     int root_dir_size; //根目录总大小(字节)
     int root_dir_block_size; //根目录占用扇区数
     int data_start_sector; //数据区起始扇区
+    unsigned char type; //12 16 32
 };
 
 struct fat12_i_fs
 {
-    unsigned short fst_clus;
+    unsigned int fst_clus;
 };
 
-void init_fat12();
+#define GET_CLUS(fat_dir_entry, type) ( (type!=FAT32_FAT_ENTRY_SIZE)? ((fat_dir_entry)->fst_clus) : \
+    ( ((fat_dir_entry)->starthi <<16) + (fat_dir_entry)->fst_clus) ) 
+
+void init_fat();
 
 #endif

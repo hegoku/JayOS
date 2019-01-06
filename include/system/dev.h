@@ -53,6 +53,7 @@ struct dev_struct
 // typedef (*blk_do_request_ptr)(int cmd, unsigned mi_dev, unsigned long pos, char * buf, int len);
 
 void init_dev();
+void add_sub(int dev_num, char *name, unsigned int size, unsigned int start_pos);
 
 extern struct dev_struct dev_table[];
 

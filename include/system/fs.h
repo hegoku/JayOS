@@ -151,4 +151,5 @@ struct super_block *get_block(int dev_num);
 int lookup(struct dir_entry *dir, const char *name, int len, struct dir_entry **res_dir);
 int namei(const char *pathname, struct dir_entry **res_dir);
 void mount_root();
+void lsdir(const char *path, struct dir_entry *dir);
 #endif

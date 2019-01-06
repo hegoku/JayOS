@@ -11,7 +11,7 @@ TARGET		= boot.bin loader kernel k1 hdboot.bin hdloader
 
 OBJS        = build/kernel.o build/start.o build/interrupt.o build/global.o build/keyboard.o build/tty.o build/desc.o build/process.o build/system_call.o \
 				build/assert.o build/stdlib.o build/unistd.o build/stdio.o build/string.o build/math.o build/fs.o \
-				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat12.o build/mm.o build/page.o build/list.o build/schedule.o \
+				build/floppy.o build/hd.o build/dev.o build/rootfs.o build/ext2.o build/fat.o build/mm.o build/page.o build/list.o build/schedule.o \
 				build/errno.o build/devfs.o build/malloc.o
 
 all : clean everything image
@@ -136,7 +136,7 @@ build/rootfs.o: fs/rootfs/super.c include/system/fs.h include/system/rootfs.h in
 build/ext2.o: fs/ext2/ext2.c include/system/fs.h include/sys/types.h include/system/dev.h fs/ext2/ext2.h kernel/global.h include/string.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-build/fat12.o: fs/fat/fat12.c include/system/fs.h include/sys/types.h include/system/dev.h fs/fat/fat.h kernel/global.h include/string.h include/stdio.h \
+build/fat.o: fs/fat/fat.c include/system/fs.h include/sys/types.h include/system/dev.h fs/fat/fat.h kernel/global.h include/string.h include/stdio.h \
 				include/system/mm.h include/system/list.h
 	$(CC) $(CFLAGS) -o $@ $<
 
